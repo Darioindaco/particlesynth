@@ -292,6 +292,18 @@ input[type=text] {
   </div>
   <button class="btn" id="startBtn">▶ START AUDIO</button>
 
+  <div class="ctrl"><label>NOTE LIFETIME</label>
+    <div class="row" style="gap:4px;margin-top:4px">
+      <button class="btn nlt-btn" id="nltInstant">INSTANT</button>
+      <button class="btn nlt-btn active" id="nltLive">LIVE</button>
+      <button class="btn nlt-btn" id="nltTimed">TIMED</button>
+    </div>
+    <div id="nltTimedRow" style="display:none;margin-top:6px">
+      <label>DURATION <span id="nltDurV">10</span>s</label>
+      <input type="range" id="nltDur" min="1" max="30" step="1" value="10">
+    </div>
+  </div>
+
   <h2>KEYBOARD</h2>
   <div id="miniKbd">
     <div class="kb-row-w">
@@ -632,6 +644,10 @@ const LOWER_KEYS = ['a', 's', 'd', 'f', 'g', 'h', 'j', 'k'];
 const UPPER_KEYS = ['w', 'e', 't', 'y', 'u', 'o', 'p'];
 const heldKeys      = new Set();
 const keyParticleMap = new Map();
+
+// NOTE LIFETIME mode: 'instant' | 'live' | 'timed'
+let noteLifetimeMode = 'live';
+let noteLifetimeDur  = 10; // seconds, for 'timed' mode
 
 function keyNoteStart() {
   const notes = SCALES[document.getElementById('scale').value] || SCALES.pentatonic;
@@ -1345,15 +1361,20 @@ function physics() {
       }
     }
 
-    // Key note: lock warmth to its note; sustain tension while held, fast decay on release
+    // Key note: lock warmth while held; on release transition to ambient or instant-decay
     if (p.isKeyNote) {
-      p.warmth = p.keyWarmth;
       if (!p.keyReleased) {
+        p.warmth = p.keyWarmth;
         p.tension = Math.max(0.8, p.tension);
+        p.r = 6 + p.tension * 10;
+      } else if (p._instantDecay) {
+        p.tension *= 0.88;
+        p.r = 6 + p.tension * 10;
       } else {
-        p.tension *= 0.92;
+        // Transitioned to ambient — behave like a normal particle
+        p.isKeyNote = false;
+        p.releasedAt = p.releasedAt || performance.now();
       }
-      p.r = 6 + p.tension * 10;
     }
 
     p.syncAudio(false);
@@ -1368,11 +1389,14 @@ function physics() {
     resolveCollision(a, b, dx, dy, d);
   }
 
-  // Remove key note particles that have fully decayed after release
+  // Remove INSTANT-decay particles that have faded out; cull TIMED expired particles
   let anyRemoved = false;
+  const nowMs = performance.now();
   for (let i = particles.length - 1; i >= 0; i--) {
     const p = particles[i];
-    if (p.isKeyNote && p.keyReleased && p.tension < 0.12) {
+    if (p._instantDecay && p.tension < 0.12) {
+      p.destroy(); particles.splice(i, 1); anyRemoved = true;
+    } else if (noteLifetimeMode === 'timed' && p.releasedAt && (nowMs - p.releasedAt) > noteLifetimeDur * 1000) {
       p.destroy(); particles.splice(i, 1); anyRemoved = true;
     }
   }
@@ -1656,12 +1680,36 @@ function draw() {
     ctx.fillStyle = 'rgba(255,255,255,0.18)';
     ctx.fill();
 
-    if (p.isKeyNote) {
+    if (p.isKeyNote && !p.keyReleased) {
+      // Held note: bright white ring
       ctx.beginPath();
       ctx.arc(p.x, p.y, p.r + 5, 0, Math.PI * 2);
-      ctx.strokeStyle = p.keyReleased ? 'rgba(255,255,255,0.25)' : 'rgba(255,255,255,0.72)';
+      ctx.strokeStyle = 'rgba(255,255,255,0.72)';
       ctx.lineWidth = 1.5;
       ctx.stroke();
+    } else if (p.releasedAt) {
+      // Fading ring: fades out over 2 seconds after release
+      const ringAge = (performance.now() - p.releasedAt) / 2000;
+      if (ringAge < 1) {
+        ctx.beginPath();
+        ctx.arc(p.x, p.y, p.r + 5, 0, Math.PI * 2);
+        ctx.strokeStyle = `rgba(255,255,255,${0.35 * (1 - ringAge)})`;
+        ctx.lineWidth = 1.5;
+        ctx.stroke();
+      }
+      // TIMED mode: shrinking decay ring showing remaining lifetime
+      if (noteLifetimeMode === 'timed' && noteLifetimeDur > 0) {
+        const elapsed = (performance.now() - p.releasedAt) / (noteLifetimeDur * 1000);
+        const remaining = Math.max(0, 1 - elapsed);
+        if (remaining > 0) {
+          const decayR = p.r + 12;
+          ctx.beginPath();
+          ctx.arc(p.x, p.y, decayR, -Math.PI / 2, -Math.PI / 2 + remaining * Math.PI * 2);
+          ctx.strokeStyle = `rgba(255,200,80,${0.18 * remaining})`;
+          ctx.lineWidth = 1;
+          ctx.stroke();
+        }
+      }
     }
   }
 
@@ -1847,6 +1895,20 @@ document.getElementById('chordOn').addEventListener('change', function() {
     document.getElementById('chordDisplay').textContent = '';
     for (const p of particles) p._chordFreq = null;
   }
+});
+
+// Note lifetime controls
+['nltInstant', 'nltLive', 'nltTimed'].forEach(id => {
+  document.getElementById(id).addEventListener('click', () => {
+    noteLifetimeMode = { nltInstant: 'instant', nltLive: 'live', nltTimed: 'timed' }[id];
+    document.querySelectorAll('.nlt-btn').forEach(b => b.classList.remove('active'));
+    document.getElementById(id).classList.add('active');
+    document.getElementById('nltTimedRow').style.display = noteLifetimeMode === 'timed' ? '' : 'none';
+  });
+});
+document.getElementById('nltDur').addEventListener('input', function() {
+  noteLifetimeDur = parseInt(this.value);
+  document.getElementById('nltDurV').textContent = noteLifetimeDur;
 });
 
 document.getElementById('plimit').addEventListener('input', function() {
@@ -2049,7 +2111,18 @@ document.addEventListener('keyup', e => {
   if (!heldKeys.has(key)) return;
   heldKeys.delete(key);
   const p = keyParticleMap.get(key);
-  if (p) p.keyReleased = true;
+  if (p) {
+    if (noteLifetimeMode === 'instant') {
+      // Old behaviour: fast decay then remove
+      p.keyReleased = true;
+      // Override physics: decay tension rapidly then destroy
+      p._instantDecay = true;
+    } else {
+      // LIVE / TIMED: transition to ambient
+      p.keyReleased = true;
+      p.releasedAt = performance.now();
+    }
+  }
   keyParticleMap.delete(key);
   updateKeyboardDisplay();
 });

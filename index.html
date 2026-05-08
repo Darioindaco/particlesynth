@@ -769,21 +769,25 @@ function updateChordVoicing() {
     if (assigned[i] === -1) particles[i]._chordFreq = null;
   }
 
-  // Voice each cluster
+  // Voice each cluster — each particle uses its OWN warmth to pick chord quality,
+  // so cold and hot particles voice their own intervals above a shared cluster root.
   let dominantChord = null, dominantSize = 0;
   for (const cluster of clusters) {
     const avgWarmth = cluster.reduce((s, i) => s + particles[i].warmth, 0) / cluster.length;
-    const chord = warmthToChord(avgWarmth);
-    const ivs   = chord.intervals;
-    // Base octave from average warmth (maps to octaves 1-3)
-    const baseOct = 1 + Math.floor(avgWarmth * 3);
+    const baseOct   = 1 + Math.floor(avgWarmth * 3);
+    const qualityCount = {};
     cluster.forEach((pi, slot) => {
-      const semitone = ivs[slot % ivs.length];
-      particles[pi]._chordFreq = chordIntervalToFreq(semitone, baseOct);
+      const pw    = particles[pi].warmth;
+      const chord = warmthToChord(pw);
+      const semi  = chord.intervals[slot % chord.intervals.length];
+      particles[pi]._chordFreq = chordIntervalToFreq(semi, baseOct);
+      qualityCount[chord.name] = (qualityCount[chord.name] || 0) + 1;
     });
+    // Display the plurality chord quality for this cluster
+    const top = Object.entries(qualityCount).sort((a, b) => b[1] - a[1])[0][0];
     if (cluster.length > dominantSize) {
       dominantSize  = cluster.length;
-      dominantChord = chord.name.toUpperCase();
+      dominantChord = top.toUpperCase();
     }
   }
 

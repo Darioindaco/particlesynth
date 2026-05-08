@@ -186,6 +186,14 @@ input[type=text] {
   line-height:10px; cursor:pointer;
 }
 .seq-cell.seq-on .seq-note { color:#3af; }
+.seq-cell.seq-picking .seq-note {
+  color:#ffa040 !important;
+  text-shadow:0 0 6px rgba(255,160,40,0.8);
+}
+.seq-cell.seq-picking .seq-tog {
+  border-color:#ffa040 !important;
+  box-shadow:0 0 6px rgba(255,160,40,0.5) !important;
+}
 .seq-chord-dot::after {
   content:''; position:absolute; top:1px; right:2px;
   width:4px; height:4px; border-radius:50%;
@@ -2206,13 +2214,27 @@ canvas.addEventListener('touchend', () => { mouse.down = false; });
 
 // Keyboard note playing
 document.addEventListener('keydown', e => {
-  if (e.key === 'Escape') { closeSettings(); setSelectedTool(null); return; }
+  if (e.key === 'Escape') {
+    seqPickingStep = -1;
+    closeSettings(); setSelectedTool(null); return;
+  }
   if (e.target.tagName === 'INPUT' && e.target.type === 'text') return;
   if (e.repeat) return;
   const key = e.key.toLowerCase();
   const w = keyToWarmth(key);
   if (w === null) return;
   e.preventDefault();
+
+  // Sequencer note assignment mode: intercept key, assign to waiting step
+  if (seqPickingStep !== -1) {
+    const notes = SCALES[document.getElementById('scale').value] || SCALES.pentatonic;
+    const total = notes.length * 4;
+    // Convert warmth → noteIdx (inverse of (noteIdx+0.5)/total)
+    const nIdx = Math.max(0, Math.min(total - 1, Math.floor(w * total)));
+    seqSteps[seqPickingStep].noteIdx = nIdx;
+    seqPickingStep = -1;
+    return;
+  }
   if (heldKeys.has(key)) return;
   if (!audioStarted) initAudio();
   heldKeys.add(key);
@@ -2278,6 +2300,7 @@ let seqFlashTime   = 0;
 let seqCellEls     = [];
 let lfoSyncOn      = false;
 let velDragStep    = -1, velDragStartY = 0, velDragStartVel = 0;
+let seqPickingStep = -1; // step index awaiting a keyboard note assignment, -1 = none
 
 const SEQ_LOOKAHEAD      = 0.10; // seconds
 const SEQ_SCHED_INTERVAL = 25;   // ms
@@ -2500,9 +2523,8 @@ function seqBindCells() {
     });
     cell.querySelector('.seq-note').addEventListener('click', e => {
       e.stopPropagation();
-      const notes = SCALES[document.getElementById('scale').value] || SCALES.pentatonic;
-      seqSteps[i].noteIdx = (seqSteps[i].noteIdx + 1) % (notes.length * 4);
-      e.target.textContent = stepNoteLabel(seqSteps[i].noteIdx);
+      // Toggle off if already picking this step
+      seqPickingStep = seqPickingStep === i ? -1 : i;
     });
     const velWrap = cell.querySelector('.seq-vel-wrap');
     velWrap.addEventListener('pointerdown', e => {
@@ -2529,9 +2551,10 @@ function seqUpdateVisuals() {
   const swingVal = parseInt(document.getElementById('swing').value);
   seqCellEls.forEach((cell, i) => {
     if (i >= seqStepCount) return;
-    cell.classList.toggle('seq-current', seqPlaying && i === seqCurrentStep);
-    cell.classList.toggle('seq-flash',   seqFlashStep === i && now - seqFlashTime < 80);
-    cell.classList.toggle('seq-on',      seqSteps[i].active);
+    cell.classList.toggle('seq-current',  seqPlaying && i === seqCurrentStep);
+    cell.classList.toggle('seq-flash',    seqFlashStep === i && now - seqFlashTime < 80);
+    cell.classList.toggle('seq-on',       seqSteps[i].active);
+    cell.classList.toggle('seq-picking',  i === seqPickingStep);
     cell.classList.toggle('seq-chord-dot', chordOn && seqIsChordTone(seqSteps[i].noteIdx));
     // Visual swing displacement
     if (swingVal > 50 && i % 2 === 1) {
@@ -2539,7 +2562,7 @@ function seqUpdateVisuals() {
     } else {
       cell.style.transform = '';
     }
-    // Keep note labels current (scale may change)
+    // Keep note labels current (scale or assignment may change)
     const noteEl = cell.querySelector('.seq-note');
     if (noteEl) noteEl.textContent = stepNoteLabel(seqSteps[i].noteIdx);
   });

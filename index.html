@@ -10,15 +10,15 @@ body {
   background:#080c10;
   color:#aab;
   font-family:'Courier New',monospace;
-  font-size:12px;
+  font-size:13px;
   overflow:hidden;
   height:100vh;
   display:flex;
 }
 
 #panel {
-  width:210px;
-  min-width:210px;
+  width:260px;
+  min-width:260px;
   background:#0a0f16;
   border-right:1px solid #1e2a3a;
   padding:14px;
@@ -29,9 +29,9 @@ body {
 }
 
 #panel h2 {
-  font-size:10px;
+  font-size:12px;
   color:#3af;
-  letter-spacing:3px;
+  letter-spacing:2px;
   border-bottom:1px solid #1a2535;
   padding-bottom:6px;
   margin-top:4px;
@@ -39,25 +39,25 @@ body {
 
 .ctrl { display:flex; flex-direction:column; gap:4px; }
 .ctrl label {
-  color:#667; font-size:10px; letter-spacing:1px;
+  color:#667; font-size:12px; letter-spacing:1px;
   display:flex; justify-content:space-between;
 }
 .ctrl label span { color:#3af; font-weight:bold; }
 
 input[type=range] {
-  width:100%; height:3px;
+  width:100%; height:5px;
   -webkit-appearance:none; appearance:none;
   background:#1e2a3a; outline:none; cursor:pointer; border-radius:2px;
 }
 input[type=range]::-webkit-slider-thumb {
   -webkit-appearance:none;
-  width:12px; height:12px; background:#3af; border-radius:50%; cursor:pointer;
+  width:14px; height:14px; background:#3af; border-radius:50%; cursor:pointer;
 }
 
 .btn {
   background:#0a0f16; border:1px solid #1e3050; color:#3af;
-  padding:6px 8px; cursor:pointer; font-family:'Courier New',monospace;
-  font-size:10px; letter-spacing:1px; width:100%; transition:all 0.1s;
+  padding:7px 10px; cursor:pointer; font-family:'Courier New',monospace;
+  font-size:11px; letter-spacing:1px; width:100%; transition:all 0.1s;
 }
 .btn:hover { background:#1a2535; border-color:#3af; }
 .btn:active { background:#3af; color:#000; }
@@ -69,16 +69,16 @@ input[type=range]::-webkit-slider-thumb {
 
 select {
   background:#0a0f16; border:1px solid #1e3050; color:#3af;
-  padding:5px; font-family:'Courier New',monospace; font-size:10px;
+  padding:6px; font-family:'Courier New',monospace; font-size:11px;
   width:100%; cursor:pointer; outline:none;
 }
 
 .toggle-row { display:flex; align-items:center; gap:8px; }
 .toggle-row input[type=checkbox] { accent-color:#3af; cursor:pointer; width:13px; height:13px; }
-.toggle-row span { color:#667; font-size:10px; letter-spacing:1px; }
+.toggle-row span { color:#667; font-size:11px; letter-spacing:1px; }
 
 #status {
-  font-size:10px; color:#445; margin-top:auto;
+  font-size:11px; color:#445; margin-top:auto;
   border-top:1px solid #1a2535; padding-top:10px; line-height:1.9;
 }
 #status span { color:#3af; }
@@ -93,24 +93,24 @@ canvas { display:block; }
 #scope { height:60px; background:#050810; }
 
 #miniKbd {
-  position:relative; height:44px;
+  position:relative; height:52px;
   margin:0 -14px;
   user-select:none;
 }
-.kb-row-w { display:flex; height:44px; }
+.kb-row-w { display:flex; height:52px; }
 .kb-w {
-  flex:1; height:44px;
+  flex:1; height:52px;
   background:#0a0f18; border:1px solid #1a2535;
   border-top:none; border-radius:0 0 3px 3px;
-  font-size:8px; color:#2a4060;
+  font-size:9px; color:#2a4060;
   display:flex; align-items:flex-end; justify-content:center;
   padding-bottom:3px; z-index:1; transition:background 0.05s,color 0.05s;
 }
 .kb-b {
-  position:absolute; top:0; width:7.5%; height:26px;
+  position:absolute; top:0; width:7.5%; height:32px;
   background:#060c14; border:1px solid #1a2535;
   border-top:none; border-radius:0 0 2px 2px;
-  font-size:7px; color:#1e3050;
+  font-size:9px; color:#1e3050;
   display:flex; align-items:flex-end; justify-content:center;
   padding-bottom:2px; z-index:2; transform:translateX(-50%);
   transition:background 0.05s,color 0.05s;
@@ -121,8 +121,8 @@ canvas { display:block; }
 #sceneToolbar { display:grid; grid-template-columns:1fr 1fr 1fr; gap:4px; }
 .scene-btn {
   background:#0a0f16; border:1px solid #1e3050; color:#3af;
-  padding:5px 2px; cursor:pointer; font-family:'Courier New',monospace;
-  font-size:9px; letter-spacing:0.5px; text-align:center; transition:all 0.1s;
+  padding:6px 4px; cursor:pointer; font-family:'Courier New',monospace;
+  font-size:11px; letter-spacing:0.5px; text-align:center; transition:all 0.1s;
 }
 .scene-btn:hover { background:#1a2535; border-color:#3af; }
 .scene-btn.scene-active { background:#3af; color:#000; border-color:#3af; }
@@ -153,41 +153,43 @@ input[type=text] {
 
 /* ── Sequencer strip ─────────────────────────────────────── */
 #seqWrap {
-  height:80px; flex-shrink:0;
+  height:110px; flex-shrink:0;
   background:#050810; border-top:1px solid #1a2535;
   display:flex; flex-direction:column; overflow:hidden;
   user-select:none;
 }
 #seqControls {
-  display:flex; justify-content:space-between; align-items:center;
-  padding:3px 8px 2px; gap:6px; flex-shrink:0;
+  display:flex; justify-content:center; align-items:center;
+  padding:4px 8px 3px; gap:12px; flex-shrink:0;
 }
-.seq-transport,.seq-tools { display:flex; gap:3px; }
+.seq-transport,.seq-tools { display:flex; gap:5px; }
+.seq-transport-btn { padding:5px 16px !important; font-size:13px !important; }
 .seq-btn {
   width:auto !important; padding:2px 7px !important;
-  font-size:9px !important; letter-spacing:0.5px !important;
+  font-size:11px !important; letter-spacing:0.5px !important;
 }
 .seq-btn.seq-active { background:#3af !important; color:#000 !important; border-color:#3af !important; }
 #seqTrack {
   flex:1; overflow-x:auto; overflow-y:hidden; padding:0 8px;
+  display:flex; align-items:center;
 }
 #seqTrack::-webkit-scrollbar { height:3px; }
 #seqTrack::-webkit-scrollbar-thumb { background:#1e3050; border-radius:2px; }
-#seqCells { display:flex; gap:2px; width:max-content; }
+#seqCells { display:flex; gap:3px; width:max-content; margin:0 auto; }
 .seq-cell {
-  width:36px; flex-shrink:0; display:flex; flex-direction:column;
-  gap:1px; position:relative; border:1px solid transparent; border-radius:2px;
+  width:48px; flex-shrink:0; display:flex; flex-direction:column;
+  gap:2px; position:relative; border:1px solid transparent; border-radius:2px;
 }
 .seq-cell.seq-current { border-color:rgba(255,255,255,0.75); }
 .seq-tog {
-  height:20px; background:#1a2535; border:1px solid #1e3050;
+  height:34px; background:#1a2535; border:1px solid #1e3050;
   border-radius:2px; cursor:pointer; transition:background 0.05s,border-color 0.05s;
 }
 .seq-cell.seq-on .seq-tog { background:#0a2a50; border-color:#3af; box-shadow:0 0 5px rgba(51,170,255,0.3); }
 .seq-cell.seq-flash .seq-tog { background:rgba(255,255,255,0.88) !important; border-color:#fff !important; }
 .seq-note {
-  height:10px; text-align:center; font-size:7px; color:#2a3f55;
-  line-height:10px; cursor:pointer;
+  height:16px; text-align:center; font-size:11px; color:#2a3f55;
+  line-height:16px; cursor:pointer;
 }
 .seq-cell.seq-on .seq-note { color:#3af; }
 .seq-cell.seq-picking .seq-note {
@@ -553,9 +555,7 @@ input[type=text] {
   <div id="seqWrap">
     <div id="seqControls">
       <div class="seq-transport">
-        <button class="btn seq-btn" id="seqPlay">▶ PLAY</button>
-        <button class="btn seq-btn" id="seqPause">⏸</button>
-        <button class="btn seq-btn" id="seqStop">■ STOP</button>
+        <button class="btn seq-btn seq-transport-btn" id="seqPlay">▶ PLAY</button>
       </div>
       <div class="seq-tools">
         <button class="btn seq-btn" id="seqRnd">RND</button>
@@ -583,7 +583,7 @@ const scopeCv = document.getElementById('scope');
 const sctx    = scopeCv.getContext('2d');
 const wrap    = document.getElementById('canvasWrap');
 
-const SEQ_H = 80; // must match #seqWrap height in CSS
+const SEQ_H = 110; // must match #seqWrap height in CSS
 let W = 1, H = 1;
 function resize() {
   const r = wrap.getBoundingClientRect();
@@ -2267,9 +2267,9 @@ document.getElementById('swing').addEventListener('input', function() {
 });
 
 // Sequencer transport
-document.getElementById('seqPlay').addEventListener('click', seqPlay);
-document.getElementById('seqPause').addEventListener('click', seqPauseFn);
-document.getElementById('seqStop').addEventListener('click', seqStop);
+document.getElementById('seqPlay').addEventListener('click', () => {
+  if (seqPlaying) seqStop(); else seqPlay();
+});
 
 // Pattern tools
 document.getElementById('seqRnd').addEventListener('click', seqRandomise);
@@ -2447,6 +2447,11 @@ document.addEventListener('keydown', e => {
     closeCollPanel();
     closeSettings(); setSelectedTool(null); return;
   }
+  if (e.key === ' ' && e.target === document.body) {
+    e.preventDefault();
+    if (seqPlaying) seqStop(); else seqPlay();
+    return;
+  }
   if (e.target.tagName === 'INPUT' && e.target.type === 'text') return;
   if (e.repeat) return;
   const key = e.key.toLowerCase();
@@ -2617,8 +2622,9 @@ function seqStop() {
 }
 
 function seqUpdateTransport() {
-  document.getElementById('seqPlay').classList.toggle('seq-active', seqPlaying);
-  document.getElementById('seqPause').classList.toggle('seq-active', seqPaused);
+  const playBtn = document.getElementById('seqPlay');
+  playBtn.textContent = seqPlaying ? '■ STOP' : '▶ PLAY';
+  playBtn.classList.toggle('seq-active', seqPlaying);
 }
 
 function spawnSeqParticle(stepIdx) {
@@ -3492,7 +3498,7 @@ function loop() {
   requestAnimationFrame(loop);
 }
 
-initParticles(12);
+initParticles(0);
 seqRenderCells();
 loop();
 </script>

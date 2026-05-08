@@ -20,7 +20,7 @@ sed -n '/<script>/,/<\/script>/p' index.html | head -n -1 | tail -n +2 > /tmp/ch
 
 ## Architecture
 
-The entire application is one `index.html` file (~3400 lines). CSS, HTML, and JS are all inline. The JS is structured with section comments (`// ── Section Name ──`).
+The entire application is one `index.html` file (~3500 lines). CSS, HTML, and JS are all inline. The JS is structured with section comments (`// ── Section Name ──`).
 
 ### The "Warmth" Abstraction
 
@@ -41,7 +41,7 @@ Called via `requestAnimationFrame`. Each frame runs: `updateLFO` → `updateChor
 
 `physics()` is the heaviest function: applies gravity/wind/viscosity, scene object forces, boundary bounces, particle–particle collisions (spatial grid above 32 particles), collision object resolution, key-note lifetime transitions, and particle culling.
 
-`draw()` renders to two canvases stacked vertically: `#main` (particle scene) and `#scope` (oscilloscope). Below them sits `#seqWrap` (step sequencer strip). Canvas height = wrapper height − 60px (scope) − 80px (sequencer).
+`draw()` renders to two canvases stacked vertically: `#main` (particle scene) and `#scope` (oscilloscope). Below them sits `#seqWrap` (step sequencer strip). Canvas height = wrapper height − 60px (scope) − 110px (sequencer). The JS constant `SEQ_H = 110` must match the CSS `#seqWrap { height: 110px }` — update both together.
 
 ### Two Kinds of "Objects"
 
@@ -57,6 +57,8 @@ When enabled, `updateChordVoicing()` runs each frame: flood-fills proximity clus
 
 Uses AudioContext lookahead scheduling (100ms ahead, 25ms interval). `seqScheduler()` runs `setTimeout`-based loops separately from `requestAnimationFrame` to ensure tight timing. Steps fire `spawnSeqParticle()` which creates particles with `isKeyNote=true, keyReleased=true` (already released, subject to NOTE LIFETIME rules). Swing is implemented as asymmetric step intervals: even steps get `base * (1 + swingFactor)`, odd steps get `base * (1 - swingFactor)`.
 
+The transport has a single **play/stop toggle** button (`#seqPlay`): clicking or pressing **spacebar** while stopped calls `seqPlay()`; while playing calls `seqStop()` (resets to step 0). There is no pause — stop always resets. `seqUpdateTransport()` updates the button label between `▶ PLAY` and `■ STOP`.
+
 ### Collision Audio — Voice Pool
 
 `acquireCollVoice(vol, pan)` manages a 16-voice pool (`collVoices[]`). When full, it steals the quietest active voice. Voices route: source nodes → gainNode → StereoPannerNode → masterGain. `pruneCollVoices()` removes expired voices and decays `hitLevel` on all collision objects each frame.
@@ -68,3 +70,5 @@ Uses AudioContext lookahead scheduling (100ms ahead, 25ms interval). `seqSchedul
 - Slider display elements follow the convention `id` + `v` suffix (e.g. slider `bpm` → display span `bpmv`)
 - `setSelectedTool(type)` cancels collision placement mode; `setCollPlacementType(type)` does not call back into setSelectedTool (no circular dependency)
 - AudioContext (`AC`) is lazily initialized on first user interaction via `initAudio()`; `audioStarted` guards all audio operations
+- App starts with `initParticles(0)` — empty canvas on load. The RESET button calls `initParticles(12)`.
+- **Panic button** (`#panicBtn`): sets `masterGain.gain` to 0 via `cancelScheduledValues` + `setValueAtTime`, then calls `AC.suspend()` and `seqStop()`. Clicking again calls `AC.resume()` and restores gain from the mastervol slider.

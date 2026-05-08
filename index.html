@@ -714,24 +714,22 @@ function warmthToChord(w) {
   return CHORD_QUALITIES[CHORD_QUALITIES.length - 1];
 }
 
-// Returns frequency for semitone interval above ROOT (at right octave for warmth)
-function chordIntervalToFreq(semitone, octaveHint) {
-  return ROOT * Math.pow(2, (octaveHint * 12 + semitone) / 12);
-}
-
 let currentChordName    = '';
 let chordOverlayName    = '';
-let chordOverlayChanged = 0; // timestamp of last chord name change
+let chordOverlayChanged = 0;
+let chordLockUntil      = 0; // timestamp — chord quality cannot change before this
 
 const CHORD_CLUSTER_DIST = 130;
+const CHORD_LOCK_MS      = 3000;
+const MAJ7_IDX           = 2; // index in CHORD_QUALITIES — used as soft default
 
 function updateChordVoicing() {
   if (!document.getElementById('chordOn').checked) {
-    for (const p of particles) p._chordFreq = null;
+    for (const p of particles) { p._chordFreq = null; p._lastSyncedChordFreq = null; }
     return;
   }
 
-  // Find clusters: particles with ≥2 neighbours within CHORD_CLUSTER_DIST
+  // ── 1. Find neighbours ──────────────────────────────────────
   const neighbourCount = new Array(particles.length).fill(0);
   for (let i = 0; i < particles.length - 1; i++) {
     for (let j = i + 1; j < particles.length; j++) {
@@ -742,14 +740,14 @@ function updateChordVoicing() {
     }
   }
 
-  // Group clustered particles via flood-fill
+  // ── 2. Flood-fill clusters (only particles with ≥2 neighbours) ──
   const assigned = new Array(particles.length).fill(-1);
   const clusters  = [];
   for (let i = 0; i < particles.length; i++) {
     if (neighbourCount[i] < 2 || assigned[i] !== -1) continue;
     const cluster = [];
-    const queue = [i];
-    assigned[i] = clusters.length;
+    const queue   = [i];
+    assigned[i]   = clusters.length;
     while (queue.length) {
       const ci = queue.shift();
       cluster.push(ci);
@@ -764,38 +762,68 @@ function updateChordVoicing() {
     clusters.push(cluster);
   }
 
-  // Clear non-clustered particles
+  // Clear particles not in any qualifying cluster
   for (let i = 0; i < particles.length; i++) {
     if (assigned[i] === -1) particles[i]._chordFreq = null;
   }
 
-  // Voice each cluster — each particle uses its OWN warmth to pick chord quality,
-  // so cold and hot particles voice their own intervals above a shared cluster root.
+  // ── 3. Voice each cluster ────────────────────────────────────
   let dominantChord = null, dominantSize = 0;
+  const now = performance.now();
+
   for (const cluster of clusters) {
+    // Rule 5: need ≥3 particles to sound like a chord
+    if (cluster.length < 3) {
+      for (const i of cluster) particles[i]._chordFreq = null;
+      continue;
+    }
+
+    // Average warmth determines the root octave placement
     const avgWarmth = cluster.reduce((s, i) => s + particles[i].warmth, 0) / cluster.length;
-    const baseOct   = 1 + Math.floor(avgWarmth * 3);
-    const qualityCount = {};
-    cluster.forEach((pi, slot) => {
-      const pw    = particles[pi].warmth;
-      const chord = warmthToChord(pw);
-      const semi  = chord.intervals[slot % chord.intervals.length];
-      particles[pi]._chordFreq = chordIntervalToFreq(semi, baseOct);
-      qualityCount[chord.name] = (qualityCount[chord.name] || 0) + 1;
+    // Root in octave 1-2 (220–440 Hz range) — keeps voicing from going too high
+    const rootFreq  = ROOT * Math.pow(2, 1 + avgWarmth);
+
+    // Rule 4: determine chord quality only if lock has expired
+    // Rule 6: use majority-vote histogram; default to maj7 on ties
+    const counts = new Array(CHORD_QUALITIES.length).fill(0);
+    for (const i of cluster) {
+      for (let qi = 0; qi < CHORD_QUALITIES.length; qi++) {
+        if (particles[i].warmth < CHORD_QUALITIES[qi].max) { counts[qi]++; break; }
+      }
+    }
+    let bestQIdx = MAJ7_IDX; // default: maj7
+    if (now >= chordLockUntil) {
+      // Find plurality, preferring maj7 on tie (only upgrade to tense quality if clearly dominant)
+      for (let qi = 0; qi < CHORD_QUALITIES.length; qi++) {
+        if (counts[qi] > counts[bestQIdx] + (qi > MAJ7_IDX ? 1 : 0)) bestQIdx = qi;
+      }
+    }
+    const chord = CHORD_QUALITIES[bestQIdx];
+
+    // Rule 2: sort cluster by warmth, coolest → root/fifth, warmest → extensions
+    const sorted = [...cluster].sort((a, b) => particles[a].warmth - particles[b].warmth);
+
+    // Rule 1: voice all intervals within one octave of the root (close position)
+    sorted.forEach((pi, slot) => {
+      const semi    = chord.intervals[slot % chord.intervals.length];
+      // All semitones kept within 0-14 above root → max one octave span
+      const target  = rootFreq * Math.pow(2, semi / 12);
+      particles[pi]._chordFreq = target;
     });
-    // Display the plurality chord quality for this cluster
-    const top = Object.entries(qualityCount).sort((a, b) => b[1] - a[1])[0][0];
+
     if (cluster.length > dominantSize) {
       dominantSize  = cluster.length;
-      dominantChord = top.toUpperCase();
+      dominantChord = { name: chord.name.toUpperCase(), qIdx: bestQIdx };
     }
   }
 
-  const newName = dominantChord || '';
-  if (newName !== currentChordName) {
+  // ── 4. Update display with 3-second lock ─────────────────────
+  const newName = dominantChord ? dominantChord.name : '';
+  if (newName !== currentChordName && now >= chordLockUntil) {
     currentChordName    = newName;
     chordOverlayName    = newName;
-    chordOverlayChanged = performance.now();
+    chordOverlayChanged = now;
+    chordLockUntil      = now + CHORD_LOCK_MS;
     document.getElementById('chordDisplay').textContent = newName;
   }
 }
@@ -994,14 +1022,18 @@ class Particle {
     const spd  = Math.hypot(this.vx, this.vy);
     const mode = getSynthMode();
     const targetFreq = freq * (1 + spd * 0.006);
+    // Use slow glide when chord voicing is active and target changed
+    const freqTau = (!immediate && this._chordFreq && this._chordFreq !== this._lastSyncedChordFreq)
+      ? 0.3 : tau;
+    if (this._chordFreq) this._lastSyncedChordFreq = this._chordFreq;
 
     if (mode === 'fm' && this.osc) {
       const type = w < 0.33 ? 'sine' : w < 0.66 ? 'triangle' : 'sawtooth';
       if (this.osc.type !== type) this.osc.type = type;
-      this.osc.frequency.setTargetAtTime(targetFreq, t, tau);
+      this.osc.frequency.setTargetAtTime(targetFreq, t, freqTau);
       const ratioSel = document.getElementById('fmratio').value;
       const ratio = ratioSel === 'free' ? this.fmRatio : parseFloat(ratioSel);
-      this.fmOsc.frequency.setTargetAtTime(freq * ratio, t, tau);
+      this.fmOsc.frequency.setTargetAtTime(freq * ratio, t, freqTau);
       if (this.fbGain) {
         this.fbGain.gain.setTargetAtTime(sl('fmfeedback') * freq * 0.35, t, 0.04);
       }
@@ -1018,7 +1050,7 @@ class Particle {
       this.oscGain.gain.setTargetAtTime(this.tension * 0.05, t, tau);
 
     } else if (mode === 'sub' && this.osc) {
-      this.osc.frequency.setTargetAtTime(targetFreq, t, tau);
+      this.osc.frequency.setTargetAtTime(targetFreq, t, freqTau);
       const baseCutoff = Math.min(8000, freq * (1.5 + spd * 0.12));
       this.subFilter.frequency.setTargetAtTime(baseCutoff, t, 0.08);
       this.subFilter.Q.value = sl('resonance');
@@ -1028,7 +1060,7 @@ class Particle {
       const spread = sl('harmspread');
       for (let h = 0; h < 6; h++) {
         const harmN = h + 1;
-        this.addOscs[h].frequency.setTargetAtTime(targetFreq * harmN, t, tau);
+        this.addOscs[h].frequency.setTargetAtTime(targetFreq * harmN, t, freqTau);
         const amp = (1 / harmN) * (1 + w * spread * h);
         this.addGains[h].gain.setTargetAtTime(this.tension * 0.008 * amp, t, tau);
       }

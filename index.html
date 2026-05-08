@@ -1,0 +1,964 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Particle Synth</title>
+<style>
+* { margin: 0; padding: 0; box-sizing: border-box; }
+
+body {
+  background: #07080f;
+  color: #b0bcd0;
+  font-family: 'Courier New', Courier, monospace;
+  overflow: hidden;
+  display: flex;
+  height: 100vh;
+  width: 100vw;
+}
+
+#canvas-wrap {
+  flex: 1;
+  position: relative;
+  min-width: 0;
+}
+
+canvas {
+  display: block;
+  cursor: crosshair;
+}
+
+/* ── Side Panel ─────────────────────────────────────────────── */
+#panel {
+  width: 256px;
+  flex-shrink: 0;
+  background: #090b14;
+  border-left: 1px solid #151c2e;
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+  overflow-y: auto;
+  overflow-x: hidden;
+  z-index: 10;
+}
+
+.panel-section {
+  padding: 14px 16px;
+  border-bottom: 1px solid #0f1525;
+}
+
+.panel-title {
+  font-size: 11px;
+  letter-spacing: 4px;
+  color: #4060c8;
+  text-transform: uppercase;
+  margin-bottom: 2px;
+}
+
+.panel-subtitle {
+  font-size: 8px;
+  letter-spacing: 1px;
+  color: #2a3550;
+  text-transform: uppercase;
+  margin-bottom: 10px;
+}
+
+.info-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-size: 9px;
+  letter-spacing: 1.5px;
+  text-transform: uppercase;
+  color: #3a4a60;
+  margin-bottom: 5px;
+}
+
+.info-row .val {
+  color: #8090b0;
+  font-size: 10px;
+}
+
+.info-row .val.active { color: #4080e0; }
+.info-row .val.warn   { color: #e04040; }
+
+/* ── Controls ───────────────────────────────────────────────── */
+.ctl {
+  margin-bottom: 12px;
+}
+
+.ctl:last-child { margin-bottom: 0; }
+
+.ctl-label {
+  display: flex;
+  justify-content: space-between;
+  font-size: 9px;
+  letter-spacing: 1.5px;
+  text-transform: uppercase;
+  color: #3a4a60;
+  margin-bottom: 5px;
+}
+
+.ctl-label .ctl-val {
+  color: #607090;
+  min-width: 36px;
+  text-align: right;
+}
+
+input[type=range] {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 100%;
+  height: 2px;
+  background: #111827;
+  border-radius: 1px;
+  outline: none;
+  cursor: pointer;
+}
+
+input[type=range]::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  width: 11px;
+  height: 11px;
+  border-radius: 50%;
+  background: #3a5ae0;
+  cursor: pointer;
+  box-shadow: 0 0 7px #3a5ae088;
+  transition: box-shadow 0.1s;
+}
+
+input[type=range]:hover::-webkit-slider-thumb {
+  box-shadow: 0 0 12px #5070ff;
+}
+
+/* ── Buttons ────────────────────────────────────────────────── */
+.btn {
+  width: 100%;
+  background: #0c1020;
+  border: 1px solid #141e34;
+  color: #607090;
+  font-family: 'Courier New', monospace;
+  font-size: 9px;
+  letter-spacing: 2px;
+  text-transform: uppercase;
+  padding: 8px 10px;
+  cursor: pointer;
+  border-radius: 2px;
+  transition: all 0.12s;
+  margin-bottom: 6px;
+  text-align: center;
+}
+
+.btn:last-child { margin-bottom: 0; }
+
+.btn:hover {
+  border-color: #3a5ae0;
+  color: #8098f0;
+  box-shadow: 0 0 8px #3a5ae033;
+}
+
+.btn:active { background: #141a30; }
+
+.btn-shock {
+  border-color: #c04020;
+  color: #e06040;
+}
+
+.btn-shock:hover {
+  border-color: #ff5030;
+  color: #ff8060;
+  box-shadow: 0 0 12px #ff503040;
+}
+
+.btn-shock.fired {
+  background: #1a0a05;
+  border-color: #ff6040;
+  color: #ff9070;
+  box-shadow: 0 0 20px #ff403080;
+}
+
+.btn-add:disabled,
+.btn-add[disabled] {
+  opacity: 0.3;
+  cursor: not-allowed;
+}
+
+/* ── Hint ───────────────────────────────────────────────────── */
+.hint {
+  font-size: 8px;
+  letter-spacing: 0.8px;
+  color: #1e2a40;
+  line-height: 1.7;
+  text-transform: uppercase;
+}
+
+.hint span { color: #2e3e58; }
+</style>
+</head>
+<body>
+
+<div id="canvas-wrap">
+  <canvas id="canvas"></canvas>
+</div>
+
+<div id="panel">
+
+  <div class="panel-section">
+    <div class="panel-title">Particle Synth</div>
+    <div class="panel-subtitle">Physics → Sound</div>
+    <div class="info-row">
+      <span>Particles</span>
+      <span class="val" id="ui-count">12 / 24</span>
+    </div>
+    <div class="info-row">
+      <span>Audio</span>
+      <span class="val" id="ui-audio">Click to arm</span>
+    </div>
+    <div class="info-row">
+      <span>Energy</span>
+      <span class="val" id="ui-energy">—</span>
+    </div>
+  </div>
+
+  <div class="panel-section">
+    <div class="panel-subtitle" style="margin-bottom:14px">Effectors</div>
+
+    <div class="ctl">
+      <div class="ctl-label"><span>Gravity</span><span class="ctl-val" id="lbl-gravity">0.30</span></div>
+      <input type="range" id="sl-gravity" min="0" max="1" step="0.01" value="0.30">
+    </div>
+
+    <div class="ctl">
+      <div class="ctl-label"><span>Wind</span><span class="ctl-val" id="lbl-wind">0.00</span></div>
+      <input type="range" id="sl-wind" min="-1" max="1" step="0.01" value="0">
+    </div>
+
+    <div class="ctl">
+      <div class="ctl-label"><span>Viscosity</span><span class="ctl-val" id="lbl-viscosity">0.25</span></div>
+      <input type="range" id="sl-viscosity" min="0" max="1" step="0.01" value="0.25">
+    </div>
+
+    <div class="ctl">
+      <div class="ctl-label"><span>Bounciness</span><span class="ctl-val" id="lbl-bounciness">0.75</span></div>
+      <input type="range" id="sl-bounciness" min="0" max="1" step="0.01" value="0.75">
+    </div>
+  </div>
+
+  <div class="panel-section">
+    <div class="panel-subtitle" style="margin-bottom:14px">Audio Mix</div>
+
+    <div class="ctl">
+      <div class="ctl-label"><span>Reverb Wet</span><span class="ctl-val" id="lbl-reverb">0.35</span></div>
+      <input type="range" id="sl-reverb" min="0" max="1" step="0.01" value="0.35">
+    </div>
+
+    <div class="ctl">
+      <div class="ctl-label"><span>Master Vol</span><span class="ctl-val" id="lbl-volume">0.70</span></div>
+      <input type="range" id="sl-volume" min="0" max="1" step="0.01" value="0.70">
+    </div>
+  </div>
+
+  <div class="panel-section">
+    <button class="btn btn-shock" id="btn-shock">!! Disturbance !!</button>
+  </div>
+
+  <div class="panel-section">
+    <button class="btn btn-add" id="btn-add">+ Add Particle</button>
+    <button class="btn" id="btn-reset">Reset System</button>
+  </div>
+
+  <div class="panel-section" style="margin-top:auto">
+    <div class="hint">
+      <span>Click + hold</span> canvas<br>
+      to attract particles<br><br>
+      <span>Warmth</span> → pitch + color<br>
+      <span>Tension</span> → volume + size<br>
+      <span>Collisions</span> → accents
+    </div>
+  </div>
+
+</div>
+
+<script>
+'use strict';
+
+// ─────────────────────────────────────────────────────────────
+// Audio subsystem
+// ─────────────────────────────────────────────────────────────
+
+let AC = null;           // AudioContext
+let particleBus = null;  // GainNode collecting all oscillators
+let dryBus = null;
+let wetBus = null;
+let convolver = null;
+let masterGain = null;
+let compressor = null;
+let analyser = null;
+let audioReady = false;
+
+function buildReverb(ac, duration, decay) {
+  const len = Math.floor(ac.sampleRate * duration);
+  const buf = ac.createBuffer(2, len, ac.sampleRate);
+  for (let c = 0; c < 2; c++) {
+    const d = buf.getChannelData(c);
+    for (let i = 0; i < len; i++) {
+      d[i] = (Math.random() * 2 - 1) * Math.pow(1 - i / len, decay);
+    }
+  }
+  return buf;
+}
+
+function initAudio() {
+  if (audioReady) return;
+
+  AC = new (window.AudioContext || window.webkitAudioContext)();
+
+  // Signal chain:
+  // particleBus ─┬─ dryBus ──────────┬─ masterGain ─ compressor ─ analyser ─ out
+  //              └─ convolver ─ wetBus ┘
+
+  particleBus = AC.createGain();
+  particleBus.gain.value = 1;
+
+  convolver = AC.createConvolver();
+  convolver.buffer = buildReverb(AC, 2.8, 2.5);
+
+  dryBus = AC.createGain();
+  dryBus.gain.value = 0.65;
+
+  wetBus = AC.createGain();
+  wetBus.gain.value = 0.35;
+
+  masterGain = AC.createGain();
+  masterGain.gain.value = 0.70;
+
+  compressor = AC.createDynamicsCompressor();
+  compressor.threshold.value = -16;
+  compressor.knee.value     = 8;
+  compressor.ratio.value    = 5;
+  compressor.attack.value   = 0.003;
+  compressor.release.value  = 0.18;
+
+  analyser = AC.createAnalyser();
+  analyser.fftSize = 1024;
+  analyser.smoothingTimeConstant = 0.88;
+
+  particleBus.connect(dryBus);
+  particleBus.connect(convolver);
+  convolver.connect(wetBus);
+  dryBus.connect(masterGain);
+  wetBus.connect(masterGain);
+  masterGain.connect(compressor);
+  compressor.connect(analyser);
+  analyser.connect(AC.destination);
+
+  audioReady = true;
+  setAudioUI('Active', 'active');
+
+  // Wire up any particles created before audio init
+  for (const p of particles) {
+    if (!p.osc) p.spawnOscillator();
+  }
+}
+
+// ─────────────────────────────────────────────────────────────
+// Colour helpers
+// ─────────────────────────────────────────────────────────────
+
+function warmthRGB(w) {
+  // 0→deep blue, 0.33→cyan, 0.66→orange, 1→red
+  w = Math.max(0, Math.min(1, w));
+  let r, g, b;
+  if (w < 0.33) {
+    const t = w / 0.33;
+    r = lerp(10,  0,   t);
+    g = lerp(30,  200, t);
+    b = lerp(180, 255, t);
+  } else if (w < 0.66) {
+    const t = (w - 0.33) / 0.33;
+    r = lerp(0,   255, t);
+    g = lerp(200, 150, t);
+    b = lerp(255, 0,   t);
+  } else {
+    const t = (w - 0.66) / 0.34;
+    r = lerp(255, 255, t);
+    g = lerp(150, 20,  t);
+    b = lerp(0,   0,   t);
+  }
+  return [Math.round(r), Math.round(g), Math.round(b)];
+}
+
+function warmthCSS(w, a = 1) {
+  const [r, g, b] = warmthRGB(w);
+  return `rgba(${r},${g},${b},${a})`;
+}
+
+function lerp(a, b, t) { return a + (b - a) * t; }
+
+// ─────────────────────────────────────────────────────────────
+// Particle
+// ─────────────────────────────────────────────────────────────
+
+const MAX_PARTICLES = 24;
+let particles = [];
+
+class Particle {
+  constructor(x, y, warmth, tension) {
+    this.x  = x;  this.y  = y;
+    this.vx = (Math.random() - 0.5) * 120;
+    this.vy = (Math.random() - 0.5) * 80;
+    this.mass    = 0.7 + Math.random() * 0.7;
+    this.warmth  = warmth  ?? Math.random();
+    this.tension = tension ?? (0.25 + Math.random() * 0.6);
+    this.prevX = x;
+    this.prevY = y;
+    // audio
+    this.osc      = null;
+    this.gainNode = null;
+    if (audioReady) this.spawnOscillator();
+  }
+
+  get radius() {
+    return 5 + this.tension * 11;
+  }
+
+  spawnOscillator() {
+    this.osc = AC.createOscillator();
+    this.gainNode = AC.createGain();
+    this.gainNode.gain.setValueAtTime(0, AC.currentTime);
+    this.osc.connect(this.gainNode);
+    this.gainNode.connect(particleBus);
+    this.osc.start();
+    this._applyAudio(true);
+  }
+
+  _applyAudio(immediate) {
+    if (!this.osc) return;
+    const t = AC.currentTime;
+
+    // frequency from warmth + velocity mod
+    const speed   = Math.hypot(this.vx, this.vy);
+    const baseHz  = 80 + this.warmth * 720;
+    const hz      = baseHz + speed * 0.12;
+
+    // oscillator type threshold
+    const type = this.warmth < 0.33 ? 'sine'
+               : this.warmth < 0.66 ? 'triangle'
+               : 'sawtooth';
+    if (this.osc.type !== type) this.osc.type = type;
+
+    // gain: each particle contributes independently; compressor handles mix
+    const gainVal = this.tension * 0.042;
+
+    if (immediate) {
+      this.osc.frequency.setValueAtTime(hz, t);
+      this.gainNode.gain.setValueAtTime(gainVal, t);
+    } else {
+      this.osc.frequency.setTargetAtTime(hz, t, 0.025);
+      this.gainNode.gain.setTargetAtTime(gainVal, t, 0.04);
+    }
+  }
+
+  // Brief gain spike on collision or wall hit
+  spike(amount) {
+    this.tension = Math.min(1, this.tension + amount);
+    if (!this.gainNode) return;
+    const t = AC.currentTime;
+    const peak = this.tension * 0.042;
+    this.gainNode.gain.cancelScheduledValues(t);
+    this.gainNode.gain.setValueAtTime(peak, t);
+    this.gainNode.gain.setTargetAtTime(peak * 0.6, t + 0.015, 0.03);
+  }
+
+  update(dt, params) {
+    this.prevX = this.x;
+    this.prevY = this.y;
+
+    const { gravity, wind, viscosity, bounciness } = params;
+
+    // Forces
+    this.vy += gravity * dt;
+    this.vx += wind * dt;
+
+    // Attractor
+    if (attractor.active) {
+      const dx = attractor.x - this.x;
+      const dy = attractor.y - this.y;
+      const dSq = dx * dx + dy * dy;
+      const d   = Math.sqrt(dSq);
+      if (d > 1) {
+        const f = Math.min(18000, 12000 / dSq * d) / d;
+        this.vx += dx * f * dt;
+        this.vy += dy * f * dt;
+      }
+    }
+
+    // Viscous drag: frame-rate independent exponential decay
+    const k = viscosity * viscosity * 3.5;
+    const drag = Math.exp(-k * dt);
+    this.vx *= drag;
+    this.vy *= drag;
+
+    // Speed cap
+    const spd = Math.hypot(this.vx, this.vy);
+    if (spd > 700) { this.vx *= 700 / spd; this.vy *= 700 / spd; }
+
+    // Integrate
+    this.x += this.vx * dt;
+    this.y += this.vy * dt;
+
+    // Wall collisions
+    const r  = this.radius;
+    const bW = SIM_W;
+    const bH = SIM_H;
+
+    if (this.x - r < 0) {
+      this.x = r;
+      this.vx = Math.abs(this.vx) * bounciness;
+      this.spike(0.12 * bounciness);
+    } else if (this.x + r > bW) {
+      this.x = bW - r;
+      this.vx = -Math.abs(this.vx) * bounciness;
+      this.spike(0.12 * bounciness);
+    }
+    if (this.y - r < 0) {
+      this.y = r;
+      this.vy = Math.abs(this.vy) * bounciness;
+      this.spike(0.10 * bounciness);
+    } else if (this.y + r > bH) {
+      this.y = bH - r;
+      this.vy = -Math.abs(this.vy) * bounciness;
+      this.spike(0.10 * bounciness);
+    }
+
+    // Tension slow decay (energy loss to environment)
+    // More decay when viscosity is higher
+    const tDecay = Math.exp(-(0.05 + viscosity * 0.15) * dt);
+    this.tension = Math.max(0.015, this.tension * tDecay);
+
+    this._applyAudio(false);
+  }
+
+  destroy() {
+    if (!this.osc) return;
+    const t = AC.currentTime;
+    this.gainNode.gain.setTargetAtTime(0, t, 0.015);
+    setTimeout(() => {
+      try { this.osc.stop(); } catch (_) {}
+      this.osc.disconnect();
+      this.gainNode.disconnect();
+    }, 120);
+    this.osc = null;
+    this.gainNode = null;
+  }
+}
+
+// Particle-particle collision resolution
+function resolveCollisions(bounciness) {
+  for (let i = 0; i < particles.length - 1; i++) {
+    for (let j = i + 1; j < particles.length; j++) {
+      const a = particles[i];
+      const b = particles[j];
+      const dx = b.x - a.x;
+      const dy = b.y - a.y;
+      const minD = a.radius + b.radius;
+      const dSq  = dx * dx + dy * dy;
+      if (dSq >= minD * minD || dSq < 0.001) continue;
+
+      const d  = Math.sqrt(dSq);
+      const nx = dx / d;
+      const ny = dy / d;
+
+      // Separate
+      const overlap = (minD - d) * 0.5;
+      const totalM  = a.mass + b.mass;
+      a.x -= nx * overlap * (b.mass / totalM);
+      a.y -= ny * overlap * (b.mass / totalM);
+      b.x += nx * overlap * (a.mass / totalM);
+      b.y += ny * overlap * (a.mass / totalM);
+
+      // Relative velocity along normal
+      const dvx = a.vx - b.vx;
+      const dvy = a.vy - b.vy;
+      const dot  = dvx * nx + dvy * ny;
+      if (dot <= 0) continue; // separating
+
+      const impulse = (1 + bounciness) * dot / totalM;
+      a.vx -= impulse * b.mass * nx;
+      a.vy -= impulse * b.mass * ny;
+      b.vx += impulse * a.mass * nx;
+      b.vy += impulse * a.mass * ny;
+
+      // Warmth/tension exchange (thermal blending)
+      const wBlend = 0.18;
+      const tBlend = 0.16;
+      const wD = (b.warmth  - a.warmth)  * wBlend;
+      const tD = (b.tension - a.tension) * tBlend;
+      a.warmth  = Math.max(0, Math.min(1, a.warmth  + wD));
+      b.warmth  = Math.max(0, Math.min(1, b.warmth  - wD));
+      a.tension = Math.max(0.015, Math.min(1, a.tension + tD));
+      b.tension = Math.max(0.015, Math.min(1, b.tension - tD));
+
+      // Accent spike proportional to impact speed
+      const spike = Math.min(0.35, Math.abs(dot) * 0.0008);
+      a.spike(spike);
+      b.spike(spike);
+    }
+  }
+}
+
+// ─────────────────────────────────────────────────────────────
+// Canvas / layout
+// ─────────────────────────────────────────────────────────────
+
+const canvas = document.getElementById('canvas');
+const CTX    = canvas.getContext('2d');
+
+const SCOPE_H = 76;
+let CW, CH, SIM_W, SIM_H;
+
+function resize() {
+  CW    = canvas.parentElement.clientWidth;
+  CH    = window.innerHeight;
+  SIM_W = CW;
+  SIM_H = CH - SCOPE_H;
+  canvas.width  = CW;
+  canvas.height = CH;
+}
+
+resize();
+window.addEventListener('resize', resize);
+
+// ─────────────────────────────────────────────────────────────
+// Attractor
+// ─────────────────────────────────────────────────────────────
+
+const attractor = { active: false, x: 0, y: 0 };
+
+// ─────────────────────────────────────────────────────────────
+// Main loop
+// ─────────────────────────────────────────────────────────────
+
+let prevTime = 0;
+const scopeBuf = new Uint8Array(1024);
+
+function getParams() {
+  return {
+    gravity    : parseFloat(document.getElementById('sl-gravity').value) * 280,
+    wind       : parseFloat(document.getElementById('sl-wind').value)    * 140,
+    viscosity  : parseFloat(document.getElementById('sl-viscosity').value),
+    bounciness : parseFloat(document.getElementById('sl-bounciness').value),
+  };
+}
+
+function loop(now) {
+  requestAnimationFrame(loop);
+
+  const dt = Math.min((now - prevTime) / 1000, 0.04);
+  prevTime = now;
+  if (dt <= 0) return;
+
+  const params = getParams();
+
+  // Physics
+  for (const p of particles) p.update(dt, params);
+  resolveCollisions(params.bounciness);
+
+  // Render
+  render();
+
+  // UI
+  const totalE = particles.reduce((s, p) => s + p.tension, 0) / Math.max(1, particles.length);
+  document.getElementById('ui-count').textContent  = `${particles.length} / ${MAX_PARTICLES}`;
+  document.getElementById('ui-energy').textContent = totalE.toFixed(2);
+  document.getElementById('btn-add').disabled      = particles.length >= MAX_PARTICLES;
+}
+
+// ─────────────────────────────────────────────────────────────
+// Rendering
+// ─────────────────────────────────────────────────────────────
+
+function render() {
+  CTX.fillStyle = '#07080f';
+  CTX.fillRect(0, 0, CW, CH);
+
+  renderConnections();
+  renderParticles();
+  renderScope();
+  renderAttractor();
+}
+
+function renderConnections() {
+  const LINK_D = 155;
+  CTX.save();
+  CTX.lineWidth = 0.6;
+  for (let i = 0; i < particles.length - 1; i++) {
+    for (let j = i + 1; j < particles.length; j++) {
+      const a = particles[i];
+      const b = particles[j];
+      const dx = b.x - a.x;
+      const dy = b.y - a.y;
+      const d  = Math.hypot(dx, dy);
+      if (d > LINK_D) continue;
+      const alpha = (1 - d / LINK_D) * 0.22;
+      CTX.strokeStyle = warmthCSS((a.warmth + b.warmth) * 0.5, alpha);
+      CTX.beginPath();
+      CTX.moveTo(a.x, a.y);
+      CTX.lineTo(b.x, b.y);
+      CTX.stroke();
+    }
+  }
+  CTX.restore();
+}
+
+function renderParticles() {
+  for (const p of particles) {
+    const r = p.radius;
+    const [pr, pg, pb] = warmthRGB(p.warmth);
+
+    // Velocity trail
+    const trailLen = Math.min(Math.hypot(p.vx, p.vy) * 0.055, 30);
+    if (trailLen > 1) {
+      const spd = Math.hypot(p.vx, p.vy);
+      const tx  = p.x - (p.vx / spd) * trailLen;
+      const ty  = p.y - (p.vy / spd) * trailLen;
+      CTX.save();
+      CTX.lineCap      = 'round';
+      CTX.lineWidth    = r * 0.45;
+      CTX.strokeStyle  = `rgba(${pr},${pg},${pb},0.22)`;
+      CTX.shadowBlur   = 4;
+      CTX.shadowColor  = `rgba(${pr},${pg},${pb},0.3)`;
+      CTX.beginPath();
+      CTX.moveTo(p.x, p.y);
+      CTX.lineTo(tx, ty);
+      CTX.stroke();
+      CTX.restore();
+    }
+
+    // Outer glow pass
+    CTX.save();
+    CTX.shadowBlur  = 8 + p.tension * 40;
+    CTX.shadowColor = `rgba(${pr},${pg},${pb},0.75)`;
+
+    // Radial gradient body
+    const grad = CTX.createRadialGradient(p.x, p.y, 0, p.x, p.y, r);
+    grad.addColorStop(0,   `rgba(${pr},${pg},${pb},1)`);
+    grad.addColorStop(0.55, `rgba(${pr},${pg},${pb},0.65)`);
+    grad.addColorStop(1,   `rgba(${pr},${pg},${pb},0)`);
+
+    CTX.beginPath();
+    CTX.arc(p.x, p.y, r, 0, Math.PI * 2);
+    CTX.fillStyle = grad;
+    CTX.fill();
+    CTX.restore();
+
+    // Hot core dot
+    if (p.tension > 0.4) {
+      CTX.save();
+      CTX.shadowBlur  = 12;
+      CTX.shadowColor = `rgba(255,255,255,${p.tension * 0.5})`;
+      CTX.beginPath();
+      CTX.arc(p.x, p.y, r * 0.28, 0, Math.PI * 2);
+      CTX.fillStyle = `rgba(255,255,255,${p.tension * 0.45})`;
+      CTX.fill();
+      CTX.restore();
+    }
+  }
+}
+
+function renderScope() {
+  const sy = SIM_H;
+
+  // Background strip
+  CTX.fillStyle = '#050710';
+  CTX.fillRect(0, sy, CW, SCOPE_H);
+
+  // Top border
+  CTX.strokeStyle = '#101828';
+  CTX.lineWidth = 1;
+  CTX.beginPath();
+  CTX.moveTo(0, sy);
+  CTX.lineTo(CW, sy);
+  CTX.stroke();
+
+  // Label
+  CTX.fillStyle = '#1a2438';
+  CTX.font = '8px Courier New';
+  CTX.fillText('OSCILLOSCOPE', 8, sy + 11);
+
+  if (!audioReady || !analyser) return;
+
+  analyser.getByteTimeDomainData(scopeBuf);
+
+  const midY = sy + SCOPE_H / 2;
+  const amp  = SCOPE_H * 0.38;
+
+  // Center line
+  CTX.strokeStyle = '#0c1525';
+  CTX.lineWidth = 1;
+  CTX.beginPath();
+  CTX.moveTo(0, midY);
+  CTX.lineTo(CW, midY);
+  CTX.stroke();
+
+  // Waveform
+  CTX.save();
+  CTX.strokeStyle  = '#2a50e0';
+  CTX.lineWidth    = 1.5;
+  CTX.shadowBlur   = 8;
+  CTX.shadowColor  = '#1a38d0';
+  CTX.lineJoin     = 'round';
+  CTX.beginPath();
+
+  const n = analyser.fftSize;
+  const sw = CW / n;
+  for (let i = 0; i < n; i++) {
+    const v = ((scopeBuf[i] / 128.0) - 1.0) * amp;
+    const x = i * sw;
+    const y = midY + v;
+    i === 0 ? CTX.moveTo(x, y) : CTX.lineTo(x, y);
+  }
+  CTX.stroke();
+  CTX.restore();
+}
+
+function renderAttractor() {
+  if (!attractor.active) return;
+  CTX.save();
+  CTX.lineWidth = 1;
+  CTX.setLineDash([3, 7]);
+  for (let r = 18; r <= 80; r += 22) {
+    const a = 0.06 + 0.12 * (1 - r / 80);
+    CTX.strokeStyle = `rgba(80,130,255,${a})`;
+    CTX.beginPath();
+    CTX.arc(attractor.x, attractor.y, r, 0, Math.PI * 2);
+    CTX.stroke();
+  }
+  CTX.setLineDash([]);
+  CTX.restore();
+}
+
+// ─────────────────────────────────────────────────────────────
+// Particle management
+// ─────────────────────────────────────────────────────────────
+
+function spawnParticle(warmth, tension) {
+  if (particles.length >= MAX_PARTICLES) return;
+  const margin = 35;
+  const x = margin + Math.random() * (SIM_W - margin * 2);
+  const y = margin + Math.random() * (SIM_H - margin * 2);
+  particles.push(new Particle(x, y, warmth, tension));
+}
+
+function initParticles(n = 12) {
+  for (const p of particles) p.destroy();
+  particles = [];
+  for (let i = 0; i < n; i++) spawnParticle();
+}
+
+function fireDisturbance() {
+  for (const p of particles) {
+    const force = 150 + Math.random() * 250;
+    const angle = Math.random() * Math.PI * 2;
+    p.vx += Math.cos(angle) * force;
+    p.vy += Math.sin(angle) * force;
+    p.spike(0.35 + Math.random() * 0.55);
+  }
+  // Visual flash feedback
+  const btn = document.getElementById('btn-shock');
+  btn.classList.add('fired');
+  setTimeout(() => btn.classList.remove('fired'), 200);
+}
+
+// ─────────────────────────────────────────────────────────────
+// UI wiring
+// ─────────────────────────────────────────────────────────────
+
+function setAudioUI(text, state) {
+  const el = document.getElementById('ui-audio');
+  el.textContent = text;
+  el.className = `val${state === 'active' ? ' active' : state === 'warn' ? ' warn' : ''}`;
+}
+
+function bindSlider(id, labelId, onChange) {
+  const sl  = document.getElementById(id);
+  const lbl = document.getElementById(labelId);
+  const fmt = (v) => parseFloat(v).toFixed(2);
+  lbl.textContent = fmt(sl.value);
+  sl.addEventListener('input', () => {
+    lbl.textContent = fmt(sl.value);
+    if (onChange) onChange(parseFloat(sl.value));
+  });
+}
+
+bindSlider('sl-gravity',    'lbl-gravity');
+bindSlider('sl-wind',       'lbl-wind');
+bindSlider('sl-viscosity',  'lbl-viscosity');
+bindSlider('sl-bounciness', 'lbl-bounciness');
+bindSlider('sl-reverb',     'lbl-reverb', v => {
+  if (audioReady) wetBus.gain.setTargetAtTime(v, AC.currentTime, 0.05);
+});
+bindSlider('sl-volume',     'lbl-volume', v => {
+  if (audioReady) masterGain.gain.setTargetAtTime(v, AC.currentTime, 0.05);
+});
+
+document.getElementById('btn-shock').addEventListener('click', () => {
+  if (!audioReady) initAudio();
+  fireDisturbance();
+});
+
+document.getElementById('btn-add').addEventListener('click', () => {
+  if (!audioReady) initAudio();
+  spawnParticle();
+});
+
+document.getElementById('btn-reset').addEventListener('click', () => {
+  initParticles(12);
+});
+
+// Attractor — mouse
+canvas.addEventListener('mousedown', e => {
+  if (!audioReady) initAudio();
+  attractor.active = true;
+  const r = canvas.getBoundingClientRect();
+  attractor.x = e.clientX - r.left;
+  attractor.y = e.clientY - r.top;
+});
+canvas.addEventListener('mousemove', e => {
+  if (!attractor.active) return;
+  const r = canvas.getBoundingClientRect();
+  attractor.x = e.clientX - r.left;
+  attractor.y = e.clientY - r.top;
+});
+canvas.addEventListener('mouseup',    () => { attractor.active = false; });
+canvas.addEventListener('mouseleave', () => { attractor.active = false; });
+
+// Attractor — touch
+canvas.addEventListener('touchstart', e => {
+  e.preventDefault();
+  if (!audioReady) initAudio();
+  attractor.active = true;
+  const r  = canvas.getBoundingClientRect();
+  attractor.x = e.touches[0].clientX - r.left;
+  attractor.y = e.touches[0].clientY - r.top;
+}, { passive: false });
+canvas.addEventListener('touchmove', e => {
+  e.preventDefault();
+  const r  = canvas.getBoundingClientRect();
+  attractor.x = e.touches[0].clientX - r.left;
+  attractor.y = e.touches[0].clientY - r.top;
+}, { passive: false });
+canvas.addEventListener('touchend',   () => { attractor.active = false; });
+
+// Audio init on first any-click
+document.addEventListener('click', () => { if (!audioReady) initAudio(); }, { once: true });
+
+// ─────────────────────────────────────────────────────────────
+// Boot
+// ─────────────────────────────────────────────────────────────
+
+initParticles(12);
+requestAnimationFrame(t => { prevTime = t; requestAnimationFrame(loop); });
+</script>
+</body>
+</html>

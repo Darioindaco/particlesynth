@@ -86,6 +86,32 @@ select {
 #canvasWrap { flex:1; position:relative; display:flex; flex-direction:column; min-width:0; }
 canvas { display:block; }
 #scope { height:60px; background:#050810; }
+
+#miniKbd {
+  position:relative; height:44px;
+  margin:0 -14px;
+  user-select:none;
+}
+.kb-row-w { display:flex; height:44px; }
+.kb-w {
+  flex:1; height:44px;
+  background:#0a0f18; border:1px solid #1a2535;
+  border-top:none; border-radius:0 0 3px 3px;
+  font-size:8px; color:#2a4060;
+  display:flex; align-items:flex-end; justify-content:center;
+  padding-bottom:3px; z-index:1; transition:background 0.05s,color 0.05s;
+}
+.kb-b {
+  position:absolute; top:0; width:7.5%; height:26px;
+  background:#060c14; border:1px solid #1a2535;
+  border-top:none; border-radius:0 0 2px 2px;
+  font-size:7px; color:#1e3050;
+  display:flex; align-items:flex-end; justify-content:center;
+  padding-bottom:2px; z-index:2; transform:translateX(-50%);
+  transition:background 0.05s,color 0.05s;
+}
+.kb-w.kb-active { color:#fff; }
+.kb-b.kb-active { color:#fff; }
 </style>
 </head>
 <body>
@@ -152,11 +178,33 @@ canvas { display:block; }
   </div>
   <button class="btn" id="startBtn">▶ START AUDIO</button>
 
+  <h2>KEYBOARD</h2>
+  <div id="miniKbd">
+    <div class="kb-row-w">
+      <div class="kb-w" data-key="a">A</div>
+      <div class="kb-w" data-key="s">S</div>
+      <div class="kb-w" data-key="d">D</div>
+      <div class="kb-w" data-key="f">F</div>
+      <div class="kb-w" data-key="g">G</div>
+      <div class="kb-w" data-key="h">H</div>
+      <div class="kb-w" data-key="j">J</div>
+      <div class="kb-w" data-key="k">K</div>
+    </div>
+    <div class="kb-b" data-key="w" style="left:12.5%">W</div>
+    <div class="kb-b" data-key="e" style="left:25%">E</div>
+    <div class="kb-b" data-key="t" style="left:37.5%">T</div>
+    <div class="kb-b" data-key="y" style="left:50%">Y</div>
+    <div class="kb-b" data-key="u" style="left:62.5%">U</div>
+    <div class="kb-b" data-key="o" style="left:75%">O</div>
+    <div class="kb-b" data-key="p" style="left:87.5%">P</div>
+  </div>
+
   <div id="status">
     PARTICLES: <span id="pcount">0</span><br>
     AUDIO: <span id="audstat">STOPPED</span><br>
     <br>
     CLICK+HOLD → ATTRACTOR<br>
+    ASDFGHJK·WETYUOP → PLAY<br>
     MAX PARTICLES: 24
   </div>
 </div>
@@ -205,6 +253,49 @@ const MAX_ACTIVE_GRAINS = 5;
 
 const MAX_P = 24;
 const particles = [];
+
+// ─────────────────────────────────────────────────────────────
+// Keyboard note playing
+// ─────────────────────────────────────────────────────────────
+
+const LOWER_KEYS = ['a', 's', 'd', 'f', 'g', 'h', 'j', 'k'];
+const UPPER_KEYS = ['w', 'e', 't', 'y', 'u', 'o', 'p'];
+const heldKeys      = new Set();
+const keyParticleMap = new Map();
+
+function keyNoteStart() {
+  const notes = SCALES[document.getElementById('scale').value] || SCALES.pentatonic;
+  return notes.length; // start at octave 1 (~220 Hz)
+}
+
+function noteIndexToWarmth(idx) {
+  const notes = SCALES[document.getElementById('scale').value] || SCALES.pentatonic;
+  const total = notes.length * 4;
+  return (Math.min(idx, total - 1) + 0.5) / total;
+}
+
+function keyToWarmth(key) {
+  const start = keyNoteStart();
+  const li = LOWER_KEYS.indexOf(key);
+  if (li !== -1) return noteIndexToWarmth(start + li);
+  const ui = UPPER_KEYS.indexOf(key);
+  if (ui !== -1) return noteIndexToWarmth(start + LOWER_KEYS.length + ui);
+  return null;
+}
+
+function updateKeyboardDisplay() {
+  document.querySelectorAll('[data-key]').forEach(el => {
+    const key = el.dataset.key;
+    const active = heldKeys.has(key);
+    el.classList.toggle('kb-active', active);
+    if (active) {
+      const w = keyToWarmth(key);
+      el.style.background = warmthToColor(w, 0.85);
+    } else {
+      el.style.background = '';
+    }
+  });
+}
 
 // ─────────────────────────────────────────────────────────────
 // Scale / tuning system
@@ -585,6 +676,17 @@ function physics() {
     const targetW = Math.min(1, p.warmth + (spd - 3) * 0.0002);
     p.warmth = Math.max(0, Math.min(1, p.warmth * 0.9998 + targetW * 0.0002));
 
+    // Key note: lock warmth to its note; sustain tension while held, fast decay on release
+    if (p.isKeyNote) {
+      p.warmth = p.keyWarmth;
+      if (!p.keyReleased) {
+        p.tension = Math.max(0.8, p.tension);
+      } else {
+        p.tension *= 0.92;
+      }
+      p.r = 6 + p.tension * 10;
+    }
+
     p.syncAudio(false);
   }
 
@@ -597,6 +699,21 @@ function physics() {
       if (d < PROX_DIST) proximityPairs.push({ a, b, str: 1 - d / PROX_DIST });
       resolveCollision(a, b, dx, dy, d);
     }
+  }
+
+  // Remove key note particles that have fully decayed after release
+  let kRemoved = false;
+  for (let i = particles.length - 1; i >= 0; i--) {
+    const p = particles[i];
+    if (p.isKeyNote && p.keyReleased && p.tension < 0.12) {
+      p.destroy();
+      particles.splice(i, 1);
+      kRemoved = true;
+    }
+  }
+  if (kRemoved) {
+    document.getElementById('pcount').textContent = particles.length;
+    document.getElementById('addBtn').disabled = particles.length >= MAX_P;
   }
 }
 
@@ -714,6 +831,14 @@ function draw() {
     ctx.arc(p.x - p.r * 0.22, p.y - p.r * 0.22, p.r * 0.32, 0, Math.PI * 2);
     ctx.fillStyle = 'rgba(255,255,255,0.18)';
     ctx.fill();
+
+    if (p.isKeyNote) {
+      ctx.beginPath();
+      ctx.arc(p.x, p.y, p.r + 5, 0, Math.PI * 2);
+      ctx.strokeStyle = p.keyReleased ? 'rgba(255,255,255,0.25)' : 'rgba(255,255,255,0.72)';
+      ctx.lineWidth = 1.5;
+      ctx.stroke();
+    }
   }
 }
 
@@ -885,6 +1010,9 @@ document.getElementById('addBtn').addEventListener('click', () => {
 });
 
 document.getElementById('resetBtn').addEventListener('click', () => {
+  heldKeys.clear();
+  keyParticleMap.clear();
+  updateKeyboardDisplay();
   initParticles(12);
 });
 
@@ -919,6 +1047,48 @@ canvas.addEventListener('touchmove', e => {
   mouse.x = e.touches[0].clientX - r.left; mouse.y = e.touches[0].clientY - r.top;
 }, { passive: false });
 canvas.addEventListener('touchend', () => { mouse.down = false; });
+
+// Keyboard note playing
+document.addEventListener('keydown', e => {
+  if (e.target.tagName === 'INPUT' || e.target.tagName === 'SELECT') return;
+  if (e.repeat) return;
+  const key = e.key.toLowerCase();
+  const w = keyToWarmth(key);
+  if (w === null) return;
+  e.preventDefault();
+  if (heldKeys.has(key)) return;
+  if (!audioStarted) initAudio();
+  heldKeys.add(key);
+  if (particles.length < MAX_P) {
+    const p = new Particle(
+      W * 0.2 + Math.random() * W * 0.6,
+      H - 10,
+      w,
+      0.88
+    );
+    p.isKeyNote  = true;
+    p.keyWarmth  = w;
+    p.heldKey    = key;
+    p.keyReleased = false;
+    p.vx = (Math.random() - 0.5) * 2;
+    p.vy = -2 - Math.random() * 2;
+    particles.push(p);
+    keyParticleMap.set(key, p);
+    document.getElementById('pcount').textContent = particles.length;
+    document.getElementById('addBtn').disabled = particles.length >= MAX_P;
+  }
+  updateKeyboardDisplay();
+});
+
+document.addEventListener('keyup', e => {
+  const key = e.key.toLowerCase();
+  if (!heldKeys.has(key)) return;
+  heldKeys.delete(key);
+  const p = keyParticleMap.get(key);
+  if (p) p.keyReleased = true;
+  keyParticleMap.delete(key);
+  updateKeyboardDisplay();
+});
 
 // ─────────────────────────────────────────────────────────────
 // Loop

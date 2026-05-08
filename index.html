@@ -130,6 +130,22 @@ input[type=text] {
 }
 #sceneSettings { display:none; flex-direction:column; gap:8px; }
 #sceneSettings.visible { display:flex; }
+
+#objList {
+  max-height:72px; overflow-y:auto;
+  display:flex; flex-direction:column; gap:2px; margin-top:2px;
+}
+.obj-row {
+  display:flex; justify-content:space-between; align-items:center;
+  font-size:9px; color:#445; letter-spacing:0.5px;
+  border-bottom:1px solid #0e1520; padding-bottom:2px;
+}
+.obj-rm {
+  background:none; border:none; color:#334;
+  cursor:pointer; font-size:11px; padding:0 3px;
+  font-family:inherit; line-height:1;
+}
+.obj-rm:hover { color:#f64; }
 </style>
 </head>
 <body>
@@ -252,11 +268,16 @@ input[type=text] {
       <input type="checkbox" id="vortexCW">
       <span>VORTEX CLOCKWISE</span>
     </div>
-    <div style="font-size:10px;color:#445;">OBJECTS: <span id="objcount">0</span>/8 · R-CLICK REMOVE</div>
+    <div class="ctrl"><label>OBJECT LIMIT <span id="olimv">8</span></label>
+      <input type="range" id="olimit" min="4" max="24" step="1" value="8"></div>
+    <div style="font-size:10px;color:#445;">OBJECTS: <span id="objcount">0</span>/<span id="objlimdisp">8</span> · R-CLICK REMOVE</div>
+    <div id="objList"></div>
   </div>
   <div id="sceneSettings"></div>
 
   <h2>CONTROL</h2>
+  <div class="ctrl"><label>PARTICLE LIMIT <span id="plimv">24</span></label>
+    <input type="range" id="plimit" min="12" max="64" step="1" value="24"></div>
   <button class="btn" id="disturbBtn">⚡ DISTURBANCE</button>
   <div class="row">
     <button class="btn" id="addBtn">+ PARTICLE</button>
@@ -286,12 +307,13 @@ input[type=text] {
   </div>
 
   <div id="status">
-    PARTICLES: <span id="pcount">0</span><br>
+    PARTICLES: <span id="pcount">0/24</span><br>
+    OBJECTS: <span id="socount">0/8</span><br>
     AUDIO: <span id="audstat">STOPPED</span><br>
+    FRAME: <span id="frametime">--</span>ms<br>
     <br>
     CLICK+HOLD → ATTRACTOR<br>
-    ASDFGHJK·WETYUOP → PLAY<br>
-    MAX PARTICLES: 24
+    ASDFGHJK·WETYUOP → PLAY
   </div>
 </div>
 
@@ -332,10 +354,10 @@ let reverb = null, reverbGain = null, analyser = null;
 let droneOsc = null, droneGain = null;
 let audioStarted = false;
 
-// Global grain limiter
+// Global grain limiter — 8 slots; skip new grains when all busy
 let activeGrains = 0;
 let lastGrainTime = 0;
-const MAX_ACTIVE_GRAINS = 5;
+const MAX_ACTIVE_GRAINS = 8;
 
 // FM extended state
 let opCount      = 2;
@@ -344,15 +366,17 @@ let lfoPhase     = 0;
 let lfoVal       = 0;
 let lastLoopTime = performance.now();
 
-const MAX_P = 24;
+let particleLimit = 24;
 const particles = [];
+let candidatePairs = [];
 
 // ─────────────────────────────────────────────────────────────
 // Scene objects
 // ─────────────────────────────────────────────────────────────
 
 const sceneObjects = [];
-const MAX_OBJECTS  = 8;
+let objectLimit = 8;
+const objFlashes = [];
 const OBJ_RADII    = { attractor:80, repulsor:80, heat:70, cold:70, vortex:90, gwell:80 };
 
 let selectedTool = null;
@@ -368,6 +392,82 @@ function setSelectedTool(type) {
 
 function updateObjCount() {
   document.getElementById('objcount').textContent = sceneObjects.length;
+  const sc = document.getElementById('socount');
+  if (sc) sc.textContent = `${sceneObjects.length}/${objectLimit}`;
+}
+
+function updateParticleCount() {
+  document.getElementById('pcount').textContent = `${particles.length}/${particleLimit}`;
+}
+
+function isInsideAnyObject(p) {
+  for (const obj of sceneObjects) {
+    if (obj.active && Math.hypot(p.x - obj.x, p.y - obj.y) < obj.r) return true;
+  }
+  return false;
+}
+
+function cullOldestParticle() {
+  // Pass 1: oldest, not held-key, not inside a scene object
+  for (let i = 0; i < particles.length; i++) {
+    const p = particles[i];
+    if (p.isKeyNote && !p.keyReleased) continue;
+    if (isInsideAnyObject(p)) continue;
+    p.destroy(); particles.splice(i, 1); return true;
+  }
+  // Pass 2: relax scene-object constraint
+  for (let i = 0; i < particles.length; i++) {
+    const p = particles[i];
+    if (p.isKeyNote && !p.keyReleased) continue;
+    p.destroy(); particles.splice(i, 1); return true;
+  }
+  return false;
+}
+
+function updateObjList() {
+  const list = document.getElementById('objList');
+  if (!list) return;
+  list.innerHTML = sceneObjects.map((obj, i) =>
+    `<div class="obj-row"><span>${obj.name}</span><button class="obj-rm" data-oi="${i}">✕</button></div>`
+  ).join('');
+}
+
+function buildCandidatePairs() {
+  candidatePairs = [];
+  const n = particles.length;
+  if (n <= 32) {
+    for (let i = 0; i < n - 1; i++)
+      for (let j = i + 1; j < n; j++)
+        candidatePairs.push({ a: particles[i], b: particles[j] });
+    return;
+  }
+  // Spatial grid — only check particles in same/adjacent cells
+  const cs = PROX_DIST;
+  const grid = new Map();
+  for (let i = 0; i < n; i++) {
+    const p = particles[i];
+    const k = (Math.floor(p.x / cs) & 0xFFFF) << 16 | (Math.floor(p.y / cs) & 0xFFFF);
+    if (!grid.has(k)) grid.set(k, []);
+    grid.get(k).push(i);
+  }
+  const seen = new Set();
+  for (let i = 0; i < n; i++) {
+    const p = particles[i];
+    const gcx = Math.floor(p.x / cs), gcy = Math.floor(p.y / cs);
+    for (let dx = -1; dx <= 1; dx++) {
+      for (let dy = -1; dy <= 1; dy++) {
+        const cell = grid.get(((gcx + dx) & 0xFFFF) << 16 | ((gcy + dy) & 0xFFFF));
+        if (!cell) continue;
+        for (const j of cell) {
+          if (j <= i) continue;
+          const key = (i << 16) | j;
+          if (seen.has(key)) continue;
+          seen.add(key);
+          candidatePairs.push({ a: particles[i], b: particles[j] });
+        }
+      }
+    }
+  }
 }
 
 function hitTestObj(x, y) {
@@ -876,19 +976,16 @@ function updateFM() {
   for (const p of particles) p._fmAccum = 0;
 
   if (opCount === 2) {
-    for (let i = 0; i < particles.length - 1; i++) {
-      for (let j = i + 1; j < particles.length; j++) {
-        const a = particles[i], b = particles[j];
-        const dx = b.x - a.x, dy = b.y - a.y;
-        const d  = Math.hypot(dx, dy);
-        if (d >= PROX_DIST) continue;
-        const str     = Math.pow(1 - d / PROX_DIST, 2);
-        const carrier = a.warmth >= b.warmth ? a : b;
-        const mod     = a.warmth >= b.warmth ? b : a;
-        carrier._fmAccum += str * fmDepth * 50;
-        mod._fmAccum     += str * fmDepth * 15;
-        opChainLinks.push({ from: mod, to: carrier, str, role: 0 });
-      }
+    for (const { a, b } of candidatePairs) {
+      const dx = b.x - a.x, dy = b.y - a.y;
+      const d  = Math.hypot(dx, dy);
+      if (d >= PROX_DIST) continue;
+      const str     = Math.pow(1 - d / PROX_DIST, 2);
+      const carrier = a.warmth >= b.warmth ? a : b;
+      const mod     = a.warmth >= b.warmth ? b : a;
+      carrier._fmAccum += str * fmDepth * 50;
+      mod._fmAccum     += str * fmDepth * 15;
+      opChainLinks.push({ from: mod, to: carrier, str, role: 0 });
     }
   } else {
     // 4-op: sort by warmth descending, chain each particle to its nearest
@@ -1114,30 +1211,22 @@ function physics() {
     p.syncAudio(false);
   }
 
-  // Particle–particle collisions
-  for (let i = 0; i < particles.length - 1; i++) {
-    for (let j = i + 1; j < particles.length; j++) {
-      const a = particles[i], b = particles[j];
-      const dx = b.x - a.x, dy = b.y - a.y;
-      const d  = Math.hypot(dx, dy);
-      if (d < PROX_DIST) proximityPairs.push({ a, b, str: 1 - d / PROX_DIST });
-      resolveCollision(a, b, dx, dy, d);
-    }
+  // Particle–particle collisions (spatial grid when n > 32)
+  buildCandidatePairs();
+  for (const { a, b } of candidatePairs) {
+    const dx = b.x - a.x, dy = b.y - a.y;
+    const d  = Math.hypot(dx, dy);
+    if (d < PROX_DIST) proximityPairs.push({ a, b, str: 1 - d / PROX_DIST });
+    resolveCollision(a, b, dx, dy, d);
   }
 
   // Remove key note particles that have fully decayed after release
-  let kRemoved = false;
+  let anyRemoved = false;
   for (let i = particles.length - 1; i >= 0; i--) {
     const p = particles[i];
     if (p.isKeyNote && p.keyReleased && p.tension < 0.12) {
-      p.destroy();
-      particles.splice(i, 1);
-      kRemoved = true;
+      p.destroy(); particles.splice(i, 1); anyRemoved = true;
     }
-  }
-  if (kRemoved) {
-    document.getElementById('pcount').textContent = particles.length;
-    document.getElementById('addBtn').disabled = particles.length >= MAX_P;
   }
 
   // Reset one-shot explosion flags
@@ -1150,13 +1239,10 @@ function physics() {
     const pi = particles.indexOf(p);
     if (pi === -1) continue;
     if (obj.rumble > 0 && audioStarted) spawnGrain(warmthToFreq(p.warmth) * 0.5, 'noise', obj.rumble * 0.4);
-    p.destroy();
-    particles.splice(pi, 1);
+    p.destroy(); particles.splice(pi, 1); anyRemoved = true;
   }
-  if (_gwAbsorb.length > 0) {
-    document.getElementById('pcount').textContent = particles.length;
-    document.getElementById('addBtn').disabled = particles.length >= MAX_P;
-  }
+
+  if (anyRemoved) updateParticleCount();
 }
 
 function resolveCollision(a, b, dx, dy, dist) {
@@ -1430,6 +1516,19 @@ function draw() {
       ctx.stroke();
     }
   }
+
+  // Scene object cull flashes
+  const fnow = performance.now();
+  for (let i = objFlashes.length - 1; i >= 0; i--) {
+    const f = objFlashes[i];
+    const age = (fnow - f.t) / 600;
+    if (age > 1) { objFlashes.splice(i, 1); continue; }
+    const alpha = (1 - age) * 0.75;
+    ctx.beginPath();
+    ctx.arc(f.x, f.y, 10 + age * 55, 0, Math.PI * 2);
+    ctx.strokeStyle = `rgba(255,100,40,${alpha})`;
+    ctx.lineWidth = 2; ctx.stroke();
+  }
 }
 
 const scopeBuf = new Float32Array(2048);
@@ -1456,10 +1555,11 @@ function drawScope() {
 
   if (analyser) {
     analyser.getFloatTimeDomainData(scopeBuf);
-    const step = Math.max(1, Math.floor(scopeBuf.length / W));
+    const fftSz = analyser.fftSize;
+    const step  = Math.max(1, Math.floor(fftSz / W));
     sctx.beginPath();
     for (let x = 0; x < W; x++) {
-      const v = scopeBuf[x * step] || 0;
+      const v = scopeBuf[Math.min(x * step, fftSz - 1)] || 0;
       const y = 30 + v * 24;
       x === 0 ? sctx.moveTo(x, y) : sctx.lineTo(x, y);
     }
@@ -1478,7 +1578,9 @@ function drawScope() {
 // ─────────────────────────────────────────────────────────────
 
 function spawnParticle(x, y) {
-  if (particles.length >= MAX_P) return;
+  while (particles.length >= particleLimit) {
+    if (!cullOldestParticle()) break;
+  }
   const p = new Particle(
     x !== undefined ? x : 50 + Math.random() * (W - 100),
     y !== undefined ? y : 50 + Math.random() * (H - 100),
@@ -1486,8 +1588,7 @@ function spawnParticle(x, y) {
     Math.random() * 0.6 + 0.2
   );
   particles.push(p);
-  document.getElementById('pcount').textContent = particles.length;
-  document.getElementById('addBtn').disabled = particles.length >= MAX_P;
+  updateParticleCount();
 }
 
 function initParticles(n) {
@@ -1577,6 +1678,36 @@ for (const [id, lblId] of Object.entries(sliderDefs)) {
   });
 }
 
+document.getElementById('plimit').addEventListener('input', function() {
+  particleLimit = parseInt(this.value);
+  document.getElementById('plimv').textContent = particleLimit;
+  while (particles.length > particleLimit) {
+    if (!cullOldestParticle()) break;
+  }
+  updateParticleCount();
+});
+
+document.getElementById('olimit').addEventListener('input', function() {
+  objectLimit = parseInt(this.value);
+  document.getElementById('olimv').textContent = objectLimit;
+  document.getElementById('objlimdisp').textContent = objectLimit;
+  while (sceneObjects.length > objectLimit) {
+    const culled = sceneObjects.shift();
+    objFlashes.push({ x: culled.x, y: culled.y, t: performance.now() });
+  }
+  updateObjCount(); updateObjList();
+});
+
+document.getElementById('objList').addEventListener('click', e => {
+  const btn = e.target.closest('.obj-rm');
+  if (!btn) return;
+  const i = parseInt(btn.dataset.oi);
+  if (i >= 0 && i < sceneObjects.length) {
+    sceneObjects.splice(i, 1);
+    updateObjCount(); updateObjList();
+  }
+});
+
 document.getElementById('op2btn').addEventListener('click', () => {
   opCount = 2;
   document.getElementById('op2btn').classList.add('op-active');
@@ -1638,7 +1769,7 @@ canvas.addEventListener('mousedown', e => {
 
   if (e.button === 2) {
     const idx = hitTestObj(cx, cy);
-    if (idx !== -1) { sceneObjects.splice(idx, 1); updateObjCount(); }
+    if (idx !== -1) { sceneObjects.splice(idx, 1); updateObjCount(); updateObjList(); }
     return;
   }
 
@@ -1652,10 +1783,13 @@ canvas.addEventListener('mousedown', e => {
   if (selectedObj) { closeSettings(); }
 
   if (selectedTool) {
-    if (sceneObjects.length < MAX_OBJECTS) {
-      sceneObjects.push(createObject(selectedTool, cx, cy));
-      updateObjCount();
+    sceneObjects.push(createObject(selectedTool, cx, cy));
+    // Cull oldest objects beyond limit
+    while (sceneObjects.length > objectLimit) {
+      const culled = sceneObjects.shift();
+      objFlashes.push({ x: culled.x, y: culled.y, t: performance.now() });
     }
+    updateObjCount(); updateObjList();
     setSelectedTool(null);
     return;
   }
@@ -1702,24 +1836,25 @@ document.addEventListener('keydown', e => {
   if (heldKeys.has(key)) return;
   if (!audioStarted) initAudio();
   heldKeys.add(key);
-  if (particles.length < MAX_P) {
-    const p = new Particle(
-      W * 0.2 + Math.random() * W * 0.6,
-      H - 10,
-      w,
-      0.88
-    );
-    p.isKeyNote  = true;
-    p.keyWarmth  = w;
-    p.heldKey    = key;
-    p.keyReleased = false;
-    p.vx = (Math.random() - 0.5) * 2;
-    p.vy = -2 - Math.random() * 2;
-    particles.push(p);
-    keyParticleMap.set(key, p);
-    document.getElementById('pcount').textContent = particles.length;
-    document.getElementById('addBtn').disabled = particles.length >= MAX_P;
+  // Cull oldest non-held ambient particle to make room
+  while (particles.length >= particleLimit) {
+    if (!cullOldestParticle()) break;
   }
+  const p = new Particle(
+    W * 0.2 + Math.random() * W * 0.6,
+    H - 10,
+    w,
+    0.88
+  );
+  p.isKeyNote  = true;
+  p.keyWarmth  = w;
+  p.heldKey    = key;
+  p.keyReleased = false;
+  p.vx = (Math.random() - 0.5) * 2;
+  p.vy = -2 - Math.random() * 2;
+  particles.push(p);
+  keyParticleMap.set(key, p);
+  updateParticleCount();
   updateKeyboardDisplay();
 });
 
@@ -1740,12 +1875,24 @@ document.addEventListener('keyup', e => {
 function loop() {
   const now = performance.now();
   const dt  = Math.min(0.05, (now - lastLoopTime) / 1000);
+  const frameMs = now - lastLoopTime;
   lastLoopTime = now;
+
+  // Auto-reduce analyser overhead at high particle counts
+  if (analyser) {
+    const targetFFT = particles.length > 48 ? 512 : 2048;
+    if (analyser.fftSize !== targetFFT) analyser.fftSize = targetFFT;
+  }
+
   updateLFO(dt);
   physics();
   updateFM();
   draw();
   drawScope();
+
+  const ft = document.getElementById('frametime');
+  if (ft) ft.textContent = frameMs.toFixed(1);
+
   requestAnimationFrame(loop);
 }
 

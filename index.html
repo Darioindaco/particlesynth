@@ -86,6 +86,41 @@ select {
 #canvasWrap { flex:1; position:relative; display:flex; flex-direction:column; min-width:0; }
 canvas { display:block; }
 #scope { height:60px; background:#050810; }
+
+/* ── Mini keyboard ──────────────────────────────────────────── */
+#kboard {
+  position: relative;
+  height: 44px;
+  width: 177px;
+  margin: 2px 0 0;
+  flex-shrink: 0;
+  user-select: none;
+}
+.wk {
+  position: absolute;
+  bottom: 0;
+  width: 19px; height: 42px;
+  background: #0c1420;
+  border: 1px solid #1e2a3a;
+  border-radius: 0 0 3px 3px;
+  font-size: 7px; color: #2a3a50;
+  display: flex; align-items: flex-end; justify-content: center;
+  padding-bottom: 3px; box-sizing: border-box;
+}
+.bk {
+  position: absolute;
+  width: 12px; height: 26px;
+  bottom: 17px;
+  background: #060c18;
+  border: 1px solid #1a2535;
+  border-radius: 0 0 2px 2px;
+  font-size: 7px; color: #2a3a50;
+  display: flex; align-items: flex-end; justify-content: center;
+  padding-bottom: 2px; box-sizing: border-box;
+  z-index: 2;
+}
+.wk.active { background: #0c2a60; border-color: #3af; color: #5cf; box-shadow: 0 0 6px #3af55 inset; }
+.bk.active { background: #071a40; border-color: #3af; color: #5cf; box-shadow: 0 0 4px #3af55 inset; }
 </style>
 </head>
 <body>
@@ -142,6 +177,34 @@ canvas { display:block; }
   <div class="toggle-row">
     <input type="checkbox" id="droneOn" checked>
     <span>DRONE ROOT</span>
+  </div>
+
+  <h2>KEYBOARD</h2>
+  <!--
+    Piano layout  (white keys: A S D F G H J K, black keys: W E T Y U O P)
+    Pitch order low→high: A W S E D F T G Y H U J O K P (positions 0–14)
+    Black keys placed with standard 2-gap piano pattern (gap at D-F and J-K).
+    O and P extend past K as the next octave's first two black keys.
+  -->
+  <div id="kboard">
+    <!-- white keys, 20px apart (19px + 1px border) -->
+    <div class="wk" id="kk-a" style="left:0">A</div>
+    <div class="wk" id="kk-s" style="left:20px">S</div>
+    <div class="wk" id="kk-d" style="left:40px">D</div>
+    <div class="wk" id="kk-f" style="left:60px">F</div>
+    <div class="wk" id="kk-g" style="left:80px">G</div>
+    <div class="wk" id="kk-h" style="left:100px">H</div>
+    <div class="wk" id="kk-j" style="left:120px">J</div>
+    <div class="wk" id="kk-k" style="left:140px">K</div>
+    <!-- black keys; gaps at D(40)-F(60) and J(120)-K(140) like piano E-F, B-C -->
+    <div class="bk" id="kk-w" style="left:14px">W</div>
+    <div class="bk" id="kk-e" style="left:34px">E</div>
+    <div class="bk" id="kk-t" style="left:74px">T</div>
+    <div class="bk" id="kk-y" style="left:94px">Y</div>
+    <div class="bk" id="kk-u" style="left:114px">U</div>
+    <!-- O and P extend past K as start of next octave -->
+    <div class="bk" id="kk-o" style="left:154px">O</div>
+    <div class="bk" id="kk-p" style="left:165px" >P</div>
   </div>
 
   <h2>CONTROL</h2>
@@ -232,6 +295,29 @@ function warmthToFreq(w) {
 
 // Harmonic ratios for FM modulators — forces sidebands onto musical intervals
 const HARMONIC_RATIOS = [0.5, 1, 1.5, 2, 3, 4];
+
+// ─────────────────────────────────────────────────────────────
+// Keyboard mapping
+// Pitch ordering low→high: A W S E D F T G Y H U J O K P
+// This interleaves like a piano — A/S/D/F/G/H/J/K are the "white keys",
+// W/E/T/Y/U/O/P are the "black keys" between them.
+// ─────────────────────────────────────────────────────────────
+
+const KEY_ORDER = ['a','w','s','e','d','f','t','g','y','h','u','j','o','k','p'];
+const KEY_POSITIONS = {}; // key letter → pitch position (0-14)
+KEY_ORDER.forEach((k, i) => { KEY_POSITIONS[k] = i; });
+
+// Convert a keyboard pitch position (0-14) to a warmth value that
+// warmthToFreq() will map to exactly that scale degree.
+// Positions span the second and third octave of the 4-octave scale range
+// so they sit comfortably in the middle of the ambient particle register.
+function keyPosToWarmth(pos) {
+  const notes     = SCALES[document.getElementById('scale').value] || SCALES.pentatonic;
+  const total     = notes.length * 4;
+  const startStep = notes.length; // begin at octave 1 (skip the lowest octave)
+  const step      = Math.min(startStep + pos, total - 1);
+  return (step + 0.5) / total;   // centre of the warmthToFreq bin for this step
+}
 
 function warmthToColor(w, alpha) {
   alpha = alpha !== undefined ? alpha : 1;
@@ -348,9 +434,12 @@ class Particle {
     this.mass = 1 + tension;
     this.r = 6 + tension * 10;
 
-    // Harmonic ratio assigned at spawn — stays fixed, ensures FM sidebands
-    // always land on musically related intervals regardless of carrier frequency
     this.fmRatio = HARMONIC_RATIOS[Math.floor(Math.random() * HARMONIC_RATIOS.length)];
+
+    // Keyboard-played particle flags
+    this.isPlayed  = false;  // spawned by a key press
+    this.isHeld    = false;  // key is still held down
+    this.baseWarmth = this.warmth; // warmth is pinned to this while key is held
 
     this.osc = null; this.fmOsc = null; this.fmGain = null;
     this.filter = null; this.lpf = null; this.oscGain = null;
@@ -580,12 +669,33 @@ function physics() {
     p.tension = Math.max(0.1, p.tension * decay);
     p.r = 6 + p.tension * 10;
 
-    // Warmth drifts very slightly with speed (faster = slightly warmer timbre)
-    // and cools slowly when slow (warmth → energy concept)
+    // Warmth drifts very slightly with speed
     const targetW = Math.min(1, p.warmth + (spd - 3) * 0.0002);
     p.warmth = Math.max(0, Math.min(1, p.warmth * 0.9998 + targetW * 0.0002));
 
+    // Keyboard-played particle behaviour
+    if (p.isPlayed) {
+      if (p.isHeld) {
+        // Pin warmth exactly to the note while key held (stops thermal drift)
+        p.warmth  = p.baseWarmth;
+        // Maintain high tension — key hold sustains the note
+        p.tension = Math.min(1, Math.max(0.88, p.tension));
+      } else {
+        // Released: tension decays 3× faster than ambient so note fades quickly
+        p.tension *= 0.993;
+      }
+    }
+
     p.syncAudio(false);
+  }
+
+  // Remove played particles whose tension has fully decayed
+  for (let i = particles.length - 1; i >= 0; i--) {
+    const p = particles[i];
+    if (p.isPlayed && !p.isHeld && p.tension < 0.06) {
+      p.destroy();
+      particles.splice(i, 1);
+    }
   }
 
   // Particle–particle collisions
@@ -714,6 +824,15 @@ function draw() {
     ctx.arc(p.x - p.r * 0.22, p.y - p.r * 0.22, p.r * 0.32, 0, Math.PI * 2);
     ctx.fillStyle = 'rgba(255,255,255,0.18)';
     ctx.fill();
+
+    // Keyboard-played particles get a white outer ring so they're distinct
+    if (p.isPlayed) {
+      ctx.beginPath();
+      ctx.arc(p.x, p.y, p.r + 4, 0, Math.PI * 2);
+      ctx.strokeStyle = `rgba(255,255,255,${0.3 + p.tension * 0.45})`;
+      ctx.lineWidth = 1.5;
+      ctx.stroke();
+    }
   }
 }
 
@@ -759,6 +878,57 @@ function drawScope() {
 }
 
 // ─────────────────────────────────────────────────────────────
+// Keyboard playing
+// ─────────────────────────────────────────────────────────────
+
+const heldKeys  = new Map();  // key letter → Particle
+const pressedKeys = new Set(); // prevents key-repeat duplicates
+
+function spawnPlayedParticle(key) {
+  if (!audioStarted) initAudio();
+
+  const pos = KEY_POSITIONS[key];
+  if (pos === undefined) return;
+  // Don't re-spawn a key that's already held
+  if (heldKeys.has(key)) return;
+
+  const warmth = keyPosToWarmth(pos);
+
+  // If at max capacity, evict the oldest non-played particle to make room
+  if (particles.length >= MAX_P) {
+    const victimIdx = particles.findIndex(p => !p.isPlayed);
+    if (victimIdx === -1) return; // all slots taken by keyboard notes
+    particles[victimIdx].destroy();
+    particles.splice(victimIdx, 1);
+  }
+
+  // Enter from the bottom, slight random x, shoot upward
+  const x = 60 + Math.random() * (W - 120);
+  const p = new Particle(x, H - 16, warmth, 0.92);
+  p.isPlayed   = true;
+  p.isHeld     = true;
+  p.baseWarmth = warmth;
+  p.vx = (Math.random() - 0.5) * 1.5;
+  p.vy = -(2.5 + Math.random() * 2);
+
+  particles.push(p);
+  heldKeys.set(key, p);
+
+  document.getElementById(`kk-${key}`)?.classList.add('active');
+  document.getElementById('pcount').textContent = particles.length;
+  document.getElementById('addBtn').disabled = particles.length >= MAX_P;
+}
+
+function releaseKey(key) {
+  const p = heldKeys.get(key);
+  if (p) {
+    p.isHeld = false;
+    heldKeys.delete(key);
+  }
+  document.getElementById(`kk-${key}`)?.classList.remove('active');
+}
+
+// ─────────────────────────────────────────────────────────────
 // Particle management
 // ─────────────────────────────────────────────────────────────
 
@@ -776,9 +946,12 @@ function spawnParticle(x, y) {
 }
 
 function initParticles(n) {
+  // Release any held keyboard notes
+  for (const key of heldKeys.keys()) releaseKey(key);
   for (const p of particles) p.destroy();
   particles.length = 0;
   activeGrains = 0;
+  pressedKeys.clear();
   for (let i = 0; i < n; i++) spawnParticle();
 }
 
@@ -919,6 +1092,28 @@ canvas.addEventListener('touchmove', e => {
   mouse.x = e.touches[0].clientX - r.left; mouse.y = e.touches[0].clientY - r.top;
 }, { passive: false });
 canvas.addEventListener('touchend', () => { mouse.down = false; });
+
+// ─────────────────────────────────────────────────────────────
+// Keyboard events
+// ─────────────────────────────────────────────────────────────
+
+document.addEventListener('keydown', e => {
+  // Don't steal keypresses from sliders, selects, etc.
+  if (e.target !== document.body) return;
+  const key = e.key.toLowerCase();
+  if (!(key in KEY_POSITIONS)) return;
+  e.preventDefault();
+  if (pressedKeys.has(key)) return; // ignore autorepeat
+  pressedKeys.add(key);
+  spawnPlayedParticle(key);
+});
+
+document.addEventListener('keyup', e => {
+  const key = e.key.toLowerCase();
+  if (!(key in KEY_POSITIONS)) return;
+  pressedKeys.delete(key);
+  releaseKey(key);
+});
 
 // ─────────────────────────────────────────────────────────────
 // Loop

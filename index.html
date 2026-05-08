@@ -113,7 +113,18 @@ canvas { display:block; }
   <div class="ctrl"><label>REVERB <span id="rvv">0.35</span></label>
     <input type="range" id="reverbamt" min="0" max="1" step="0.05" value="0.35"></div>
 
-  <div style="font-size:10px;color:#667;letter-spacing:1px;">GRAIN TYPE</div>
+  <div class="ctrl"><label>BPM <span id="bpmv">90</span></label>
+    <input type="range" id="bpm" min="40" max="180" step="1" value="90"></div>
+
+  <div style="font-size:10px;color:#667;letter-spacing:1px;">SCALE</div>
+  <select id="scale">
+    <option value="pentatonic">PENTATONIC</option>
+    <option value="minor">MINOR</option>
+    <option value="major">MAJOR</option>
+    <option value="chromatic">CHROMATIC</option>
+  </select>
+
+  <div style="font-size:10px;color:#667;letter-spacing:1px;margin-top:2px;">GRAIN TYPE</div>
   <select id="graintype">
     <option value="droplet">DROPLET</option>
     <option value="pluck">PLUCK</option>
@@ -121,8 +132,16 @@ canvas { display:block; }
   </select>
 
   <div class="toggle-row">
+    <input type="checkbox" id="beatsync" checked>
+    <span>BEAT SYNC GRAINS</span>
+  </div>
+  <div class="toggle-row">
     <input type="checkbox" id="bubbleOn" checked>
     <span>BUBBLE RESONANCE</span>
+  </div>
+  <div class="toggle-row">
+    <input type="checkbox" id="droneOn" checked>
+    <span>DRONE ROOT</span>
   </div>
 
   <h2>CONTROL</h2>
@@ -176,9 +195,10 @@ window.addEventListener('resize', resize);
 
 let AC = null, masterGain = null, limiter = null;
 let reverb = null, reverbGain = null, analyser = null;
+let droneOsc = null, droneGain = null;
 let audioStarted = false;
 
-// Global grain limiter: prevents simultaneous grain explosions
+// Global grain limiter
 let activeGrains = 0;
 let lastGrainTime = 0;
 const MAX_ACTIVE_GRAINS = 5;
@@ -187,13 +207,31 @@ const MAX_P = 24;
 const particles = [];
 
 // ─────────────────────────────────────────────────────────────
-// Helpers
+// Scale / tuning system
 // ─────────────────────────────────────────────────────────────
 
-// warmth 0→1 maps to 80→800 Hz
+const ROOT = 110; // A2 — everything resolves here
+
+const SCALES = {
+  pentatonic: [0, 2, 4, 7, 9],
+  minor:      [0, 2, 3, 5, 7, 8, 10],
+  major:      [0, 2, 4, 5, 7, 9, 11],
+  chromatic:  [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11],
+};
+
+// warmth 0→1 snaps to the nearest scale degree across 4 octaves
 function warmthToFreq(w) {
-  return 80 * Math.pow(10, Math.max(0, Math.min(1, w)));
+  const notes  = SCALES[document.getElementById('scale').value] || SCALES.pentatonic;
+  const octaves = 4;
+  const total   = notes.length * octaves;
+  const idx     = Math.floor(Math.max(0, Math.min(0.9999, w)) * total);
+  const octave  = Math.floor(idx / notes.length);
+  const degree  = notes[idx % notes.length];
+  return ROOT * Math.pow(2, (octave * 12 + degree) / 12);
 }
+
+// Harmonic ratios for FM modulators — forces sidebands onto musical intervals
+const HARMONIC_RATIOS = [0.5, 1, 1.5, 2, 3, 4];
 
 function warmthToColor(w, alpha) {
   alpha = alpha !== undefined ? alpha : 1;
@@ -226,12 +264,23 @@ function buildReverb(ac) {
 // A global active-grain count and minimum time gap prevent noise buildup.
 // ─────────────────────────────────────────────────────────────
 
+// Returns true when AC.currentTime is close enough to a beat or half-beat
+function isOnBeat() {
+  if (!document.getElementById('beatsync').checked) return true;
+  const bpm     = sl('bpm');
+  const beatDur = 60 / bpm;
+  const phase   = (AC.currentTime % beatDur) / beatDur; // 0→1 through one beat
+  // Open window: first 18% of beat (downbeat) or 48-66% (half-beat / upbeat)
+  return phase < 0.18 || (phase > 0.48 && phase < 0.66);
+}
+
 function spawnGrain(freq, type, gainAmt) {
   if (!audioStarted) return;
   if (activeGrains >= MAX_ACTIVE_GRAINS) return;
+  if (!isOnBeat()) return;
 
   const now = performance.now();
-  // Global minimum gap shrinks with grain density (200ms→40ms)
+  // Global minimum gap scales with density slider (200ms → 40ms)
   const minGap = 200 - sl('graindensity') * 160;
   if (now - lastGrainTime < minGap) return;
   lastGrainTime = now;
@@ -299,6 +348,10 @@ class Particle {
     this.mass = 1 + tension;
     this.r = 6 + tension * 10;
 
+    // Harmonic ratio assigned at spawn — stays fixed, ensures FM sidebands
+    // always land on musically related intervals regardless of carrier frequency
+    this.fmRatio = HARMONIC_RATIOS[Math.floor(Math.random() * HARMONIC_RATIOS.length)];
+
     this.osc = null; this.fmOsc = null; this.fmGain = null;
     this.filter = null; this.lpf = null; this.oscGain = null;
     this._fmAccum = 0;
@@ -364,9 +417,8 @@ class Particle {
     const targetFreq = freq * (1 + spd * 0.006);  // 6% per unit speed
     this.osc.frequency.setTargetAtTime(targetFreq, t, tau);
 
-    // FM modulator at a musically interesting ratio (subharmonic → harmonic with warmth)
-    const fmRatio = 0.5 + w * 1.0;  // 0.5x (cold) → 1.5x (hot)
-    this.fmOsc.frequency.setTargetAtTime(freq * fmRatio, t, tau);
+    // FM modulator at the particle's fixed harmonic ratio — sidebands stay musical
+    this.fmOsc.frequency.setTargetAtTime(freq * this.fmRatio, t, tau);
 
     // Bubble resonance: bandpass at particle freq with high Q
     const bubbleOn = document.getElementById('bubbleOn').checked;
@@ -670,6 +722,19 @@ const scopeBuf = new Float32Array(2048);
 function drawScope() {
   sctx.fillStyle = '#050810';
   sctx.fillRect(0, 0, W, 60);
+
+  // Beat flash: subtle top-edge glow on downbeat so users see the pulse
+  if (audioStarted && document.getElementById('beatsync').checked) {
+    const bpm     = sl('bpm');
+    const beatDur = 60 / bpm;
+    const phase   = (AC.currentTime % beatDur) / beatDur;
+    const flash   = phase < 0.12 ? (1 - phase / 0.12) * 0.35 : 0;
+    if (flash > 0) {
+      sctx.fillStyle = `rgba(40,160,255,${flash})`;
+      sctx.fillRect(0, 0, W, 3);
+    }
+  }
+
   sctx.beginPath();
   sctx.moveTo(0, 30); sctx.lineTo(W, 30);
   sctx.strokeStyle = '#1a2535'; sctx.lineWidth = 1; sctx.stroke();
@@ -753,6 +818,17 @@ function initAudio() {
     limiter.connect(analyser);
     analyser.connect(AC.destination);
 
+    // Drone: one persistent sine at the root note gives everything a tonal anchor.
+    // Without it, floating scale-quantized frequencies feel untethered.
+    droneOsc  = AC.createOscillator();
+    droneGain = AC.createGain();
+    droneOsc.type = 'sine';
+    droneOsc.frequency.value = ROOT;
+    droneGain.gain.value = document.getElementById('droneOn').checked ? 0.038 : 0;
+    droneOsc.connect(droneGain);
+    droneGain.connect(masterGain);
+    droneOsc.start();
+
     audioStarted = true;
     document.getElementById('audstat').textContent  = 'RUNNING';
     document.getElementById('startBtn').textContent = '■ AUDIO RUNNING';
@@ -768,7 +844,8 @@ function initAudio() {
 
 const sliderDefs = {
   gravity:'gv', wind:'wv', viscosity:'vv', bounce:'bv',
-  fmdepth:'fv', graindensity:'gdv', mastervol:'mvv', reverbamt:'rvv'
+  fmdepth:'fv', graindensity:'gdv', mastervol:'mvv', reverbamt:'rvv',
+  bpm:'bpmv'
 };
 
 for (const [id, lblId] of Object.entries(sliderDefs)) {
@@ -783,6 +860,16 @@ for (const [id, lblId] of Object.entries(sliderDefs)) {
       reverbGain.gain.setTargetAtTime(parseFloat(this.value), AC.currentTime, 0.05);
   });
 }
+
+// Drone toggle: ramp gain so it doesn't click
+document.getElementById('droneOn').addEventListener('change', function () {
+  if (droneGain && AC) {
+    droneGain.gain.setTargetAtTime(this.checked ? 0.038 : 0, AC.currentTime, 0.05);
+  }
+});
+
+// Scale change: retune all particles immediately (they call warmthToFreq next syncAudio)
+// No extra code needed — warmthToFreq reads the select live.
 
 document.getElementById('disturbBtn').addEventListener('click', () => {
   for (const p of particles) {

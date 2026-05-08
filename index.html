@@ -16,25 +16,51 @@ body {
   display:flex;
 }
 
-#panel {
-  width:260px;
-  min-width:260px;
+.panel {
+  width:240px;
+  min-width:240px;
   background:#0a0f16;
-  border-right:1px solid #1e2a3a;
-  padding:14px;
+  padding:10px 12px;
   display:flex;
   flex-direction:column;
-  gap:10px;
+  gap:0;
   overflow-y:auto;
+  overflow-x:hidden;
 }
+.panel::-webkit-scrollbar { width:3px; }
+.panel::-webkit-scrollbar-thumb { background:#1e3050; border-radius:2px; }
+#panel-left  { border-right:1px solid #1e2a3a; }
+#panel-right { border-left:1px solid #1e2a3a; }
 
-#panel h2 {
-  font-size:12px;
-  color:#3af;
-  letter-spacing:2px;
+/* ── Collapsible sections ──────────────────────────────────── */
+.section { display:flex; flex-direction:column; }
+.section-header {
+  display:flex; align-items:center; justify-content:space-between;
+  cursor:pointer; padding:7px 0 5px;
   border-bottom:1px solid #1a2535;
-  padding-bottom:6px;
-  margin-top:4px;
+  user-select:none;
+  margin-bottom:0;
+}
+.section-header:hover { border-color:#2a3f55; }
+.section-title {
+  font-size:11px; color:#3af; letter-spacing:2px; font-weight:bold;
+}
+.section-arrow {
+  font-size:9px; color:#3af; transition:transform 0.15s; display:inline-block;
+}
+.section.collapsed .section-arrow { transform:rotate(-90deg); }
+.section-body {
+  display:flex; flex-direction:column; gap:8px;
+  padding:8px 0 4px;
+  overflow:hidden;
+  transition:max-height 0.2s ease, opacity 0.2s ease, padding 0.2s ease;
+  max-height:1200px;
+  opacity:1;
+}
+.section.collapsed .section-body {
+  max-height:0;
+  opacity:0;
+  padding:0;
 }
 
 .ctrl { display:flex; flex-direction:column; gap:4px; }
@@ -78,8 +104,8 @@ select {
 .toggle-row span { color:#667; font-size:11px; letter-spacing:1px; }
 
 #status {
-  font-size:11px; color:#445; margin-top:auto;
-  border-top:1px solid #1a2535; padding-top:10px; line-height:1.9;
+  font-size:11px; color:#445;
+  border-top:1px solid #1a2535; padding-top:8px; margin-top:4px; line-height:1.9;
 }
 #status span { color:#3af; }
 #startBtn.running { border-color:#3fa; color:#3fa; }
@@ -94,7 +120,7 @@ canvas { display:block; }
 
 #miniKbd {
   position:relative; height:52px;
-  margin:0 -14px;
+  margin:0 -12px;
   user-select:none;
 }
 .kb-row-w { display:flex; height:52px; }
@@ -216,6 +242,19 @@ input[type=text] {
 /* NLT active state */
 .nlt-btn.active { background:#3af !important; color:#000 !important; border-color:#3af !important; }
 
+/* ── Emitter warmth gradient preview ────────────────────── */
+#emWarmthPreview {
+  height:8px; border-radius:2px; margin-top:2px;
+  background:linear-gradient(to right,
+    hsl(200,70%,45%), hsl(220,70%,50%), hsl(260,70%,50%), hsl(20,80%,50%), hsl(0,80%,45%));
+  position:relative; overflow:visible;
+}
+#emWarmthPreview .em-min-thumb,
+#emWarmthPreview .em-max-thumb {
+  position:absolute; top:-4px; width:2px; height:16px;
+  background:#fff; border-radius:1px; pointer-events:none;
+}
+
 /* ── Collision object panel ──────────────────────────────── */
 #collisionPanel {
   display:none; flex-direction:column; gap:7px;
@@ -232,320 +271,234 @@ input[type=text] {
 </head>
 <body>
 
-<div id="panel">
-  <div style="color:#3af;font-size:11px;letter-spacing:2px;font-weight:bold;padding-bottom:4px;">PARTICLE SYNTH</div>
+<!-- ═══════════════════════════════ LEFT PANEL ═══════════════════════════════ -->
+<div class="panel" id="panel-left">
+  <div style="color:#3af;font-size:11px;letter-spacing:2px;font-weight:bold;padding:4px 0 6px;">PARTICLE SYNTH</div>
 
-  <h2>PHYSICS</h2>
-  <div class="ctrl"><label>GRAVITY <span id="gv">0.08</span></label>
-    <input type="range" id="gravity" min="0" max="0.5" step="0.01" value="0.08"></div>
-  <div class="ctrl"><label>WIND <span id="wv">0.00</span></label>
-    <input type="range" id="wind" min="-0.3" max="0.3" step="0.01" value="0"></div>
-  <div class="ctrl"><label>VISCOSITY <span id="vv">0.98</span></label>
-    <input type="range" id="viscosity" min="0.8" max="1.0" step="0.005" value="0.98"></div>
-  <div class="ctrl"><label>BOUNCINESS <span id="bv">0.75</span></label>
-    <input type="range" id="bounce" min="0.1" max="1.0" step="0.05" value="0.75"></div>
-
-  <h2>HARMONIC</h2>
-  <div class="toggle-row">
-    <input type="checkbox" id="chordOn">
-    <span>CHORD QUALITIES</span>
+  <!-- PHYSICS -->
+  <div class="section" id="sec-physics">
+    <div class="section-header" onclick="toggleSection('sec-physics')">
+      <span class="section-title">PHYSICS</span>
+      <span class="section-arrow">▼</span>
+    </div>
+    <div class="section-body">
+      <div class="ctrl"><label>GRAVITY <span id="gv">0.08</span></label>
+        <input type="range" id="gravity" min="0" max="0.5" step="0.01" value="0.08"></div>
+      <div class="ctrl"><label>WIND <span id="wv">0.00</span></label>
+        <input type="range" id="wind" min="-0.3" max="0.3" step="0.01" value="0"></div>
+      <div class="ctrl"><label>VISCOSITY <span id="vv">0.98</span></label>
+        <input type="range" id="viscosity" min="0.8" max="1.0" step="0.005" value="0.98"></div>
+      <div class="ctrl"><label>BOUNCINESS <span id="bv">0.75</span></label>
+        <input type="range" id="bounce" min="0.1" max="1.0" step="0.05" value="0.75"></div>
+    </div>
   </div>
-  <div id="chordDisplay" style="font-size:16px;color:#3af;letter-spacing:2px;font-weight:bold;min-height:20px;text-align:center;margin:2px 0;"></div>
 
-  <h2>SYNTHESIS</h2>
-  <div style="font-size:10px;color:#667;letter-spacing:1px;">MODE</div>
-  <select id="synthmode">
-    <option value="fm">FM</option>
-    <option value="sub">SUBTRACTIVE</option>
-    <option value="add">ADDITIVE</option>
-  </select>
-
-  <div id="panel-fm">
-    <div class="ctrl"><label>FM DEPTH <span id="fv">3.0</span></label>
-      <input type="range" id="fmdepth" min="0" max="12" step="0.5" value="3"></div>
-    <div style="font-size:10px;color:#667;letter-spacing:1px;">FM RATIO</div>
-    <select id="fmratio">
-      <option value="0.5">0.5×</option>
-      <option value="1" selected>1×</option>
-      <option value="1.5">1.5×</option>
-      <option value="2">2×</option>
-      <option value="3">3×</option>
-      <option value="4">4×</option>
-      <option value="free">FREE</option>
-    </select>
-    <div class="ctrl"><label>FM FEEDBACK <span id="fbv">0.00</span></label>
-      <input type="range" id="fmfeedback" min="0" max="1" step="0.05" value="0"></div>
-    <div style="font-size:10px;color:#667;letter-spacing:1px;margin-top:2px;">OPERATORS</div>
-    <div class="row">
-      <button class="btn op-active" id="op2btn">2-OP</button>
-      <button class="btn" id="op4btn">4-OP</button>
+  <!-- SYNTHESIS -->
+  <div class="section" id="sec-synth">
+    <div class="section-header" onclick="toggleSection('sec-synth')">
+      <span class="section-title">SYNTHESIS</span>
+      <span class="section-arrow">▼</span>
     </div>
-    <div class="ctrl"><label>LFO RATE <span id="lrv">1.00</span></label>
-      <input type="range" id="lforate" min="0.1" max="8" step="0.1" value="1"></div>
-    <div style="font-size:10px;color:#667;letter-spacing:1px;">LFO TARGET</div>
-    <select id="lfotarget">
-      <option value="fmdepth">FM DEPTH</option>
-      <option value="cutoff">FILTER CUTOFF</option>
-      <option value="warmth">WARMTH DRIFT</option>
-      <option value="reverb">REVERB</option>
-    </select>
-    <div class="toggle-row" style="margin-top:4px">
-      <input type="checkbox" id="lfoSync">
-      <span>LFO SYNC TO BPM</span>
-    </div>
-    <div id="lfoSyncDivRow" style="display:none;margin-top:4px">
-      <select id="lfoSyncDiv">
-        <option value="4">1/4 NOTE</option>
-        <option value="2">1/2 NOTE</option>
-        <option value="1" selected>1 BAR</option>
-        <option value="0.5">2 BARS</option>
+    <div class="section-body">
+      <div style="font-size:10px;color:#667;letter-spacing:1px;">MODE</div>
+      <select id="synthmode">
+        <option value="fm">FM</option>
+        <option value="sub">SUBTRACTIVE</option>
+        <option value="add">ADDITIVE</option>
       </select>
-    </div>
-    <div class="toggle-row">
-      <input type="checkbox" id="bubbleOn" checked>
-      <span>BUBBLE RESONANCE</span>
-    </div>
-  </div>
 
-  <div id="panel-sub" style="display:none">
-    <div class="ctrl"><label>RESONANCE <span id="resv">5.0</span></label>
-      <input type="range" id="resonance" min="0.1" max="20" step="0.5" value="5"></div>
-    <div class="ctrl"><label>FILT ATTACK <span id="fatkv">0.010</span></label>
-      <input type="range" id="filtattack" min="0.001" max="0.1" step="0.005" value="0.01"></div>
-    <div class="ctrl"><label>FILT DECAY <span id="fdecv">0.30</span></label>
-      <input type="range" id="filtdecay" min="0.05" max="2.0" step="0.05" value="0.3"></div>
-  </div>
+      <div id="panel-fm">
+        <div class="ctrl"><label>FM DEPTH <span id="fv">3.0</span></label>
+          <input type="range" id="fmdepth" min="0" max="12" step="0.5" value="3"></div>
+        <div style="font-size:10px;color:#667;letter-spacing:1px;">FM RATIO</div>
+        <select id="fmratio">
+          <option value="0.5">0.5×</option>
+          <option value="1" selected>1×</option>
+          <option value="1.5">1.5×</option>
+          <option value="2">2×</option>
+          <option value="3">3×</option>
+          <option value="4">4×</option>
+          <option value="free">FREE</option>
+        </select>
+        <div class="ctrl"><label>FM FEEDBACK <span id="fbv">0.00</span></label>
+          <input type="range" id="fmfeedback" min="0" max="1" step="0.05" value="0"></div>
+        <div style="font-size:10px;color:#667;letter-spacing:1px;margin-top:2px;">OPERATORS</div>
+        <div class="row">
+          <button class="btn op-active" id="op2btn">2-OP</button>
+          <button class="btn" id="op4btn">4-OP</button>
+        </div>
+        <div class="ctrl"><label>LFO RATE <span id="lrv">1.00</span></label>
+          <input type="range" id="lforate" min="0.1" max="8" step="0.1" value="1"></div>
+        <div style="font-size:10px;color:#667;letter-spacing:1px;">LFO TARGET</div>
+        <select id="lfotarget">
+          <option value="fmdepth">FM DEPTH</option>
+          <option value="cutoff">FILTER CUTOFF</option>
+          <option value="warmth">WARMTH DRIFT</option>
+          <option value="reverb">REVERB</option>
+        </select>
+        <div class="toggle-row" style="margin-top:4px">
+          <input type="checkbox" id="lfoSync">
+          <span>LFO SYNC TO BPM</span>
+        </div>
+        <div id="lfoSyncDivRow" style="display:none;margin-top:4px">
+          <select id="lfoSyncDiv">
+            <option value="4">1/4 NOTE</option>
+            <option value="2">1/2 NOTE</option>
+            <option value="1" selected>1 BAR</option>
+            <option value="0.5">2 BARS</option>
+          </select>
+        </div>
+        <div class="toggle-row">
+          <input type="checkbox" id="bubbleOn" checked>
+          <span>BUBBLE RESONANCE</span>
+        </div>
+      </div>
 
-  <div id="panel-add" style="display:none">
-    <div class="ctrl"><label>HARM SPREAD <span id="hspv">0.60</span></label>
-      <input type="range" id="harmspread" min="0" max="1" step="0.05" value="0.6"></div>
-  </div>
+      <div id="panel-sub" style="display:none">
+        <div class="ctrl"><label>RESONANCE <span id="resv">5.0</span></label>
+          <input type="range" id="resonance" min="0.1" max="20" step="0.5" value="5"></div>
+        <div class="ctrl"><label>FILT ATTACK <span id="fatkv">0.010</span></label>
+          <input type="range" id="filtattack" min="0.001" max="0.1" step="0.005" value="0.01"></div>
+        <div class="ctrl"><label>FILT DECAY <span id="fdecv">0.30</span></label>
+          <input type="range" id="filtdecay" min="0.05" max="2.0" step="0.05" value="0.3"></div>
+      </div>
 
-  <div class="ctrl"><label>GRAIN DENSITY <span id="gdv">0.5</span></label>
-    <input type="range" id="graindensity" min="0" max="1" step="0.05" value="0.5"></div>
-  <div class="ctrl"><label>MASTER VOL <span id="mvv">0.60</span></label>
-    <input type="range" id="mastervol" min="0" max="1" step="0.05" value="0.6"></div>
-  <div class="ctrl"><label>REVERB <span id="rvv">0.35</span></label>
-    <input type="range" id="reverbamt" min="0" max="1" step="0.05" value="0.35"></div>
+      <div id="panel-add" style="display:none">
+        <div class="ctrl"><label>HARM SPREAD <span id="hspv">0.60</span></label>
+          <input type="range" id="harmspread" min="0" max="1" step="0.05" value="0.6"></div>
+      </div>
 
-  <h2>SEQUENCER</h2>
-  <div class="ctrl"><label>BPM <span id="bpmv">90</span></label>
-    <input type="range" id="bpm" min="20" max="200" step="1" value="90"></div>
-  <div class="ctrl"><label>SWING <span id="swingv">0</span></label>
-    <input type="range" id="swing" min="0" max="100" step="1" value="0"></div>
-  <div style="font-size:10px;color:#667;letter-spacing:1px;">STEPS</div>
-  <div class="row">
-    <button class="btn seq-steps-btn" data-steps="8">8</button>
-    <button class="btn seq-steps-btn seq-active" data-steps="16">16</button>
-    <button class="btn seq-steps-btn" data-steps="32">32</button>
-  </div>
-
-  <div style="font-size:10px;color:#667;letter-spacing:1px;">SCALE</div>
-  <select id="scale">
-    <option value="pentatonic">PENTATONIC</option>
-    <option value="minor">MINOR</option>
-    <option value="major">MAJOR</option>
-    <option value="chromatic">CHROMATIC</option>
-  </select>
-
-  <div style="font-size:10px;color:#667;letter-spacing:1px;margin-top:2px;">GRAIN TYPE</div>
-  <select id="graintype">
-    <option value="droplet">DROPLET</option>
-    <option value="pluck">PLUCK</option>
-    <option value="noise">NOISE</option>
-  </select>
-
-  <div class="toggle-row">
-    <input type="checkbox" id="beatsync" checked>
-    <span>BEAT SYNC GRAINS</span>
-  </div>
-  <div class="toggle-row">
-    <input type="checkbox" id="droneOn" checked>
-    <span>DRONE ROOT</span>
-  </div>
-
-  <h2>SCENE</h2>
-  <div id="sceneDefault">
-    <div id="sceneToolbar">
-      <button class="scene-btn" data-type="attractor">ATTR</button>
-      <button class="scene-btn" data-type="repulsor">REPL</button>
-      <button class="scene-btn" data-type="heat">HEAT</button>
-      <button class="scene-btn" data-type="cold">COLD</button>
-      <button class="scene-btn" data-type="vortex">VRTX</button>
-      <button class="scene-btn" data-type="gwell">GRAV</button>
-    </div>
-    <div style="font-size:10px;color:#667;letter-spacing:1px;margin-top:4px;">COLLISION</div>
-    <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:4px;margin-top:2px;">
-      <button class="scene-btn" data-ctype="wall">WALL</button>
-      <button class="scene-btn" data-ctype="box">BOX</button>
-      <button class="scene-btn" data-ctype="circle">CIRC</button>
-      <button class="scene-btn" data-ctype="tri">TRI</button>
-      <button class="scene-btn" data-ctype="poly">POLY</button>
-    </div>
-    <div class="toggle-row">
-      <input type="checkbox" id="vortexCW">
-      <span>VORTEX CLOCKWISE</span>
-    </div>
-    <div class="ctrl"><label>OBJECT LIMIT <span id="olimv">8</span></label>
-      <input type="range" id="olimit" min="4" max="24" step="1" value="8"></div>
-    <div style="font-size:10px;color:#445;">OBJECTS: <span id="objcount">0</span>/<span id="objlimdisp">8</span> · R-CLICK REMOVE</div>
-    <div id="objList"></div>
-  </div>
-  <div id="sceneSettings"></div>
-
-  <div id="collisionPanel">
-    <div class="c-sub">COLLISION OBJECT</div>
-    <input type="text" id="collName" placeholder="NAME" value="">
-
-    <div class="c-sub">SOUND ENGINE</div>
-    <select id="collSoundType">
-      <option value="res">RESONATOR</option>
-      <option value="pitched">PITCHED</option>
-      <option value="perc">PERCUSSION</option>
-      <option value="gran">GRANULAR</option>
-      <option value="fm">FM BURST</option>
-      <option value="chord">CHORD STAB</option>
-    </select>
-
-    <div class="ctrl"><label>VOLUME <span id="collVolV">0.70</span></label>
-      <input type="range" id="collVol" min="0" max="1" step="0.05" value="0.7"></div>
-    <div class="ctrl"><label>PAN <span id="collPanV">0.00</span></label>
-      <input type="range" id="collPan" min="-1" max="1" step="0.05" value="0"></div>
-    <div class="ctrl"><label>VEL SENS <span id="collVelV">0.70</span></label>
-      <input type="range" id="collVel" min="0" max="1" step="0.05" value="0.7"></div>
-    <div class="ctrl"><label>COOLDOWN <span id="collCoolV">50</span>ms</label>
-      <input type="range" id="collCool" min="0" max="500" step="10" value="50"></div>
-    <div class="ctrl"><label>BOUNCINESS <span id="collBncV">0.80</span></label>
-      <input type="range" id="collBnc" min="0" max="1" step="0.05" value="0.8"></div>
-
-    <!-- RESONATOR -->
-    <div id="cPanRes">
-      <div class="ctrl"><label>DECAY <span id="collResDV">1.00</span>s</label>
-        <input type="range" id="collResDec" min="0.05" max="4" step="0.05" value="1"></div>
-    </div>
-
-    <!-- PITCHED -->
-    <div id="cPanPitched" style="display:none">
-      <select id="collWave">
-        <option value="sine">SINE</option>
-        <option value="triangle">TRIANGLE</option>
-        <option value="sawtooth">SAW</option>
-        <option value="square">SQUARE</option>
-      </select>
-      <div class="ctrl"><label>ATTACK <span id="collAtkV">5</span>ms</label>
-        <input type="range" id="collAtk" min="1" max="200" step="1" value="5"></div>
-      <div class="ctrl"><label>DECAY <span id="collDecV">300</span>ms</label>
-        <input type="range" id="collDec" min="10" max="2000" step="10" value="300"></div>
-    </div>
-
-    <!-- PERCUSSION -->
-    <div id="cPanPerc" style="display:none">
-      <select id="collPercType">
-        <option value="kick">KICK</option>
-        <option value="snare">SNARE</option>
-        <option value="hat">HI-HAT</option>
-        <option value="tom">TOM</option>
-      </select>
-      <div class="ctrl"><label>FREQ <span id="collPercFV">80</span>Hz</label>
-        <input type="range" id="collPercFreq" min="30" max="400" step="5" value="80"></div>
-      <div class="ctrl"><label>DECAY <span id="collPercDV">0.30</span>s</label>
-        <input type="range" id="collPercDec" min="0.05" max="1.5" step="0.05" value="0.3"></div>
-    </div>
-
-    <!-- GRANULAR -->
-    <div id="cPanGran" style="display:none">
-      <select id="collGranMat">
-        <option value="metal">METAL</option>
-        <option value="wood">WOOD</option>
-        <option value="glass">GLASS</option>
-        <option value="stone">STONE</option>
-      </select>
-      <div class="ctrl"><label>GRAIN SIZE <span id="collGranSzV">80</span>ms</label>
-        <input type="range" id="collGranSz" min="10" max="200" step="5" value="80"></div>
-      <div class="ctrl"><label>DENSITY <span id="collGranDnV">2</span></label>
-        <input type="range" id="collGranDn" min="1" max="8" step="1" value="2"></div>
-    </div>
-
-    <!-- FM BURST -->
-    <div id="cPanFm" style="display:none">
-      <div class="ctrl"><label>CARRIER <span id="collFmCrV">220</span>Hz</label>
-        <input type="range" id="collFmCr" min="40" max="1200" step="10" value="220"></div>
-      <div class="ctrl"><label>RATIO <span id="collFmRaV">2.0</span></label>
-        <input type="range" id="collFmRa" min="0.5" max="8" step="0.5" value="2"></div>
-      <div class="ctrl"><label>INDEX <span id="collFmIdV">4</span></label>
-        <input type="range" id="collFmId" min="0" max="16" step="0.5" value="4"></div>
-      <div class="ctrl"><label>DURATION <span id="collFmDuV">200</span>ms</label>
-        <input type="range" id="collFmDu" min="20" max="1000" step="10" value="200"></div>
-    </div>
-
-    <!-- CHORD STAB -->
-    <div id="cPanChord" style="display:none">
-      <select id="collChordQ">
-        <option value="0">MAJOR</option>
-        <option value="1">MINOR</option>
-        <option value="2">SUS2</option>
-        <option value="3">DOM7</option>
-        <option value="4">MAJ7</option>
-      </select>
-      <div class="ctrl"><label>DURATION <span id="collChordDuV">0.5</span>s</label>
-        <input type="range" id="collChordDu" min="0.1" max="2" step="0.1" value="0.5"></div>
-    </div>
-
-    <button class="btn coll-del-btn" id="collDelBtn" style="margin-top:4px">✕ DELETE</button>
-  </div>
-
-  <h2>CONTROL</h2>
-  <div class="ctrl"><label>PARTICLE LIMIT <span id="plimv">24</span></label>
-    <input type="range" id="plimit" min="12" max="64" step="1" value="24"></div>
-  <button class="btn" id="disturbBtn">⚡ DISTURBANCE</button>
-  <div class="row">
-    <button class="btn" id="addBtn">+ PARTICLE</button>
-    <button class="btn" id="resetBtn">RESET</button>
-  </div>
-  <button class="btn" id="startBtn">▶ START AUDIO</button>
-  <button class="btn" id="panicBtn">⬛ PANIC — KILL AUDIO</button>
-
-  <div class="ctrl"><label>NOTE LIFETIME</label>
-    <div class="row" style="gap:4px;margin-top:4px">
-      <button class="btn nlt-btn" id="nltInstant">INSTANT</button>
-      <button class="btn nlt-btn active" id="nltLive">LIVE</button>
-      <button class="btn nlt-btn" id="nltTimed">TIMED</button>
-    </div>
-    <div id="nltTimedRow" style="display:none;margin-top:6px">
-      <label>DURATION <span id="nltDurV">10</span>s</label>
-      <input type="range" id="nltDur" min="1" max="30" step="1" value="10">
+      <div class="ctrl"><label>GRAIN DENSITY <span id="gdv">0.5</span></label>
+        <input type="range" id="graindensity" min="0" max="1" step="0.05" value="0.5"></div>
+      <div class="ctrl"><label>MASTER VOL <span id="mvv">0.60</span></label>
+        <input type="range" id="mastervol" min="0" max="1" step="0.05" value="0.6"></div>
+      <div class="ctrl"><label>REVERB <span id="rvv">0.35</span></label>
+        <input type="range" id="reverbamt" min="0" max="1" step="0.05" value="0.35"></div>
     </div>
   </div>
 
-  <h2>KEYBOARD</h2>
-  <div id="miniKbd">
-    <div class="kb-row-w">
-      <div class="kb-w" data-key="a">A</div>
-      <div class="kb-w" data-key="s">S</div>
-      <div class="kb-w" data-key="d">D</div>
-      <div class="kb-w" data-key="f">F</div>
-      <div class="kb-w" data-key="g">G</div>
-      <div class="kb-w" data-key="h">H</div>
-      <div class="kb-w" data-key="j">J</div>
-      <div class="kb-w" data-key="k">K</div>
+  <!-- SCENE -->
+  <div class="section" id="sec-scene">
+    <div class="section-header" onclick="toggleSection('sec-scene')">
+      <span class="section-title">SCENE</span>
+      <span class="section-arrow">▼</span>
     </div>
-    <div class="kb-b" data-key="w" style="left:12.5%">W</div>
-    <div class="kb-b" data-key="e" style="left:25%">E</div>
-    <div class="kb-b" data-key="t" style="left:37.5%">T</div>
-    <div class="kb-b" data-key="y" style="left:50%">Y</div>
-    <div class="kb-b" data-key="u" style="left:62.5%">U</div>
-    <div class="kb-b" data-key="o" style="left:75%">O</div>
-    <div class="kb-b" data-key="p" style="left:87.5%">P</div>
-  </div>
+    <div class="section-body">
+      <div id="sceneDefault">
+        <div id="sceneToolbar">
+          <button class="scene-btn" data-type="attractor">ATTR</button>
+          <button class="scene-btn" data-type="repulsor">REPL</button>
+          <button class="scene-btn" data-type="heat">HEAT</button>
+          <button class="scene-btn" data-type="cold">COLD</button>
+          <button class="scene-btn" data-type="vortex">VRTX</button>
+          <button class="scene-btn" data-type="gwell">GRAV</button>
+          <button class="scene-btn" data-type="emitter" style="grid-column:span 3;letter-spacing:1.5px;">⊕ EMITTER</button>
+        </div>
+        <div style="font-size:10px;color:#667;letter-spacing:1px;margin-top:6px;">COLLISION</div>
+        <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:4px;margin-top:2px;">
+          <button class="scene-btn" data-ctype="wall">WALL</button>
+          <button class="scene-btn" data-ctype="box">BOX</button>
+          <button class="scene-btn" data-ctype="circle">CIRC</button>
+          <button class="scene-btn" data-ctype="tri">TRI</button>
+          <button class="scene-btn" data-ctype="poly">POLY</button>
+        </div>
+        <div class="toggle-row" style="margin-top:6px">
+          <input type="checkbox" id="vortexCW">
+          <span>VORTEX CLOCKWISE</span>
+        </div>
+        <div class="ctrl"><label>OBJECT LIMIT <span id="olimv">8</span></label>
+          <input type="range" id="olimit" min="4" max="24" step="1" value="8"></div>
+        <div style="font-size:10px;color:#445;">OBJECTS: <span id="objcount">0</span>/<span id="objlimdisp">8</span> · R-CLICK REMOVE</div>
+        <div id="objList"></div>
+      </div>
+      <div id="sceneSettings"></div>
 
-  <div id="status">
-    PARTICLES: <span id="pcount">0/24</span><br>
-    OBJECTS: <span id="socount">0/8</span><br>
-    AUDIO: <span id="audstat">STOPPED</span><br>
-    FRAME: <span id="frametime">--</span>ms<br>
-    <br>
-    CLICK+HOLD → ATTRACTOR<br>
-    ASDFGHJK·WETYUOP → PLAY
+      <div id="collisionPanel">
+        <div class="c-sub">COLLISION OBJECT</div>
+        <input type="text" id="collName" placeholder="NAME" value="">
+        <div class="c-sub">SOUND ENGINE</div>
+        <select id="collSoundType">
+          <option value="res">RESONATOR</option>
+          <option value="pitched">PITCHED</option>
+          <option value="perc">PERCUSSION</option>
+          <option value="gran">GRANULAR</option>
+          <option value="fm">FM BURST</option>
+          <option value="chord">CHORD STAB</option>
+        </select>
+        <div class="ctrl"><label>VOLUME <span id="collVolV">0.70</span></label>
+          <input type="range" id="collVol" min="0" max="1" step="0.05" value="0.7"></div>
+        <div class="ctrl"><label>PAN <span id="collPanV">0.00</span></label>
+          <input type="range" id="collPan" min="-1" max="1" step="0.05" value="0"></div>
+        <div class="ctrl"><label>VEL SENS <span id="collVelV">0.70</span></label>
+          <input type="range" id="collVel" min="0" max="1" step="0.05" value="0.7"></div>
+        <div class="ctrl"><label>COOLDOWN <span id="collCoolV">50</span>ms</label>
+          <input type="range" id="collCool" min="0" max="500" step="10" value="50"></div>
+        <div class="ctrl"><label>BOUNCINESS <span id="collBncV">0.80</span></label>
+          <input type="range" id="collBnc" min="0" max="1" step="0.05" value="0.8"></div>
+        <div id="cPanRes">
+          <div class="ctrl"><label>DECAY <span id="collResDV">1.00</span>s</label>
+            <input type="range" id="collResDec" min="0.05" max="4" step="0.05" value="1"></div>
+        </div>
+        <div id="cPanPitched" style="display:none">
+          <select id="collWave">
+            <option value="sine">SINE</option>
+            <option value="triangle">TRIANGLE</option>
+            <option value="sawtooth">SAW</option>
+            <option value="square">SQUARE</option>
+          </select>
+          <div class="ctrl"><label>ATTACK <span id="collAtkV">5</span>ms</label>
+            <input type="range" id="collAtk" min="1" max="200" step="1" value="5"></div>
+          <div class="ctrl"><label>DECAY <span id="collDecV">300</span>ms</label>
+            <input type="range" id="collDec" min="10" max="2000" step="10" value="300"></div>
+        </div>
+        <div id="cPanPerc" style="display:none">
+          <select id="collPercType">
+            <option value="kick">KICK</option>
+            <option value="snare">SNARE</option>
+            <option value="hat">HI-HAT</option>
+            <option value="tom">TOM</option>
+          </select>
+          <div class="ctrl"><label>FREQ <span id="collPercFV">80</span>Hz</label>
+            <input type="range" id="collPercFreq" min="30" max="400" step="5" value="80"></div>
+          <div class="ctrl"><label>DECAY <span id="collPercDV">0.30</span>s</label>
+            <input type="range" id="collPercDec" min="0.05" max="1.5" step="0.05" value="0.3"></div>
+        </div>
+        <div id="cPanGran" style="display:none">
+          <select id="collGranMat">
+            <option value="metal">METAL</option>
+            <option value="wood">WOOD</option>
+            <option value="glass">GLASS</option>
+            <option value="stone">STONE</option>
+          </select>
+          <div class="ctrl"><label>GRAIN SIZE <span id="collGranSzV">80</span>ms</label>
+            <input type="range" id="collGranSz" min="10" max="200" step="5" value="80"></div>
+          <div class="ctrl"><label>DENSITY <span id="collGranDnV">2</span></label>
+            <input type="range" id="collGranDn" min="1" max="8" step="1" value="2"></div>
+        </div>
+        <div id="cPanFm" style="display:none">
+          <div class="ctrl"><label>CARRIER <span id="collFmCrV">220</span>Hz</label>
+            <input type="range" id="collFmCr" min="40" max="1200" step="10" value="220"></div>
+          <div class="ctrl"><label>RATIO <span id="collFmRaV">2.0</span></label>
+            <input type="range" id="collFmRa" min="0.5" max="8" step="0.5" value="2"></div>
+          <div class="ctrl"><label>INDEX <span id="collFmIdV">4</span></label>
+            <input type="range" id="collFmId" min="0" max="16" step="0.5" value="4"></div>
+          <div class="ctrl"><label>DURATION <span id="collFmDuV">200</span>ms</label>
+            <input type="range" id="collFmDu" min="20" max="1000" step="10" value="200"></div>
+        </div>
+        <div id="cPanChord" style="display:none">
+          <select id="collChordQ">
+            <option value="0">MAJOR</option>
+            <option value="1">MINOR</option>
+            <option value="2">SUS2</option>
+            <option value="3">DOM7</option>
+            <option value="4">MAJ7</option>
+          </select>
+          <div class="ctrl"><label>DURATION <span id="collChordDuV">0.5</span>s</label>
+            <input type="range" id="collChordDu" min="0.1" max="2" step="0.1" value="0.5"></div>
+        </div>
+        <button class="btn coll-del-btn" id="collDelBtn" style="margin-top:4px">✕ DELETE</button>
+      </div>
+    </div>
   </div>
 </div>
 
@@ -570,8 +523,145 @@ input[type=text] {
   </div>
 </div>
 
+<!-- ══════════════════════════════ RIGHT PANEL ══════════════════════════════ -->
+<div class="panel" id="panel-right">
+
+  <!-- HARMONIC -->
+  <div class="section" id="sec-harmonic">
+    <div class="section-header" onclick="toggleSection('sec-harmonic')">
+      <span class="section-title">HARMONIC</span>
+      <span class="section-arrow">▼</span>
+    </div>
+    <div class="section-body">
+      <div class="toggle-row">
+        <input type="checkbox" id="chordOn">
+        <span>CHORD QUALITIES</span>
+      </div>
+      <div id="chordDisplay" style="font-size:16px;color:#3af;letter-spacing:2px;font-weight:bold;min-height:20px;text-align:center;margin:2px 0;"></div>
+    </div>
+  </div>
+
+  <!-- SEQUENCER -->
+  <div class="section" id="sec-seq">
+    <div class="section-header" onclick="toggleSection('sec-seq')">
+      <span class="section-title">SEQUENCER</span>
+      <span class="section-arrow">▼</span>
+    </div>
+    <div class="section-body">
+      <div class="ctrl"><label>BPM <span id="bpmv">90</span></label>
+        <input type="range" id="bpm" min="20" max="200" step="1" value="90"></div>
+      <div class="ctrl"><label>SWING <span id="swingv">0</span></label>
+        <input type="range" id="swing" min="0" max="100" step="1" value="0"></div>
+      <div style="font-size:10px;color:#667;letter-spacing:1px;">STEPS</div>
+      <div class="row">
+        <button class="btn seq-steps-btn" data-steps="8">8</button>
+        <button class="btn seq-steps-btn seq-active" data-steps="16">16</button>
+        <button class="btn seq-steps-btn" data-steps="32">32</button>
+      </div>
+      <div style="font-size:10px;color:#667;letter-spacing:1px;">SCALE</div>
+      <select id="scale">
+        <option value="pentatonic">PENTATONIC</option>
+        <option value="minor">MINOR</option>
+        <option value="major">MAJOR</option>
+        <option value="chromatic">CHROMATIC</option>
+      </select>
+      <div style="font-size:10px;color:#667;letter-spacing:1px;margin-top:2px;">GRAIN TYPE</div>
+      <select id="graintype">
+        <option value="droplet">DROPLET</option>
+        <option value="pluck">PLUCK</option>
+        <option value="noise">NOISE</option>
+      </select>
+      <div class="toggle-row">
+        <input type="checkbox" id="beatsync" checked>
+        <span>BEAT SYNC GRAINS</span>
+      </div>
+      <div class="toggle-row">
+        <input type="checkbox" id="droneOn" checked>
+        <span>DRONE ROOT</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- CONTROL -->
+  <div class="section" id="sec-control">
+    <div class="section-header" onclick="toggleSection('sec-control')">
+      <span class="section-title">CONTROL</span>
+      <span class="section-arrow">▼</span>
+    </div>
+    <div class="section-body">
+      <div class="ctrl"><label>PARTICLE LIMIT <span id="plimv">24</span></label>
+        <input type="range" id="plimit" min="12" max="64" step="1" value="24"></div>
+      <button class="btn" id="disturbBtn">⚡ DISTURBANCE</button>
+      <div class="row">
+        <button class="btn" id="addBtn">+ PARTICLE</button>
+        <button class="btn" id="resetBtn">RESET</button>
+      </div>
+      <button class="btn" id="startBtn">▶ START AUDIO</button>
+      <button class="btn" id="panicBtn">⬛ PANIC — KILL AUDIO</button>
+      <div class="ctrl"><label>NOTE LIFETIME</label>
+        <div class="row" style="gap:4px;margin-top:4px">
+          <button class="btn nlt-btn" id="nltInstant">INSTANT</button>
+          <button class="btn nlt-btn active" id="nltLive">LIVE</button>
+          <button class="btn nlt-btn" id="nltTimed">TIMED</button>
+        </div>
+        <div id="nltTimedRow" style="display:none;margin-top:6px">
+          <label>DURATION <span id="nltDurV">10</span>s</label>
+          <input type="range" id="nltDur" min="1" max="30" step="1" value="10">
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- KEYBOARD -->
+  <div class="section" id="sec-kbd">
+    <div class="section-header" onclick="toggleSection('sec-kbd')">
+      <span class="section-title">KEYBOARD</span>
+      <span class="section-arrow">▼</span>
+    </div>
+    <div class="section-body">
+      <div id="miniKbd">
+        <div class="kb-row-w">
+          <div class="kb-w" data-key="a">A</div>
+          <div class="kb-w" data-key="s">S</div>
+          <div class="kb-w" data-key="d">D</div>
+          <div class="kb-w" data-key="f">F</div>
+          <div class="kb-w" data-key="g">G</div>
+          <div class="kb-w" data-key="h">H</div>
+          <div class="kb-w" data-key="j">J</div>
+          <div class="kb-w" data-key="k">K</div>
+        </div>
+        <div class="kb-b" data-key="w" style="left:12.5%">W</div>
+        <div class="kb-b" data-key="e" style="left:25%">E</div>
+        <div class="kb-b" data-key="t" style="left:37.5%">T</div>
+        <div class="kb-b" data-key="y" style="left:50%">Y</div>
+        <div class="kb-b" data-key="u" style="left:62.5%">U</div>
+        <div class="kb-b" data-key="o" style="left:75%">O</div>
+        <div class="kb-b" data-key="p" style="left:87.5%">P</div>
+      </div>
+    </div>
+  </div>
+
+  <div id="status">
+    PARTICLES: <span id="pcount">0/24</span><br>
+    OBJECTS: <span id="socount">0/8</span><br>
+    AUDIO: <span id="audstat">STOPPED</span><br>
+    FRAME: <span id="frametime">--</span>ms<br>
+    <br>
+    CLICK+HOLD → ATTRACTOR<br>
+    ASDFGHJK·WETYUOP → PLAY
+  </div>
+</div>
+
 <script>
 'use strict';
+
+// ─────────────────────────────────────────────────────────────
+// Collapsible sections
+// ─────────────────────────────────────────────────────────────
+
+function toggleSection(id) {
+  document.getElementById(id).classList.toggle('collapsed');
+}
 
 // ─────────────────────────────────────────────────────────────
 // Canvas
@@ -626,7 +716,7 @@ let candidatePairs = [];
 const sceneObjects = [];
 let objectLimit = 8;
 const objFlashes = [];
-const OBJ_RADII    = { attractor:80, repulsor:80, heat:70, cold:70, vortex:90, gwell:80 };
+const OBJ_RADII    = { attractor:80, repulsor:80, heat:70, cold:70, vortex:90, gwell:80, emitter:70 };
 
 let selectedTool = null;
 let dragObj      = null;
@@ -728,7 +818,7 @@ function hitTestObj(x, y) {
 
 function createObject(type, x, y) {
   const num = sceneObjects.filter(o => o.type === type).length + 1;
-  const names = {attractor:'Attractor',repulsor:'Repulsor',heat:'Heat Source',cold:'Cold Source',vortex:'Vortex',gwell:'Gravity Well'};
+  const names = {attractor:'Attractor',repulsor:'Repulsor',heat:'Heat Source',cold:'Cold Source',vortex:'Vortex',gwell:'Gravity Well',emitter:'Emitter'};
   const spec = {
     attractor: { pullMode:'continuous', pulseRate:2, warmthEffect:0, massThreshold:3.0 },
     repulsor:  { shape:'circle', direction:0, coneAngle:60, explosionActive:false },
@@ -736,8 +826,27 @@ function createObject(type, x, y) {
     cold:      { temperature:0.2, freezeThreshold:0.2, crystallise:false, slowFactor:0.97 },
     vortex:    { clockwise:document.getElementById('vortexCW').checked, speed:3, inwardPull:0, chaos:0 },
     gwell:     { pullStrength:5, gwellDirection:90, eventHorizon:false, rumble:0.5 },
+    emitter:   {
+      mode:'continuous',        // 'continuous' | 'burst' | 'pulse'
+      rate:2,                   // particles per second (continuous/pulse)
+      burstCount:8,             // particles per burst
+      pulseInterval:1.5,        // seconds between pulses
+      direction:270,            // degrees (270 = upward)
+      spread:45,                // cone half-angle in degrees
+      speed:4,                  // launch speed
+      speedVariance:0.4,        // 0-1 randomness on speed
+      warmthMin:0.0,            // emitted particle warmth range
+      warmthMax:1.0,
+      tensionMin:0.2,
+      tensionMax:0.8,
+      sizeMin:0.3,              // tension maps to size; these clamp it
+      sizeMax:1.0,
+      inheritVelocity:false,    // emit relative to scene (false) or add obj motion
+      _spawnAccum:0,            // internal timer
+      _lastPulse:0,
+    },
   };
-  return { type, x, y, r:OBJ_RADII[type], name:names[type]+' '+num, strength:1.0, opacity:0.8, active:true, ...spec[type] };
+  return { type, x, y, r:OBJ_RADII[type]||70, name:names[type]+' '+num, strength:1.0, opacity:0.8, active:true, ...spec[type] };
 }
 
 // ── Settings panel ──────────────────────────────────────────
@@ -757,6 +866,17 @@ const _sh = {
   sep: () => `<div style="border-top:1px solid #1a2535;margin:4px 0;"></div>`,
   btn: (id, lbl) => `<button class="btn" id="${id}" style="margin-top:2px;">${lbl}</button>`,
 };
+
+function emWarmthHint(min, max) {
+  const mid = (min + max) / 2;
+  if (max < 0.25) return 'ICY COLD';
+  if (min > 0.75) return 'SCORCHING HOT';
+  if (min > 0.45 && max < 0.65) return 'WARM MIDRANGE';
+  if (min < 0.15 && max > 0.85) return 'FULL SPECTRUM';
+  if (mid < 0.4) return 'COOL BLUE';
+  if (mid > 0.6) return 'WARM AMBER';
+  return 'MIXED';
+}
 
 function buildSettingsHTML(obj) {
   const o = obj;
@@ -802,6 +922,42 @@ function buildSettingsHTML(obj) {
     h += _sh.row('soGwDir','DIRECTION',o.gwellDirection,0,360,5,0);
     h += _sh.chk('soEvtHrz','EVENT HORIZON',o.eventHorizon);
     h += _sh.row('soRumble','RUMBLE',o.rumble,0,1,0.05);
+  } else if (o.type === 'emitter') {
+    h += _sh.sel('soEmMode','MODE',[
+      ['continuous','CONTINUOUS'],['burst','BURST'],['pulse','PULSE'],['off','OFF']
+    ], o.mode);
+    h += `<div id="sosEmCont" style="display:${o.mode==='continuous'?'':'none'}">
+      ${_sh.row('soEmRate','RATE (P/S)',o.rate,0.2,20,0.2,1)}</div>`;
+    h += `<div id="sosEmBurst" style="display:${o.mode==='burst'?'':'none'}">
+      ${_sh.row('soEmBurstN','BURST COUNT',o.burstCount,1,32,1,0)}
+      ${_sh.btn('soEmBurstFire','🚀 FIRE BURST')}</div>`;
+    h += `<div id="sosEmPulse" style="display:${o.mode==='pulse'?'':'none'}">
+      ${_sh.row('soEmPulseRate','PARTICLES',o.rate,1,16,1,0)}
+      ${_sh.row('soEmPulseInt','INTERVAL (S)',o.pulseInterval,0.1,10,0.1,1)}</div>`;
+    h += _sh.sep();
+    h += _sh.row('soEmDir','DIRECTION°',o.direction,0,360,5,0);
+    h += _sh.row('soEmSpread','SPREAD°',o.spread,0,180,5,0);
+    h += _sh.row('soEmSpeed','SPEED',o.speed,0.5,20,0.5,1);
+    h += _sh.row('soEmSpeedVar','SPEED VARIANCE',o.speedVariance,0,1,0.05);
+    h += _sh.sep();
+    // Warmth range with gradient preview
+    h += `<div style="font-size:10px;color:#667;letter-spacing:1px;margin-top:2px;">WARMTH RANGE</div>
+    <div style="display:flex;gap:4px;align-items:center;margin-top:4px;">
+      <span style="font-size:9px;color:#3af;width:20px;text-align:right;" id="soEmWminV">${o.warmthMin.toFixed(2)}</span>
+      <input type="range" id="soEmWmin" min="0" max="1" step="0.05" value="${o.warmthMin}" style="flex:1">
+    </div>
+    <div style="display:flex;gap:4px;align-items:center;margin-top:4px;">
+      <span style="font-size:9px;color:#3af;width:20px;text-align:right;" id="soEmWmaxV">${o.warmthMax.toFixed(2)}</span>
+      <input type="range" id="soEmWmax" min="0" max="1" step="0.05" value="${o.warmthMax}" style="flex:1">
+    </div>
+    <div id="emWarmthPreview">
+      <div class="em-min-thumb" id="emMinThumb" style="left:${o.warmthMin*100}%"></div>
+      <div class="em-max-thumb" id="emMaxThumb" style="left:${o.warmthMax*100}%"></div>
+    </div>`;
+    h += `<div style="font-size:9px;color:#445;margin-top:3px;text-align:center;" id="emWarmthHint">${emWarmthHint(o.warmthMin,o.warmthMax)}</div>`;
+    h += _sh.sep();
+    h += _sh.row('soEmTensMin','TENSION MIN',o.tensionMin,0.1,1,0.05);
+    h += _sh.row('soEmTensMax','TENSION MAX',o.tensionMax,0.1,1,0.05);
   }
   return h;
 }
@@ -845,6 +1001,43 @@ function wireSettingsListeners(obj) {
     wchk('soVortCW','clockwise'); wsl('soSpeed','speed',2); wsl('soInward','inwardPull',2); wsl('soChaos','chaos',2);
   } else if (obj.type === 'gwell') {
     wsl('soPullStr','pullStrength',1); wsl('soGwDir','gwellDirection',0); wchk('soEvtHrz','eventHorizon'); wsl('soRumble','rumble',2);
+  } else if (obj.type === 'emitter') {
+    const updateEmPanels = v => {
+      document.getElementById('sosEmCont').style.display  = v==='continuous' ? '' : 'none';
+      document.getElementById('sosEmBurst').style.display = v==='burst'      ? '' : 'none';
+      document.getElementById('sosEmPulse').style.display = v==='pulse'      ? '' : 'none';
+    };
+    wsel('soEmMode','mode', v => { updateEmPanels(v); });
+    wsl('soEmRate','rate',1); wsl('soEmBurstN','burstCount',0);
+    wsl('soEmPulseRate','rate',0); wsl('soEmPulseInt','pulseInterval',1);
+    wsl('soEmDir','direction',0); wsl('soEmSpread','spread',0);
+    wsl('soEmSpeed','speed',1); wsl('soEmSpeedVar','speedVariance',2);
+    wsl('soEmTensMin','tensionMin',2); wsl('soEmTensMax','tensionMax',2);
+
+    const updateWarmthPreview = () => {
+      const mn = document.getElementById('emMinThumb');
+      const mx = document.getElementById('emMaxThumb');
+      const hint = document.getElementById('emWarmthHint');
+      if (mn) mn.style.left = (obj.warmthMin * 100) + '%';
+      if (mx) mx.style.left = (obj.warmthMax * 100) + '%';
+      if (hint) hint.textContent = emWarmthHint(obj.warmthMin, obj.warmthMax);
+    };
+    const wminEl = document.getElementById('soEmWmin');
+    const wmaxEl = document.getElementById('soEmWmax');
+    if (wminEl) wminEl.addEventListener('input', function() {
+      obj.warmthMin = Math.min(parseFloat(this.value), obj.warmthMax);
+      this.value = obj.warmthMin;
+      document.getElementById('soEmWminV').textContent = obj.warmthMin.toFixed(2);
+      updateWarmthPreview();
+    });
+    if (wmaxEl) wmaxEl.addEventListener('input', function() {
+      obj.warmthMax = Math.max(parseFloat(this.value), obj.warmthMin);
+      this.value = obj.warmthMax;
+      document.getElementById('soEmWmaxV').textContent = obj.warmthMax.toFixed(2);
+      updateWarmthPreview();
+    });
+    const fireBtn = document.getElementById('soEmBurstFire');
+    if (fireBtn) fireBtn.addEventListener('click', () => emitterFireBurst(obj));
   }
 }
 
@@ -1807,6 +2000,60 @@ function drawSceneObjects() {
       }
       ctx.beginPath(); ctx.arc(x, y, 5, 0, Math.PI * 2);
       ctx.fillStyle = 'rgba(160,80,255,0.85)'; ctx.fill();
+
+    } else if (type === 'emitter') {
+      const dirRad  = (obj.direction - 90) * Math.PI / 180;
+      const halfSpr = obj.spread * Math.PI / 180;
+      const isOff   = obj.mode === 'off';
+
+      // Warmth gradient arc showing the cone
+      const wMin = obj.warmthMin, wMax = obj.warmthMax;
+      const cMid = warmthToColor((wMin + wMax) / 2, 0.55);
+      const cEdge = warmthToColor((wMin + wMax) / 2, 0.1);
+      const cone = ctx.createConicalGradient
+        ? null  // fallback below
+        : null;
+
+      // Draw spread cone as filled sector
+      const arcR = r * 0.8;
+      ctx.beginPath();
+      ctx.moveTo(x, y);
+      ctx.arc(x, y, arcR, dirRad - halfSpr, dirRad + halfSpr);
+      ctx.closePath();
+      const grad = ctx.createRadialGradient(x, y, 0, x, y, arcR);
+      grad.addColorStop(0, warmthToColor((wMin+wMax)/2, 0.5));
+      grad.addColorStop(1, warmthToColor((wMin+wMax)/2, 0.0));
+      ctx.fillStyle = grad;
+      ctx.fill();
+
+      // Direction arrow
+      const arLen = r * 0.45;
+      ctx.beginPath();
+      ctx.moveTo(x, y);
+      ctx.lineTo(x + Math.cos(dirRad) * arLen, y + Math.sin(dirRad) * arLen);
+      ctx.strokeStyle = isOff ? 'rgba(100,100,120,0.6)' : warmthToColor((wMin+wMax)/2, 0.9);
+      ctx.lineWidth = 2; ctx.stroke();
+      // Arrow head
+      const hx = x + Math.cos(dirRad) * arLen;
+      const hy = y + Math.sin(dirRad) * arLen;
+      ctx.beginPath();
+      ctx.moveTo(hx + Math.cos(dirRad) * 7, hy + Math.sin(dirRad) * 7);
+      ctx.lineTo(hx + Math.cos(dirRad + 2.4) * 5, hy + Math.sin(dirRad + 2.4) * 5);
+      ctx.lineTo(hx + Math.cos(dirRad - 2.4) * 5, hy + Math.sin(dirRad - 2.4) * 5);
+      ctx.closePath();
+      ctx.fillStyle = isOff ? 'rgba(100,100,120,0.7)' : warmthToColor((wMin+wMax)/2, 0.9);
+      ctx.fill();
+
+      // Pulsing ring when active
+      if (!isOff) {
+        const ph = (t * 0.003) % 1;
+        ctx.beginPath(); ctx.arc(x, y, 8 + ph * 14, 0, Math.PI * 2);
+        ctx.strokeStyle = warmthToColor((wMin+wMax)/2, (1-ph) * 0.6);
+        ctx.lineWidth = 1.5; ctx.stroke();
+      }
+      ctx.beginPath(); ctx.arc(x, y, 5, 0, Math.PI * 2);
+      ctx.fillStyle = isOff ? 'rgba(80,80,100,0.9)' : warmthToColor((wMin+wMax)/2, 0.95);
+      ctx.fill();
     }
 
     ctx.globalAlpha = 1;
@@ -2053,6 +2300,53 @@ function initParticles(n) {
 }
 
 // ─────────────────────────────────────────────────────────────
+// Emitter logic
+// ─────────────────────────────────────────────────────────────
+
+function emitterSpawnParticle(em) {
+  if (particles.length >= particleLimit) {
+    if (!cullOldestParticle()) return;
+  }
+  const dirRad  = (em.direction - 90) * Math.PI / 180;
+  const halfSpr = em.spread * Math.PI / 180;
+  const angle   = dirRad + (Math.random() - 0.5) * 2 * halfSpr;
+  const spd     = em.speed * (1 - em.speedVariance * Math.random());
+  const warmth  = em.warmthMin + Math.random() * (em.warmthMax - em.warmthMin);
+  const tension = em.tensionMin + Math.random() * (em.tensionMax - em.tensionMin);
+  const p = new Particle(em.x, em.y, warmth, tension);
+  p.vx = Math.cos(angle) * spd;
+  p.vy = Math.sin(angle) * spd;
+  particles.push(p);
+  updateParticleCount();
+}
+
+function emitterFireBurst(em) {
+  const n = em.burstCount || 8;
+  for (let i = 0; i < n; i++) emitterSpawnParticle(em);
+}
+
+function tickEmitters(dtSec) {
+  const nowSec = performance.now() / 1000;
+  for (const obj of sceneObjects) {
+    if (obj.type !== 'emitter' || !obj.active || obj.mode === 'off') continue;
+    if (obj.mode === 'continuous') {
+      obj._spawnAccum = (obj._spawnAccum || 0) + obj.rate * dtSec;
+      while (obj._spawnAccum >= 1) {
+        emitterSpawnParticle(obj);
+        obj._spawnAccum -= 1;
+      }
+    } else if (obj.mode === 'pulse') {
+      if (nowSec - (obj._lastPulse || 0) >= obj.pulseInterval) {
+        obj._lastPulse = nowSec;
+        const n = Math.round(obj.rate) || 1;
+        for (let i = 0; i < n; i++) emitterSpawnParticle(obj);
+      }
+    }
+    // burst mode is manual-only (fire button)
+  }
+}
+
+// ─────────────────────────────────────────────────────────────
 // Audio init
 // ─────────────────────────────────────────────────────────────
 
@@ -2236,7 +2530,7 @@ document.getElementById('resetBtn').addEventListener('click', () => {
   heldKeys.clear();
   keyParticleMap.clear();
   updateKeyboardDisplay();
-  initParticles(12);
+  initParticles(0);
 });
 
 document.getElementById('startBtn').addEventListener('click', initAudio);
@@ -2293,11 +2587,13 @@ document.getElementById('lfoSync').addEventListener('change', function() {
 
 // Return focus to document after interacting with sliders/dropdowns so keyboard note
 // playing works immediately without needing to click elsewhere first.
-document.getElementById('panel').addEventListener('pointerup', e => {
-  const el = e.target;
-  if ((el.tagName === 'INPUT' && el.type === 'range') || el.tagName === 'SELECT') {
-    el.blur();
-  }
+['panel-left','panel-right'].forEach(id => {
+  document.getElementById(id).addEventListener('pointerup', e => {
+    const el = e.target;
+    if ((el.tagName === 'INPUT' && el.type === 'range') || el.tagName === 'SELECT') {
+      el.blur();
+    }
+  });
 });
 
 // Canvas mouse — handles attractor, scene object place/drag/remove
@@ -3485,6 +3781,7 @@ function loop() {
 
   updateLFO(dt);
   updateChordVoicing();
+  tickEmitters(dt);
   physics();
   updateFM();
   draw();

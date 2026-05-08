@@ -130,8 +130,36 @@ canvas { display:block; }
     <input type="range" id="bounce" min="0.1" max="1.0" step="0.05" value="0.75"></div>
 
   <h2>SYNTHESIS</h2>
-  <div class="ctrl"><label>FM DEPTH <span id="fv">3.0</span></label>
-    <input type="range" id="fmdepth" min="0" max="12" step="0.5" value="3"></div>
+  <div style="font-size:10px;color:#667;letter-spacing:1px;">MODE</div>
+  <select id="synthmode">
+    <option value="fm">FM</option>
+    <option value="sub">SUBTRACTIVE</option>
+    <option value="add">ADDITIVE</option>
+  </select>
+
+  <div id="panel-fm">
+    <div class="ctrl"><label>FM DEPTH <span id="fv">3.0</span></label>
+      <input type="range" id="fmdepth" min="0" max="12" step="0.5" value="3"></div>
+    <div class="toggle-row">
+      <input type="checkbox" id="bubbleOn" checked>
+      <span>BUBBLE RESONANCE</span>
+    </div>
+  </div>
+
+  <div id="panel-sub" style="display:none">
+    <div class="ctrl"><label>RESONANCE <span id="resv">5.0</span></label>
+      <input type="range" id="resonance" min="0.1" max="20" step="0.5" value="5"></div>
+    <div class="ctrl"><label>FILT ATTACK <span id="fatkv">0.010</span></label>
+      <input type="range" id="filtattack" min="0.001" max="0.1" step="0.005" value="0.01"></div>
+    <div class="ctrl"><label>FILT DECAY <span id="fdecv">0.30</span></label>
+      <input type="range" id="filtdecay" min="0.05" max="2.0" step="0.05" value="0.3"></div>
+  </div>
+
+  <div id="panel-add" style="display:none">
+    <div class="ctrl"><label>HARM SPREAD <span id="hspv">0.60</span></label>
+      <input type="range" id="harmspread" min="0" max="1" step="0.05" value="0.6"></div>
+  </div>
+
   <div class="ctrl"><label>GRAIN DENSITY <span id="gdv">0.5</span></label>
     <input type="range" id="graindensity" min="0" max="1" step="0.05" value="0.5"></div>
   <div class="ctrl"><label>MASTER VOL <span id="mvv">0.60</span></label>
@@ -160,10 +188,6 @@ canvas { display:block; }
   <div class="toggle-row">
     <input type="checkbox" id="beatsync" checked>
     <span>BEAT SYNC GRAINS</span>
-  </div>
-  <div class="toggle-row">
-    <input type="checkbox" id="bubbleOn" checked>
-    <span>BUBBLE RESONANCE</span>
   </div>
   <div class="toggle-row">
     <input type="checkbox" id="droneOn" checked>
@@ -422,11 +446,12 @@ function spawnGrain(freq, type, gainAmt) {
   } catch (_) { activeGrains = Math.max(0, activeGrains - 1); }
 }
 
+function getSynthMode() {
+  return document.getElementById('synthmode').value;
+}
+
 // ─────────────────────────────────────────────────────────────
-// Particle
-// Each particle owns:
-//   osc → filter (bandpass bubble) → lpf (tame sawtooth) → oscGain → masterGain
-//   fmOsc → fmGain → osc.frequency    (proximity FM, set externally)
+// Particle — three synthesis modes: fm / sub / add
 // ─────────────────────────────────────────────────────────────
 
 class Particle {
@@ -438,118 +463,146 @@ class Particle {
     this.tension = Math.max(0.1, Math.min(1, tension));
     this.mass = 1 + tension;
     this.r = 6 + tension * 10;
-
-    // Harmonic ratio assigned at spawn — stays fixed, ensures FM sidebands
-    // always land on musically related intervals regardless of carrier frequency
     this.fmRatio = HARMONIC_RATIOS[Math.floor(Math.random() * HARMONIC_RATIOS.length)];
-
     this.osc = null; this.fmOsc = null; this.fmGain = null;
     this.filter = null; this.lpf = null; this.oscGain = null;
+    this.subFilter = null;
+    this.addOscs = null; this.addGains = null; this._addMerger = null;
     this._fmAccum = 0;
-
     if (audioStarted) this.initAudio();
   }
 
   initAudio() {
+    if (this.oscGain) this.destroy();
     try {
       const t0 = AC.currentTime;
-
-      // Carrier oscillator
-      this.osc = AC.createOscillator();
-
-      // Optional bandpass "bubble resonance"
-      this.filter = AC.createBiquadFilter();
-      this.filter.type = 'bandpass';
-      this.filter.Q.value = 12;
-
-      // Lowpass to tame sawtooth at high warmth
-      this.lpf = AC.createBiquadFilter();
-      this.lpf.type = 'lowpass';
+      const mode = getSynthMode();
 
       this.oscGain = AC.createGain();
       this.oscGain.gain.setValueAtTime(0, t0);
-
-      // FM oscillator: always wired, gain controls depth
-      this.fmOsc  = AC.createOscillator();
-      this.fmGain = AC.createGain();
-      this.fmGain.gain.setValueAtTime(0, t0);
-
-      // Wire FM: fmOsc → fmGain → osc.frequency
-      this.fmOsc.connect(this.fmGain);
-      this.fmGain.connect(this.osc.frequency);
-
-      // Wire carrier: osc → filter → lpf → oscGain → master
-      this.osc.connect(this.filter);
-      this.filter.connect(this.lpf);
-      this.lpf.connect(this.oscGain);
       this.oscGain.connect(masterGain);
 
-      this.fmOsc.start(t0);
-      this.osc.start(t0);
+      if (mode === 'fm') {
+        this.osc    = AC.createOscillator();
+        this.filter = AC.createBiquadFilter();
+        this.filter.type = 'bandpass'; this.filter.Q.value = 12;
+        this.lpf    = AC.createBiquadFilter();
+        this.lpf.type = 'lowpass';
+        this.fmOsc  = AC.createOscillator();
+        this.fmGain = AC.createGain();
+        this.fmGain.gain.setValueAtTime(0, t0);
+        this.fmOsc.connect(this.fmGain);
+        this.fmGain.connect(this.osc.frequency);
+        this.osc.connect(this.filter);
+        this.filter.connect(this.lpf);
+        this.lpf.connect(this.oscGain);
+        this.fmOsc.start(t0); this.osc.start(t0);
 
+      } else if (mode === 'sub') {
+        this.osc = AC.createOscillator();
+        this.osc.type = 'sawtooth';
+        this.subFilter = AC.createBiquadFilter();
+        this.subFilter.type = 'lowpass';
+        this.subFilter.Q.value = sl('resonance');
+        this.osc.connect(this.subFilter);
+        this.subFilter.connect(this.oscGain);
+        this.osc.start(t0);
+
+      } else { // additive
+        this.addOscs = []; this.addGains = [];
+        this._addMerger = AC.createGain();
+        this._addMerger.connect(this.oscGain);
+        for (let h = 1; h <= 6; h++) {
+          const o = AC.createOscillator(); o.type = 'sine';
+          const g = AC.createGain(); g.gain.setValueAtTime(0, t0);
+          o.connect(g); g.connect(this._addMerger); o.start(t0);
+          this.addOscs.push(o); this.addGains.push(g);
+        }
+      }
       this.syncAudio(true);
     } catch (e) { console.warn('initAudio:', e); }
   }
 
   syncAudio(immediate) {
-    if (!this.osc || !AC) return;
+    if (!this.oscGain || !AC) return;
     const t   = AC.currentTime;
     const tau = immediate ? 0 : 0.06;
     const w   = this.warmth;
     const freq = warmthToFreq(w);
+    const spd  = Math.hypot(this.vx, this.vy);
+    const mode = getSynthMode();
+    const targetFreq = freq * (1 + spd * 0.006);
 
-    // Oscillator type: sine (cold) → triangle → sawtooth (hot)
-    const type = w < 0.33 ? 'sine' : w < 0.66 ? 'triangle' : 'sawtooth';
-    if (this.osc.type !== type) this.osc.type = type;
+    if (mode === 'fm' && this.osc) {
+      const type = w < 0.33 ? 'sine' : w < 0.66 ? 'triangle' : 'sawtooth';
+      if (this.osc.type !== type) this.osc.type = type;
+      this.osc.frequency.setTargetAtTime(targetFreq, t, tau);
+      this.fmOsc.frequency.setTargetAtTime(freq * this.fmRatio, t, tau);
+      const bubbleOn = document.getElementById('bubbleOn').checked;
+      if (bubbleOn) {
+        this.filter.frequency.setTargetAtTime(freq, t, 0.1);
+        this.filter.Q.value = 12;
+      } else {
+        this.filter.frequency.value = 22050; this.filter.Q.value = 0.01;
+      }
+      const lpfCutoff = w < 0.66 ? 22050 : freq * (3 + (1 - w) * 6);
+      this.lpf.frequency.setTargetAtTime(lpfCutoff, t, 0.08);
+      this.oscGain.gain.setTargetAtTime(this.tension * 0.05, t, tau);
 
-    // Pitch = warmth frequency + velocity detune
-    // Speed adds significant upward pitch shift — fast particles sound bright
-    const spd = Math.hypot(this.vx, this.vy);
-    const targetFreq = freq * (1 + spd * 0.006);  // 6% per unit speed
-    this.osc.frequency.setTargetAtTime(targetFreq, t, tau);
+    } else if (mode === 'sub' && this.osc) {
+      this.osc.frequency.setTargetAtTime(targetFreq, t, tau);
+      const baseCutoff = Math.min(8000, freq * (1.5 + spd * 0.12));
+      this.subFilter.frequency.setTargetAtTime(baseCutoff, t, 0.08);
+      this.subFilter.Q.value = sl('resonance');
+      this.oscGain.gain.setTargetAtTime(this.tension * 0.05, t, tau);
 
-    // FM modulator at the particle's fixed harmonic ratio — sidebands stay musical
-    this.fmOsc.frequency.setTargetAtTime(freq * this.fmRatio, t, tau);
-
-    // Bubble resonance: bandpass at particle freq with high Q
-    const bubbleOn = document.getElementById('bubbleOn').checked;
-    if (bubbleOn) {
-      this.filter.frequency.setTargetAtTime(freq, t, 0.1);
-      this.filter.Q.value = 12;
-    } else {
-      this.filter.frequency.value = 22050;
-      this.filter.Q.value = 0.01;
+    } else if (mode === 'add' && this.addOscs) {
+      const spread = sl('harmspread');
+      for (let h = 0; h < 6; h++) {
+        const harmN = h + 1;
+        this.addOscs[h].frequency.setTargetAtTime(targetFreq * harmN, t, tau);
+        const amp = (1 / harmN) * (1 + w * spread * h);
+        this.addGains[h].gain.setTargetAtTime(this.tension * 0.008 * amp, t, tau);
+      }
+      this.oscGain.gain.setTargetAtTime(1, t, tau);
     }
-
-    // LPF tames harsh sawtooth: cutoff rises with warmth but stays below hearing damage
-    // At w=0 (sine): cutoff = 22kHz (no effect)
-    // At w=1 (saw):  cutoff = freq * 4 (removes high partials)
-    const lpfCutoff = w < 0.66 ? 22050 : freq * (3 + (1 - w) * 6);
-    this.lpf.frequency.setTargetAtTime(lpfCutoff, t, 0.08);
-
-    // Gain: tension drives amplitude, but scaled to prevent noise mass
-    // Maximum 0.05 per particle; with 24 particles at max that's 1.2 — compressor handles it
-    const targetGain = this.tension * 0.05;
-    this.oscGain.gain.setTargetAtTime(targetGain, t, tau);
   }
 
-  // Called from updateFM each frame — sets FM depth in Hz
+  triggerFilterEnv(impact) {
+    if (!this.subFilter || !AC) return;
+    const t   = AC.currentTime;
+    const atk = sl('filtattack');
+    const dec = sl('filtdecay');
+    const base = warmthToFreq(this.warmth);
+    const peak = Math.min(9000, base * (3 + impact * 8));
+    this.subFilter.frequency.cancelScheduledValues(t);
+    this.subFilter.frequency.setValueAtTime(this.subFilter.frequency.value, t);
+    this.subFilter.frequency.linearRampToValueAtTime(peak, t + atk);
+    this.subFilter.frequency.setTargetAtTime(base, t + atk, dec / 3);
+  }
+
   setFMDepth(depthHz) {
     if (!this.fmGain || !AC) return;
-    // Short tau so FM responds immediately to proximity changes
     this.fmGain.gain.setTargetAtTime(depthHz, AC.currentTime, 0.04);
   }
 
   destroy() {
-    if (!this.osc) return;
-    const t = AC.currentTime;
-    try { this.oscGain.gain.setTargetAtTime(0, t, 0.015); } catch (_) {}
+    if (!this.oscGain) return;
+    const nodes = [
+      this.osc, this.fmOsc, this.fmGain, this.filter, this.lpf,
+      this.oscGain, this.subFilter, this._addMerger,
+      ...(this.addOscs || []), ...(this.addGains || [])
+    ];
+    try { this.oscGain.gain.setTargetAtTime(0, AC.currentTime, 0.015); } catch (_) {}
     setTimeout(() => {
-      for (const n of [this.osc, this.fmOsc, this.fmGain, this.filter, this.lpf, this.oscGain]) {
+      for (const n of nodes) {
         try { if (n) { n.stop && n.stop(); n.disconnect(); } } catch (_) {}
       }
     }, 120);
-    this.osc = null; this.fmOsc = null;
+    this.osc = null; this.fmOsc = null; this.fmGain = null;
+    this.filter = null; this.lpf = null; this.oscGain = null;
+    this.subFilter = null; this.addOscs = null; this.addGains = null;
+    this._addMerger = null;
   }
 }
 
@@ -562,7 +615,7 @@ class Particle {
 const PROX_DIST = 140;
 
 function updateFM() {
-  if (!audioStarted) return;
+  if (!audioStarted || getSynthMode() !== 'fm') return;
   const fmDepth = sl('fmdepth');
 
   for (const p of particles) p._fmAccum = 0;
@@ -655,14 +708,11 @@ function physics() {
     }
 
     if (bounced && impactSpd > 1.5) {
-      // Tension spike: harder hit → bigger burst (low bounciness = absorbed, less spike)
       const spike = Math.min(0.5, impactSpd * 0.015 * bnc);
       p.tension = Math.min(1, p.tension + spike);
-
-      // Wall grain: always on significant impact, gain proportional to speed × bounciness
-      // Bounciness affects this directly: high bnc = punchy grain, low bnc = muffled thud
       const grainGain = Math.min(0.55, impactSpd * 0.02 * (0.3 + bnc * 0.7));
-      spawnGrain(warmthToFreq(p.warmth), sl('graintype') !== undefined ? document.getElementById('graintype').value : 'pluck', grainGain);
+      spawnGrain(warmthToFreq(p.warmth), document.getElementById('graintype').value, grainGain);
+      if (getSynthMode() === 'sub') p.triggerFilterEnv(Math.min(1, impactSpd * 0.08));
     }
 
     // Tension + warmth decay
@@ -750,8 +800,6 @@ function resolveCollision(a, b, dx, dy, dist) {
   a.tension = Math.min(1, a.tension + spike);
   b.tension = Math.min(1, b.tension + spike);
 
-  // Collision grain: only if impact is strong enough to be worth hearing
-  // Threshold rises with bounciness (bouncy collisions are physically sharper)
   const threshold = 1.5 + bnc * 1.5;
   if (impact > threshold) {
     const density = sl('graindensity');
@@ -760,6 +808,10 @@ function resolveCollision(a, b, dx, dy, dist) {
       const avgFreq   = warmthToFreq((a.warmth + b.warmth) * 0.5);
       spawnGrain(avgFreq, document.getElementById('graintype').value, grainGain);
     }
+  }
+  if (getSynthMode() === 'sub' && impact > 0.5) {
+    const env = Math.min(1, impact * 0.08);
+    a.triggerFilterEnv(env); b.triggerFilterEnv(env);
   }
 }
 
@@ -970,7 +1022,7 @@ function initAudio() {
 const sliderDefs = {
   gravity:'gv', wind:'wv', viscosity:'vv', bounce:'bv',
   fmdepth:'fv', graindensity:'gdv', mastervol:'mvv', reverbamt:'rvv',
-  bpm:'bpmv'
+  bpm:'bpmv', resonance:'resv', filtattack:'fatkv', filtdecay:'fdecv', harmspread:'hspv'
 };
 
 for (const [id, lblId] of Object.entries(sliderDefs)) {
@@ -985,6 +1037,14 @@ for (const [id, lblId] of Object.entries(sliderDefs)) {
       reverbGain.gain.setTargetAtTime(parseFloat(this.value), AC.currentTime, 0.05);
   });
 }
+
+document.getElementById('synthmode').addEventListener('change', () => {
+  const mode = getSynthMode();
+  document.getElementById('panel-fm').style.display  = mode === 'fm'  ? '' : 'none';
+  document.getElementById('panel-sub').style.display = mode === 'sub' ? '' : 'none';
+  document.getElementById('panel-add').style.display = mode === 'add' ? '' : 'none';
+  if (audioStarted) for (const p of particles) p.initAudio();
+});
 
 // Drone toggle: ramp gain so it doesn't click
 document.getElementById('droneOn').addEventListener('change', function () {

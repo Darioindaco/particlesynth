@@ -701,11 +701,11 @@ const HARMONIC_RATIOS = [0.5, 1, 1.5, 2, 3, 4];
 // ─────────────────────────────────────────────────────────────
 
 const CHORD_QUALITIES = [
-  { name: 'min9',  max: 0.2,  intervals: [0, 3,  7, 10, 14] },
-  { name: 'min7',  max: 0.4,  intervals: [0, 3,  7, 10]     },
+  { name: 'min9',  max: 0.25, intervals: [0, 3,  7, 10, 14] },
+  { name: 'min7',  max: 0.45, intervals: [0, 3,  7, 10]     },
   { name: 'maj7',  max: 0.6,  intervals: [0, 4,  7, 11]     },
-  { name: 'dom7',  max: 0.75, intervals: [0, 4,  7, 10]     },
-  { name: 'maj9',  max: 0.9,  intervals: [0, 4,  7, 11, 14] },
+  { name: 'dom7',  max: 0.72, intervals: [0, 4,  7, 10]     },
+  { name: 'maj9',  max: 0.88, intervals: [0, 4,  7, 11, 14] },
   { name: 'aug',   max: 1.01, intervals: [0, 4,  8]         },
 ];
 
@@ -1264,9 +1264,11 @@ function physics() {
           const str = 1 - od / obj.r;
           if (p.warmth < obj.temperature) p.warmth = Math.min(obj.temperature, p.warmth + str * obj.heatRate * S);
           if (obj.soundCharacter === 'bright' && p.warmth < 0.66)
-            p.warmth = Math.min(0.66, p.warmth + str * 0.005);
+            p.warmth = Math.min(0.66, p.warmth + str * 0.015);
           else if (obj.soundCharacter === 'harmonic')
-            p.warmth = Math.min(0.66, Math.max(0.33, p.warmth + (0.5 - p.warmth) * str * 0.01));
+            p.warmth = Math.min(0.66, Math.max(0.33, p.warmth + (0.5 - p.warmth) * str * 0.015));
+          else
+            p.warmth = Math.min(1, p.warmth + str * 0.015);
         } else if (od < obj.r * 1.5) {
           const str = 1 - (od - obj.r) / (obj.r * 0.5);
           p.warmth = Math.max(0, p.warmth - obj.coolingRate * str);
@@ -1871,11 +1873,17 @@ document.getElementById('droneOn').addEventListener('change', function () {
 // No extra code needed — warmthToFreq reads the select live.
 
 document.getElementById('disturbBtn').addEventListener('click', () => {
-  for (const p of particles) {
+  particles.forEach((p, i) => {
     p.vx += (Math.random() - 0.5) * 18;
     p.vy += (Math.random() - 0.5) * 18;
     p.tension = Math.min(1, p.tension + 0.6);
-  }
+    // Push half toward cold (0.1) and half toward hot (0.9) to span the full chord range
+    if (!p.isKeyNote) {
+      p.warmth = i % 2 === 0
+        ? Math.max(0,   p.warmth * 0.3 + 0.1 * 0.7)
+        : Math.min(1,   p.warmth * 0.3 + 0.9 * 0.7);
+    }
+  });
 });
 
 document.getElementById('addBtn').addEventListener('click', () => {

@@ -146,6 +146,62 @@ input[type=text] {
   font-family:inherit; line-height:1;
 }
 .obj-rm:hover { color:#f64; }
+
+/* ── Sequencer strip ─────────────────────────────────────── */
+#seqWrap {
+  height:80px; flex-shrink:0;
+  background:#050810; border-top:1px solid #1a2535;
+  display:flex; flex-direction:column; overflow:hidden;
+  user-select:none;
+}
+#seqControls {
+  display:flex; justify-content:space-between; align-items:center;
+  padding:3px 8px 2px; gap:6px; flex-shrink:0;
+}
+.seq-transport,.seq-tools { display:flex; gap:3px; }
+.seq-btn {
+  width:auto !important; padding:2px 7px !important;
+  font-size:9px !important; letter-spacing:0.5px !important;
+}
+.seq-btn.seq-active { background:#3af !important; color:#000 !important; border-color:#3af !important; }
+#seqTrack {
+  flex:1; overflow-x:auto; overflow-y:hidden; padding:0 8px;
+}
+#seqTrack::-webkit-scrollbar { height:3px; }
+#seqTrack::-webkit-scrollbar-thumb { background:#1e3050; border-radius:2px; }
+#seqCells { display:flex; gap:2px; width:max-content; }
+.seq-cell {
+  width:36px; flex-shrink:0; display:flex; flex-direction:column;
+  gap:1px; position:relative; border:1px solid transparent; border-radius:2px;
+}
+.seq-cell.seq-current { border-color:rgba(255,255,255,0.75); }
+.seq-tog {
+  height:20px; background:#1a2535; border:1px solid #1e3050;
+  border-radius:2px; cursor:pointer; transition:background 0.05s,border-color 0.05s;
+}
+.seq-cell.seq-on .seq-tog { background:#0a2a50; border-color:#3af; box-shadow:0 0 5px rgba(51,170,255,0.3); }
+.seq-cell.seq-flash .seq-tog { background:rgba(255,255,255,0.88) !important; border-color:#fff !important; }
+.seq-note {
+  height:10px; text-align:center; font-size:7px; color:#2a3f55;
+  line-height:10px; cursor:pointer;
+}
+.seq-cell.seq-on .seq-note { color:#3af; }
+.seq-chord-dot::after {
+  content:''; position:absolute; top:1px; right:2px;
+  width:4px; height:4px; border-radius:50%;
+  background:rgba(51,255,160,0.65); pointer-events:none;
+}
+.seq-vel-wrap {
+  height:14px; background:#0d1520; border:1px solid #1a2535;
+  border-radius:1px; cursor:ns-resize; position:relative; touch-action:none;
+}
+.seq-vel-bar {
+  position:absolute; bottom:0; left:0; right:0;
+  background:rgba(51,170,255,0.65); border-radius:1px 1px 0 0; pointer-events:none;
+}
+/* NLT active state */
+.nlt-btn.active { background:#3af !important; color:#000 !important; border-color:#3af !important; }
+
 </style>
 </head>
 <body>
@@ -207,6 +263,18 @@ input[type=text] {
       <option value="warmth">WARMTH DRIFT</option>
       <option value="reverb">REVERB</option>
     </select>
+    <div class="toggle-row" style="margin-top:4px">
+      <input type="checkbox" id="lfoSync">
+      <span>LFO SYNC TO BPM</span>
+    </div>
+    <div id="lfoSyncDivRow" style="display:none;margin-top:4px">
+      <select id="lfoSyncDiv">
+        <option value="4">1/4 NOTE</option>
+        <option value="2">1/2 NOTE</option>
+        <option value="1" selected>1 BAR</option>
+        <option value="0.5">2 BARS</option>
+      </select>
+    </div>
     <div class="toggle-row">
       <input type="checkbox" id="bubbleOn" checked>
       <span>BUBBLE RESONANCE</span>
@@ -234,8 +302,17 @@ input[type=text] {
   <div class="ctrl"><label>REVERB <span id="rvv">0.35</span></label>
     <input type="range" id="reverbamt" min="0" max="1" step="0.05" value="0.35"></div>
 
+  <h2>SEQUENCER</h2>
   <div class="ctrl"><label>BPM <span id="bpmv">90</span></label>
-    <input type="range" id="bpm" min="40" max="180" step="1" value="90"></div>
+    <input type="range" id="bpm" min="20" max="200" step="1" value="90"></div>
+  <div class="ctrl"><label>SWING <span id="swingv">0</span></label>
+    <input type="range" id="swing" min="0" max="100" step="1" value="0"></div>
+  <div style="font-size:10px;color:#667;letter-spacing:1px;">STEPS</div>
+  <div class="row">
+    <button class="btn seq-steps-btn" data-steps="8">8</button>
+    <button class="btn seq-steps-btn seq-active" data-steps="16">16</button>
+    <button class="btn seq-steps-btn" data-steps="32">32</button>
+  </div>
 
   <div style="font-size:10px;color:#667;letter-spacing:1px;">SCALE</div>
   <select id="scale">
@@ -339,6 +416,24 @@ input[type=text] {
 <div id="canvasWrap">
   <canvas id="main"></canvas>
   <canvas id="scope"></canvas>
+  <div id="seqWrap">
+    <div id="seqControls">
+      <div class="seq-transport">
+        <button class="btn seq-btn" id="seqPlay">▶ PLAY</button>
+        <button class="btn seq-btn" id="seqPause">⏸</button>
+        <button class="btn seq-btn" id="seqStop">■ STOP</button>
+      </div>
+      <div class="seq-tools">
+        <button class="btn seq-btn" id="seqRnd">RND</button>
+        <button class="btn seq-btn" id="seqClear">CLR</button>
+        <button class="btn seq-btn" id="seqFill">FILL</button>
+        <button class="btn seq-btn" id="seqShl">◀ SHL</button>
+        <button class="btn seq-btn" id="seqShr">SHR ▶</button>
+        <button class="btn seq-btn" id="seqRev">REV</button>
+      </div>
+    </div>
+    <div id="seqTrack"><div id="seqCells"></div></div>
+  </div>
 </div>
 
 <script>
@@ -354,10 +449,11 @@ const scopeCv = document.getElementById('scope');
 const sctx    = scopeCv.getContext('2d');
 const wrap    = document.getElementById('canvasWrap');
 
+const SEQ_H = 80; // must match #seqWrap height in CSS
 let W = 1, H = 1;
 function resize() {
   const r = wrap.getBoundingClientRect();
-  W = r.width; H = r.height - 60;
+  W = r.width; H = r.height - 60 - SEQ_H;
   canvas.width = W;  canvas.height = H;
   scopeCv.width = W; scopeCv.height = 60;
 }
@@ -1182,7 +1278,13 @@ function updateFM() {
 
 function updateLFO(dt) {
   if (getSynthMode() !== 'fm') return;
-  const rate = parseFloat(document.getElementById('lforate').value);
+  let rate;
+  if (lfoSyncOn && AC) {
+    const div = parseFloat(document.getElementById('lfoSyncDiv').value);
+    rate = sl('bpm') * div / 240; // div: 4=qtr,2=half,1=bar,0.5=2bar
+  } else {
+    rate = parseFloat(document.getElementById('lforate').value);
+  }
   lfoPhase = (lfoPhase + rate * 2 * Math.PI * dt) % (Math.PI * 2);
   lfoVal   = Math.sin(lfoPhase);
 
@@ -1998,6 +2100,36 @@ document.getElementById('resetBtn').addEventListener('click', () => {
 
 document.getElementById('startBtn').addEventListener('click', initAudio);
 
+// Swing display
+document.getElementById('swing').addEventListener('input', function() {
+  document.getElementById('swingv').textContent = this.value;
+});
+
+// Sequencer transport
+document.getElementById('seqPlay').addEventListener('click', seqPlay);
+document.getElementById('seqPause').addEventListener('click', seqPauseFn);
+document.getElementById('seqStop').addEventListener('click', seqStop);
+
+// Pattern tools
+document.getElementById('seqRnd').addEventListener('click', seqRandomise);
+document.getElementById('seqClear').addEventListener('click', seqClearAll);
+document.getElementById('seqFill').addEventListener('click', seqFillAll);
+document.getElementById('seqShl').addEventListener('click', () => seqShift(-1));
+document.getElementById('seqShr').addEventListener('click', () => seqShift(1));
+document.getElementById('seqRev').addEventListener('click', seqReverse);
+
+// Step count
+document.querySelectorAll('.seq-steps-btn').forEach(b => {
+  b.addEventListener('click', () => seqSetStepCount(parseInt(b.dataset.steps)));
+});
+
+// LFO sync
+document.getElementById('lfoSync').addEventListener('change', function() {
+  lfoSyncOn = this.checked;
+  document.getElementById('lforate').disabled = lfoSyncOn;
+  document.getElementById('lfoSyncDivRow').style.display = lfoSyncOn ? '' : 'none';
+});
+
 // Return focus to document after interacting with sliders/dropdowns so keyboard note
 // playing works immediately without needing to click elsewhere first.
 document.getElementById('panel').addEventListener('pointerup', e => {
@@ -2128,6 +2260,292 @@ document.addEventListener('keyup', e => {
 });
 
 // ─────────────────────────────────────────────────────────────
+// Sequencer
+// ─────────────────────────────────────────────────────────────
+
+const NOTE_NAMES = ['C','C#','D','D#','E','F','F#','G','G#','A','A#','B'];
+const SEQ_MAX = 32;
+
+let seqStepCount   = 16;
+let seqPlaying     = false;
+let seqPaused      = false;
+let seqCurrentStep = 0;
+let seqNextStep    = 0;
+let seqNextStepTime = 0;
+let seqSchedTimer  = null;
+let seqFlashStep   = -1;
+let seqFlashTime   = 0;
+let seqCellEls     = [];
+let lfoSyncOn      = false;
+let velDragStep    = -1, velDragStartY = 0, velDragStartVel = 0;
+
+const SEQ_LOOKAHEAD      = 0.10; // seconds
+const SEQ_SCHED_INTERVAL = 25;   // ms
+
+function makeDefaultSteps() {
+  return Array.from({length: SEQ_MAX}, (_, i) => ({
+    active: false,
+    noteIdx: i % 8,
+    velocity: 0.75,
+  }));
+}
+let seqSteps = makeDefaultSteps();
+
+function stepNoteLabel(noteIdx) {
+  const notes = SCALES[document.getElementById('scale').value] || SCALES.pentatonic;
+  const total = notes.length * 4;
+  const idx   = Math.min(noteIdx, total - 1);
+  const oct   = Math.floor(idx / notes.length);
+  const deg   = notes[idx % notes.length];
+  const midi  = 45 + oct * 12 + deg;
+  return NOTE_NAMES[midi % 12] + (Math.floor(midi / 12) - 1);
+}
+
+// Duration of the interval AFTER step s fires (swing applied here)
+function seqStepInterval(s) {
+  const base = 60 / sl('bpm') / 4; // 16th-note grid
+  const sf   = parseInt(document.getElementById('swing').value) / 100 * 0.33;
+  // Even downbeat steps get a longer gap (pushes off-beat later); odd get shorter
+  return s % 2 === 0 ? base * (1 + sf) : base * (1 - sf);
+}
+
+function seqScheduler() {
+  if (!seqPlaying || !AC) return;
+  while (seqNextStepTime < AC.currentTime + SEQ_LOOKAHEAD) {
+    const step     = seqNextStep;
+    const fireTime = seqNextStepTime;
+    const delayMs  = Math.max(0, (fireTime - AC.currentTime) * 1000 - 5);
+    setTimeout(() => {
+      if (!seqPlaying) return;
+      seqCurrentStep = step;
+      if (seqSteps[step].active) {
+        spawnSeqParticle(step);
+        seqFlashStep = step;
+        seqFlashTime = performance.now();
+      }
+    }, delayMs);
+    seqNextStepTime += seqStepInterval(step);
+    seqNextStep = (seqNextStep + 1) % seqStepCount;
+  }
+  seqSchedTimer = setTimeout(seqScheduler, SEQ_SCHED_INTERVAL);
+}
+
+function seqPlay() {
+  if (!audioStarted) initAudio();
+  if (seqPaused) {
+    seqPaused  = false;
+    seqPlaying = true;
+    seqNextStepTime = AC.currentTime + 0.05;
+    seqScheduler();
+  } else if (!seqPlaying) {
+    seqPlaying = true;
+    seqPaused  = false;
+    seqNextStep    = 0;
+    seqCurrentStep = 0;
+    seqNextStepTime = AC.currentTime + 0.05;
+    seqScheduler();
+  }
+  seqUpdateTransport();
+}
+
+function seqPauseFn() {
+  if (!seqPlaying) return;
+  clearTimeout(seqSchedTimer);
+  seqPlaying = false;
+  seqPaused  = true;
+  seqUpdateTransport();
+}
+
+function seqStop() {
+  clearTimeout(seqSchedTimer);
+  seqPlaying     = false;
+  seqPaused      = false;
+  seqCurrentStep = 0;
+  seqUpdateTransport();
+}
+
+function seqUpdateTransport() {
+  document.getElementById('seqPlay').classList.toggle('seq-active', seqPlaying);
+  document.getElementById('seqPause').classList.toggle('seq-active', seqPaused);
+}
+
+function spawnSeqParticle(stepIdx) {
+  if (!audioStarted) return;
+  const step  = seqSteps[stepIdx];
+  const notes = SCALES[document.getElementById('scale').value] || SCALES.pentatonic;
+  const total = notes.length * 4;
+  const nIdx  = step.noteIdx % total;
+  const w     = (nIdx + 0.5) / total;
+  const vel   = step.velocity;
+
+  while (particles.length >= particleLimit) {
+    if (!cullOldestParticle()) break;
+  }
+
+  const px = W * 0.05 + Math.random() * W * 0.9;
+  const py = H * 0.74 + Math.random() * H * 0.24;
+  const p  = new Particle(px, py, w, vel);
+  p.isKeyNote   = true;
+  p.keyWarmth   = w;
+  p.keyReleased = true;
+  p.releasedAt  = performance.now();
+  p.vx = (Math.random() - 0.5) * 3;
+  p.vy = -(0.8 + vel * 5);
+  if (noteLifetimeMode === 'instant') p._instantDecay = true;
+  particles.push(p);
+  updateParticleCount();
+}
+
+// ─── Pattern tools ───────────────────────────────────────────
+function seqRandomise() {
+  const notes = SCALES[document.getElementById('scale').value] || SCALES.pentatonic;
+  const total = notes.length * 4;
+  for (let i = 0; i < seqStepCount; i++) {
+    seqSteps[i].active   = Math.random() < 0.5;
+    seqSteps[i].noteIdx  = Math.floor(Math.random() * total);
+    seqSteps[i].velocity = 0.3 + Math.random() * 0.7;
+  }
+  seqRenderCells();
+}
+
+function seqClearAll() {
+  for (let i = 0; i < seqStepCount; i++) seqSteps[i].active = false;
+  seqRenderCells();
+}
+
+function seqFillAll() {
+  for (let i = 0; i < seqStepCount; i++) { seqSteps[i].active = true; seqSteps[i].velocity = 1; }
+  seqRenderCells();
+}
+
+function seqShift(dir) {
+  const snap = seqSteps.slice(0, seqStepCount).map(s => ({...s}));
+  for (let i = 0; i < seqStepCount; i++)
+    seqSteps[(i + dir + seqStepCount) % seqStepCount] = snap[i];
+  seqRenderCells();
+}
+
+function seqReverse() {
+  const snap = seqSteps.slice(0, seqStepCount).map(s => ({...s}));
+  for (let i = 0; i < seqStepCount; i++) seqSteps[i] = snap[seqStepCount - 1 - i];
+  seqRenderCells();
+}
+
+function seqSetStepCount(n) {
+  if (seqStepCount === n) return;
+  if (!confirm(`Reset pattern to ${n} steps?`)) return;
+  seqStop();
+  seqStepCount = n;
+  seqSteps = makeDefaultSteps();
+  document.querySelectorAll('.seq-steps-btn').forEach(b =>
+    b.classList.toggle('seq-active', parseInt(b.dataset.steps) === n));
+  seqRenderCells();
+}
+
+// ─── Chord tone marker ───────────────────────────────────────
+function seqIsChordTone(noteIdx) {
+  if (!currentChordName || !document.getElementById('chordOn').checked) return false;
+  const q = CHORD_QUALITIES.find(cq => cq.name.toUpperCase() === currentChordName);
+  if (!q) return false;
+  const notes = SCALES[document.getElementById('scale').value] || SCALES.pentatonic;
+  const total = notes.length * 4;
+  const idx   = noteIdx % total;
+  const oct   = Math.floor(idx / notes.length);
+  const deg   = notes[idx % notes.length];
+  const midi  = 45 + oct * 12 + deg;
+  const rel   = (midi - 45 + 120) % 12;
+  return q.intervals.some(iv => (iv % 12) === rel);
+}
+
+// ─── DOM cell builder ────────────────────────────────────────
+function seqRenderCells() {
+  const container = document.getElementById('seqCells');
+  container.innerHTML = '';
+  for (let i = 0; i < SEQ_MAX; i++) {
+    const step = seqSteps[i];
+    const cell = document.createElement('div');
+    cell.className = 'seq-cell' + (step.active ? ' seq-on' : '');
+    cell.dataset.step = i;
+    if (i >= seqStepCount) cell.style.display = 'none';
+
+    const tog = document.createElement('div');
+    tog.className = 'seq-tog';
+
+    const note = document.createElement('div');
+    note.className = 'seq-note';
+    note.textContent = stepNoteLabel(step.noteIdx);
+
+    const velWrap = document.createElement('div');
+    velWrap.className = 'seq-vel-wrap';
+    const velBar = document.createElement('div');
+    velBar.className = 'seq-vel-bar';
+    velBar.style.height = Math.round(step.velocity * 100) + '%';
+    velWrap.appendChild(velBar);
+
+    cell.appendChild(tog);
+    cell.appendChild(note);
+    cell.appendChild(velWrap);
+    container.appendChild(cell);
+  }
+  seqCellEls = Array.from(container.querySelectorAll('.seq-cell'));
+  seqBindCells();
+}
+
+function seqBindCells() {
+  seqCellEls.forEach((cell, i) => {
+    cell.querySelector('.seq-tog').addEventListener('click', e => {
+      e.stopPropagation();
+      seqSteps[i].active = !seqSteps[i].active;
+      cell.classList.toggle('seq-on', seqSteps[i].active);
+    });
+    cell.querySelector('.seq-note').addEventListener('click', e => {
+      e.stopPropagation();
+      const notes = SCALES[document.getElementById('scale').value] || SCALES.pentatonic;
+      seqSteps[i].noteIdx = (seqSteps[i].noteIdx + 1) % (notes.length * 4);
+      e.target.textContent = stepNoteLabel(seqSteps[i].noteIdx);
+    });
+    const velWrap = cell.querySelector('.seq-vel-wrap');
+    velWrap.addEventListener('pointerdown', e => {
+      e.preventDefault(); e.stopPropagation();
+      velDragStep     = i;
+      velDragStartY   = e.clientY;
+      velDragStartVel = seqSteps[i].velocity;
+      velWrap.setPointerCapture(e.pointerId);
+    });
+    velWrap.addEventListener('pointermove', e => {
+      if (velDragStep !== i) return;
+      const dy = velDragStartY - e.clientY;
+      seqSteps[i].velocity = Math.max(0, Math.min(1, velDragStartVel + dy / 60));
+      cell.querySelector('.seq-vel-bar').style.height = Math.round(seqSteps[i].velocity * 100) + '%';
+    });
+    velWrap.addEventListener('pointerup', () => { if (velDragStep === i) velDragStep = -1; });
+  });
+}
+
+// ─── Per-frame visual update ─────────────────────────────────
+function seqUpdateVisuals() {
+  const now = performance.now();
+  const chordOn = document.getElementById('chordOn').checked;
+  const swingVal = parseInt(document.getElementById('swing').value);
+  seqCellEls.forEach((cell, i) => {
+    if (i >= seqStepCount) return;
+    cell.classList.toggle('seq-current', seqPlaying && i === seqCurrentStep);
+    cell.classList.toggle('seq-flash',   seqFlashStep === i && now - seqFlashTime < 80);
+    cell.classList.toggle('seq-on',      seqSteps[i].active);
+    cell.classList.toggle('seq-chord-dot', chordOn && seqIsChordTone(seqSteps[i].noteIdx));
+    // Visual swing displacement
+    if (swingVal > 50 && i % 2 === 1) {
+      cell.style.transform = `translateX(${(swingVal - 50) / 50 * 7}px)`;
+    } else {
+      cell.style.transform = '';
+    }
+    // Keep note labels current (scale may change)
+    const noteEl = cell.querySelector('.seq-note');
+    if (noteEl) noteEl.textContent = stepNoteLabel(seqSteps[i].noteIdx);
+  });
+}
+
+// ─────────────────────────────────────────────────────────────
 // Loop
 // ─────────────────────────────────────────────────────────────
 
@@ -2149,6 +2567,7 @@ function loop() {
   updateFM();
   draw();
   drawScope();
+  seqUpdateVisuals();
 
   const ft = document.getElementById('frametime');
   if (ft) ft.textContent = frameMs.toFixed(1);
@@ -2157,6 +2576,7 @@ function loop() {
 }
 
 initParticles(12);
+seqRenderCells();
 loop();
 </script>
 </body>

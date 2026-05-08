@@ -1759,6 +1759,15 @@ document.getElementById('resetBtn').addEventListener('click', () => {
 
 document.getElementById('startBtn').addEventListener('click', initAudio);
 
+// Return focus to document after interacting with sliders/dropdowns so keyboard note
+// playing works immediately without needing to click elsewhere first.
+document.getElementById('panel').addEventListener('pointerup', e => {
+  const el = e.target;
+  if ((el.tagName === 'INPUT' && el.type === 'range') || el.tagName === 'SELECT') {
+    el.blur();
+  }
+});
+
 // Canvas mouse — handles attractor, scene object place/drag/remove
 canvas.addEventListener('contextmenu', e => e.preventDefault());
 

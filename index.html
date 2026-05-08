@@ -16,7 +16,6 @@ body {
   display:flex;
 }
 
-/* ── Panel ──────────────────────────────────────────────────── */
 #panel {
   width:210px;
   min-width:210px;
@@ -39,46 +38,26 @@ body {
 }
 
 .ctrl { display:flex; flex-direction:column; gap:4px; }
-
 .ctrl label {
-  color:#667;
-  font-size:10px;
-  letter-spacing:1px;
-  display:flex;
-  justify-content:space-between;
+  color:#667; font-size:10px; letter-spacing:1px;
+  display:flex; justify-content:space-between;
 }
 .ctrl label span { color:#3af; font-weight:bold; }
 
 input[type=range] {
-  width:100%;
-  height:3px;
-  -webkit-appearance:none;
-  appearance:none;
-  background:#1e2a3a;
-  outline:none;
-  cursor:pointer;
-  border-radius:2px;
+  width:100%; height:3px;
+  -webkit-appearance:none; appearance:none;
+  background:#1e2a3a; outline:none; cursor:pointer; border-radius:2px;
 }
 input[type=range]::-webkit-slider-thumb {
   -webkit-appearance:none;
-  width:12px;
-  height:12px;
-  background:#3af;
-  border-radius:50%;
-  cursor:pointer;
+  width:12px; height:12px; background:#3af; border-radius:50%; cursor:pointer;
 }
 
 .btn {
-  background:#0a0f16;
-  border:1px solid #1e3050;
-  color:#3af;
-  padding:6px 8px;
-  cursor:pointer;
-  font-family:'Courier New',monospace;
-  font-size:10px;
-  letter-spacing:1px;
-  width:100%;
-  transition:all 0.1s;
+  background:#0a0f16; border:1px solid #1e3050; color:#3af;
+  padding:6px 8px; cursor:pointer; font-family:'Courier New',monospace;
+  font-size:10px; letter-spacing:1px; width:100%; transition:all 0.1s;
 }
 .btn:hover { background:#1a2535; border-color:#3af; }
 .btn:active { background:#3af; color:#000; }
@@ -88,53 +67,24 @@ input[type=range]::-webkit-slider-thumb {
 .row .btn { flex:1; }
 
 select {
-  background:#0a0f16;
-  border:1px solid #1e3050;
-  color:#3af;
-  padding:5px;
-  font-family:'Courier New',monospace;
-  font-size:10px;
-  width:100%;
-  cursor:pointer;
-  outline:none;
+  background:#0a0f16; border:1px solid #1e3050; color:#3af;
+  padding:5px; font-family:'Courier New',monospace; font-size:10px;
+  width:100%; cursor:pointer; outline:none;
 }
 
-.toggle-row {
-  display:flex;
-  align-items:center;
-  gap:8px;
-}
-.toggle-row input[type=checkbox] {
-  accent-color:#3af;
-  cursor:pointer;
-  width:13px;
-  height:13px;
-}
+.toggle-row { display:flex; align-items:center; gap:8px; }
+.toggle-row input[type=checkbox] { accent-color:#3af; cursor:pointer; width:13px; height:13px; }
 .toggle-row span { color:#667; font-size:10px; letter-spacing:1px; }
 
 #status {
-  font-size:10px;
-  color:#445;
-  margin-top:auto;
-  border-top:1px solid #1a2535;
-  padding-top:10px;
-  line-height:1.9;
+  font-size:10px; color:#445; margin-top:auto;
+  border-top:1px solid #1a2535; padding-top:10px; line-height:1.9;
 }
 #status span { color:#3af; }
-
 #startBtn.running { border-color:#3fa; color:#3fa; }
 
-/* ── Canvas area ─────────────────────────────────────────────── */
-#canvasWrap {
-  flex:1;
-  position:relative;
-  display:flex;
-  flex-direction:column;
-  min-width:0;
-}
-
+#canvasWrap { flex:1; position:relative; display:flex; flex-direction:column; min-width:0; }
 canvas { display:block; }
-
 #scope { height:60px; background:#050810; }
 </style>
 </head>
@@ -144,40 +94,24 @@ canvas { display:block; }
   <div style="color:#3af;font-size:11px;letter-spacing:2px;font-weight:bold;padding-bottom:4px;">PARTICLE SYNTH</div>
 
   <h2>PHYSICS</h2>
-  <div class="ctrl">
-    <label>GRAVITY <span id="gv">0.08</span></label>
-    <input type="range" id="gravity" min="0" max="0.5" step="0.01" value="0.08">
-  </div>
-  <div class="ctrl">
-    <label>WIND <span id="wv">0.00</span></label>
-    <input type="range" id="wind" min="-0.3" max="0.3" step="0.01" value="0">
-  </div>
-  <div class="ctrl">
-    <label>VISCOSITY <span id="vv">0.98</span></label>
-    <input type="range" id="viscosity" min="0.8" max="1.0" step="0.005" value="0.98">
-  </div>
-  <div class="ctrl">
-    <label>BOUNCINESS <span id="bv">0.75</span></label>
-    <input type="range" id="bounce" min="0.1" max="1.0" step="0.05" value="0.75">
-  </div>
+  <div class="ctrl"><label>GRAVITY <span id="gv">0.08</span></label>
+    <input type="range" id="gravity" min="0" max="0.5" step="0.01" value="0.08"></div>
+  <div class="ctrl"><label>WIND <span id="wv">0.00</span></label>
+    <input type="range" id="wind" min="-0.3" max="0.3" step="0.01" value="0"></div>
+  <div class="ctrl"><label>VISCOSITY <span id="vv">0.98</span></label>
+    <input type="range" id="viscosity" min="0.8" max="1.0" step="0.005" value="0.98"></div>
+  <div class="ctrl"><label>BOUNCINESS <span id="bv">0.75</span></label>
+    <input type="range" id="bounce" min="0.1" max="1.0" step="0.05" value="0.75"></div>
 
   <h2>SYNTHESIS</h2>
-  <div class="ctrl">
-    <label>FM DEPTH <span id="fv">3.0</span></label>
-    <input type="range" id="fmdepth" min="0" max="12" step="0.5" value="3">
-  </div>
-  <div class="ctrl">
-    <label>GRAIN DENSITY <span id="gdv">0.5</span></label>
-    <input type="range" id="graindensity" min="0" max="1" step="0.05" value="0.5">
-  </div>
-  <div class="ctrl">
-    <label>MASTER VOL <span id="mvv">0.60</span></label>
-    <input type="range" id="mastervol" min="0" max="1" step="0.05" value="0.6">
-  </div>
-  <div class="ctrl">
-    <label>REVERB <span id="rvv">0.35</span></label>
-    <input type="range" id="reverbamt" min="0" max="1" step="0.05" value="0.35">
-  </div>
+  <div class="ctrl"><label>FM DEPTH <span id="fv">3.0</span></label>
+    <input type="range" id="fmdepth" min="0" max="12" step="0.5" value="3"></div>
+  <div class="ctrl"><label>GRAIN DENSITY <span id="gdv">0.5</span></label>
+    <input type="range" id="graindensity" min="0" max="1" step="0.05" value="0.5"></div>
+  <div class="ctrl"><label>MASTER VOL <span id="mvv">0.60</span></label>
+    <input type="range" id="mastervol" min="0" max="1" step="0.05" value="0.6"></div>
+  <div class="ctrl"><label>REVERB <span id="rvv">0.35</span></label>
+    <input type="range" id="reverbamt" min="0" max="1" step="0.05" value="0.35"></div>
 
   <div style="font-size:10px;color:#667;letter-spacing:1px;">GRAIN TYPE</div>
   <select id="graintype">
@@ -217,203 +151,250 @@ canvas { display:block; }
 'use strict';
 
 // ─────────────────────────────────────────────────────────────
-// Canvas setup
+// Canvas
 // ─────────────────────────────────────────────────────────────
 
-const canvas     = document.getElementById('main');
-const ctx        = canvas.getContext('2d');
-const scopeCv    = document.getElementById('scope');
-const sctx       = scopeCv.getContext('2d');
-const wrap       = document.getElementById('canvasWrap');
+const canvas  = document.getElementById('main');
+const ctx     = canvas.getContext('2d');
+const scopeCv = document.getElementById('scope');
+const sctx    = scopeCv.getContext('2d');
+const wrap    = document.getElementById('canvasWrap');
 
 let W = 1, H = 1;
-
 function resize() {
   const r = wrap.getBoundingClientRect();
-  W = r.width;
-  H = r.height - 60;
-  canvas.width  = W;  canvas.height = H;
-  scopeCv.width = W;  scopeCv.height = 60;
+  W = r.width; H = r.height - 60;
+  canvas.width = W;  canvas.height = H;
+  scopeCv.width = W; scopeCv.height = 60;
 }
 resize();
 window.addEventListener('resize', resize);
 
 // ─────────────────────────────────────────────────────────────
-// Audio
+// Audio globals
 // ─────────────────────────────────────────────────────────────
 
-let AC           = null;
-let masterGain   = null;
-let limiter      = null;
-let reverb       = null;
-let reverbGain   = null;
-let analyser     = null;
+let AC = null, masterGain = null, limiter = null;
+let reverb = null, reverbGain = null, analyser = null;
 let audioStarted = false;
+
+// Global grain limiter: prevents simultaneous grain explosions
+let activeGrains = 0;
+let lastGrainTime = 0;
+const MAX_ACTIVE_GRAINS = 5;
 
 const MAX_P = 24;
 const particles = [];
 
-// Warmth → Hz (80 → 800)
+// ─────────────────────────────────────────────────────────────
+// Helpers
+// ─────────────────────────────────────────────────────────────
+
+// warmth 0→1 maps to 80→800 Hz
 function warmthToFreq(w) {
   return 80 * Math.pow(10, Math.max(0, Math.min(1, w)));
 }
 
 function warmthToColor(w, alpha) {
   alpha = alpha !== undefined ? alpha : 1;
-  const h = w < 0.5
-    ? 200 + w * 80
-    : 240 - (w - 0.5) * 280;
+  const h = w < 0.5 ? 200 + w * 80 : 240 - (w - 0.5) * 280;
   return `hsla(${Math.round(h)},80%,${40 + w * 20}%,${alpha})`;
 }
 
+function sl(id)  { return parseFloat(document.getElementById(id).value); }
+
+// ─────────────────────────────────────────────────────────────
+// Reverb impulse
+// ─────────────────────────────────────────────────────────────
+
 function buildReverb(ac) {
-  const len = ac.sampleRate * 3;
+  const len = Math.floor(ac.sampleRate * 2.2);
   const buf = ac.createBuffer(2, len, ac.sampleRate);
   for (let c = 0; c < 2; c++) {
     const d = buf.getChannelData(c);
     for (let i = 0; i < len; i++)
-      d[i] = (Math.random() * 2 - 1) * Math.pow(1 - i / len, 2.2);
+      d[i] = (Math.random() * 2 - 1) * Math.pow(1 - i / len, 2.5);
   }
   const conv = ac.createConvolver();
   conv.buffer = buf;
   return conv;
 }
 
-// Grain synthesis — fired on collision
-function spawnGrain(freq, type) {
+// ─────────────────────────────────────────────────────────────
+// Grain synthesis
+// Called only on meaningful events (significant collision or wall bounce).
+// A global active-grain count and minimum time gap prevent noise buildup.
+// ─────────────────────────────────────────────────────────────
+
+function spawnGrain(freq, type, gainAmt) {
   if (!audioStarted) return;
+  if (activeGrains >= MAX_ACTIVE_GRAINS) return;
+
+  const now = performance.now();
+  // Global minimum gap shrinks with grain density (200ms→40ms)
+  const minGap = 200 - sl('graindensity') * 160;
+  if (now - lastGrainTime < minGap) return;
+  lastGrainTime = now;
+
   try {
     const sr  = AC.sampleRate;
-    const dur = 0.025 + Math.random() * 0.1;
+    freq = Math.max(40, Math.min(3000, freq));
+    const dur = 0.03 + Math.random() * 0.09;
     const len = Math.floor(sr * dur);
     const buf = AC.createBuffer(1, len, sr);
     const d   = buf.getChannelData(0);
 
     if (type === 'droplet') {
+      // Decaying sine — clearly pitched
       for (let i = 0; i < len; i++)
-        d[i] = Math.sin(2 * Math.PI * freq * i / sr) * Math.exp(-i / sr * 28) * 0.85;
+        d[i] = Math.sin(2 * Math.PI * freq * i / sr) * Math.exp(-i / sr * 22);
 
     } else if (type === 'pluck') {
-      // Karplus-Strong: noise burst filtered through a delay loop
-      const delayLen = Math.max(2, Math.round(sr / freq));
-      const ring = new Float32Array(delayLen);
-      for (let i = 0; i < delayLen; i++) ring[i] = Math.random() * 2 - 1;
+      // Karplus-Strong — physical string ping, frequency-accurate
+      const dl = Math.max(2, Math.round(sr / freq));
+      const ring = new Float32Array(dl);
+      for (let i = 0; i < dl; i++) ring[i] = Math.random() * 2 - 1;
       for (let i = 0; i < len; i++) {
-        const idx = i % delayLen;
+        const idx = i % dl;
         d[i] = ring[idx];
-        ring[idx] = 0.5 * (ring[idx] + ring[(idx + 1) % delayLen]);
+        ring[idx] = 0.498 * (ring[idx] + ring[(idx + 1) % dl]);
       }
-      // Fade out
-      for (let i = 0; i < len; i++) d[i] *= Math.exp(-i / len * 4);
 
-    } else { // noise
+    } else {
+      // Noise burst — short, filtered enough to not dominate
       for (let i = 0; i < len; i++)
-        d[i] = (Math.random() * 2 - 1) * Math.exp(-i / len * 12) * 0.7;
+        d[i] = (Math.random() * 2 - 1) * Math.exp(-i / len * 14) * 0.6;
     }
 
+    activeGrains++;
     const src = AC.createBufferSource();
     src.buffer = buf;
-    src.playbackRate.value = 0.88 + Math.random() * 0.24;
+    src.playbackRate.value = 0.92 + Math.random() * 0.16;
+
     const g = AC.createGain();
-    g.gain.value = 0.28;
+    g.gain.value = Math.max(0, Math.min(0.7, gainAmt));
+
     src.connect(g);
     g.connect(masterGain);
     src.start();
-    src.stop(AC.currentTime + dur + 0.06);
-  } catch (_) {}
+    src.onended = () => { activeGrains--; };
+    src.stop(AC.currentTime + dur + 0.08);
+  } catch (_) { activeGrains = Math.max(0, activeGrains - 1); }
 }
 
 // ─────────────────────────────────────────────────────────────
 // Particle
+// Each particle owns:
+//   osc → filter (bandpass bubble) → lpf (tame sawtooth) → oscGain → masterGain
+//   fmOsc → fmGain → osc.frequency    (proximity FM, set externally)
 // ─────────────────────────────────────────────────────────────
 
 class Particle {
   constructor(x, y, warmth, tension) {
-    this.x       = x;
-    this.y       = y;
-    this.vx      = (Math.random() - 0.5) * 3;
-    this.vy      = (Math.random() - 0.5) * 3;
-    this.warmth  = warmth;
-    this.tension = tension;
-    this.mass    = 1 + tension;
-    this.r       = 6 + tension * 10;
+    this.x = x; this.y = y;
+    this.vx = (Math.random() - 0.5) * 3;
+    this.vy = (Math.random() - 0.5) * 3;
+    this.warmth  = Math.max(0, Math.min(1, warmth));
+    this.tension = Math.max(0.1, Math.min(1, tension));
+    this.mass = 1 + tension;
+    this.r = 6 + tension * 10;
 
-    // Audio nodes (null until initAudio)
-    this.osc     = null;
-    this.fmOsc   = null; // dedicated FM modulator per particle
-    this.fmGain  = null;
-    this.filter  = null;
-    this.oscGain = null;
-
-    this.lastGrainTime = 0;
+    this.osc = null; this.fmOsc = null; this.fmGain = null;
+    this.filter = null; this.lpf = null; this.oscGain = null;
+    this._fmAccum = 0;
 
     if (audioStarted) this.initAudio();
   }
 
   initAudio() {
     try {
-      // Carrier chain: osc → filter → oscGain → masterGain
+      const t0 = AC.currentTime;
+
+      // Carrier oscillator
       this.osc = AC.createOscillator();
+
+      // Optional bandpass "bubble resonance"
       this.filter = AC.createBiquadFilter();
       this.filter.type = 'bandpass';
-      this.oscGain = AC.createGain();
-      this.oscGain.gain.value = 0;
+      this.filter.Q.value = 12;
 
-      // Dedicated FM oscillator: fmOsc → fmGain → osc.frequency
-      // This is wired once and stays wired — gain amplitude controls depth
+      // Lowpass to tame sawtooth at high warmth
+      this.lpf = AC.createBiquadFilter();
+      this.lpf.type = 'lowpass';
+
+      this.oscGain = AC.createGain();
+      this.oscGain.gain.setValueAtTime(0, t0);
+
+      // FM oscillator: always wired, gain controls depth
       this.fmOsc  = AC.createOscillator();
       this.fmGain = AC.createGain();
-      this.fmGain.gain.value = 0;
+      this.fmGain.gain.setValueAtTime(0, t0);
 
+      // Wire FM: fmOsc → fmGain → osc.frequency
       this.fmOsc.connect(this.fmGain);
-      this.fmGain.connect(this.osc.frequency);  // FM into carrier frequency
+      this.fmGain.connect(this.osc.frequency);
+
+      // Wire carrier: osc → filter → lpf → oscGain → master
       this.osc.connect(this.filter);
-      this.filter.connect(this.oscGain);
+      this.filter.connect(this.lpf);
+      this.lpf.connect(this.oscGain);
       this.oscGain.connect(masterGain);
 
-      this.fmOsc.start();
-      this.osc.start();
+      this.fmOsc.start(t0);
+      this.osc.start(t0);
 
       this.syncAudio(true);
-    } catch (e) { console.warn('Particle audio init:', e); }
+    } catch (e) { console.warn('initAudio:', e); }
   }
 
   syncAudio(immediate) {
     if (!this.osc || !AC) return;
-    const t    = AC.currentTime;
-    const tau  = immediate ? 0 : 0.05;
-    const freq = warmthToFreq(this.warmth);
-    const w    = this.warmth;
+    const t   = AC.currentTime;
+    const tau = immediate ? 0 : 0.06;
+    const w   = this.warmth;
+    const freq = warmthToFreq(w);
 
-    // Carrier type
-    this.osc.type = w < 0.33 ? 'sine' : w < 0.66 ? 'triangle' : 'sawtooth';
+    // Oscillator type: sine (cold) → triangle → sawtooth (hot)
+    const type = w < 0.33 ? 'sine' : w < 0.66 ? 'triangle' : 'sawtooth';
+    if (this.osc.type !== type) this.osc.type = type;
 
-    // Carrier frequency + velocity detune
+    // Pitch = warmth frequency + velocity detune
+    // Speed adds significant upward pitch shift — fast particles sound bright
     const spd = Math.hypot(this.vx, this.vy);
-    this.osc.frequency.setTargetAtTime(freq, t, tau);
-    this.osc.detune.setTargetAtTime(spd * 5, t, 0.12);
+    const targetFreq = freq * (1 + spd * 0.006);  // 6% per unit speed
+    this.osc.frequency.setTargetAtTime(targetFreq, t, tau);
 
-    // FM modulator tracks half the carrier frequency
-    this.fmOsc.frequency.setTargetAtTime(freq * 0.5, t, tau);
+    // FM modulator at a musically interesting ratio (subharmonic → harmonic with warmth)
+    const fmRatio = 0.5 + w * 1.0;  // 0.5x (cold) → 1.5x (hot)
+    this.fmOsc.frequency.setTargetAtTime(freq * fmRatio, t, tau);
 
-    // Bubble resonance filter
+    // Bubble resonance: bandpass at particle freq with high Q
     const bubbleOn = document.getElementById('bubbleOn').checked;
     if (bubbleOn) {
-      this.filter.frequency.setTargetAtTime(freq, t, 0.08);
-      this.filter.Q.value = 14;
+      this.filter.frequency.setTargetAtTime(freq, t, 0.1);
+      this.filter.Q.value = 12;
     } else {
       this.filter.frequency.value = 22050;
-      this.filter.Q.value = 0.1;
+      this.filter.Q.value = 0.01;
     }
 
-    // Amplitude from tension
-    this.oscGain.gain.setTargetAtTime(this.tension * 0.1, t, tau);
+    // LPF tames harsh sawtooth: cutoff rises with warmth but stays below hearing damage
+    // At w=0 (sine): cutoff = 22kHz (no effect)
+    // At w=1 (saw):  cutoff = freq * 4 (removes high partials)
+    const lpfCutoff = w < 0.66 ? 22050 : freq * (3 + (1 - w) * 6);
+    this.lpf.frequency.setTargetAtTime(lpfCutoff, t, 0.08);
+
+    // Gain: tension drives amplitude, but scaled to prevent noise mass
+    // Maximum 0.05 per particle; with 24 particles at max that's 1.2 — compressor handles it
+    const targetGain = this.tension * 0.05;
+    this.oscGain.gain.setTargetAtTime(targetGain, t, tau);
   }
 
-  // Called every frame from updateFM() — sets FM depth from proximity accumulator
-  setFMDepth(depth) {
+  // Called from updateFM each frame — sets FM depth in Hz
+  setFMDepth(depthHz) {
     if (!this.fmGain || !AC) return;
-    this.fmGain.gain.setTargetAtTime(depth, AC.currentTime, 0.08);
+    // Short tau so FM responds immediately to proximity changes
+    this.fmGain.gain.setTargetAtTime(depthHz, AC.currentTime, 0.04);
   }
 
   destroy() {
@@ -421,38 +402,87 @@ class Particle {
     const t = AC.currentTime;
     try { this.oscGain.gain.setTargetAtTime(0, t, 0.015); } catch (_) {}
     setTimeout(() => {
-      for (const node of [this.osc, this.fmOsc, this.fmGain, this.filter, this.oscGain]) {
-        try { if (node) { node.stop && node.stop(); node.disconnect(); } } catch (_) {}
+      for (const n of [this.osc, this.fmOsc, this.fmGain, this.filter, this.lpf, this.oscGain]) {
+        try { if (n) { n.stop && n.stop(); n.disconnect(); } } catch (_) {}
       }
-    }, 100);
+    }, 120);
     this.osc = null; this.fmOsc = null;
   }
 }
 
 // ─────────────────────────────────────────────────────────────
+// FM update — proximity-based, per-frame
+// Carriers (higher warmth) get modulated by nearby particles.
+// Depth is in Hz and clearly audible: at fmDepth=3, close pair → ~150Hz depth.
+// ─────────────────────────────────────────────────────────────
+
+const PROX_DIST = 140;
+
+function updateFM() {
+  if (!audioStarted) return;
+  const fmDepth = sl('fmdepth');
+
+  for (const p of particles) p._fmAccum = 0;
+
+  for (let i = 0; i < particles.length - 1; i++) {
+    for (let j = i + 1; j < particles.length; j++) {
+      const a = particles[i], b = particles[j];
+      const dx = b.x - a.x, dy = b.y - a.y;
+      const d  = Math.hypot(dx, dy);
+      if (d >= PROX_DIST) continue;
+
+      // Squared falloff: FM kicks in hard only when really close
+      const str = Math.pow(1 - d / PROX_DIST, 2);
+
+      // Carrier = higher warmth particle, mod = lower warmth
+      const carrier = a.warmth >= b.warmth ? a : b;
+      const mod     = a.warmth >= b.warmth ? b : a;
+
+      // Depth in Hz: fmDepth slider directly scales perceptible pitch deviation
+      // At fmDepth=3, str=1 → 150Hz — clearly audible on any carrier frequency
+      carrier._fmAccum += str * fmDepth * 50;
+
+      // The modulated particle also gets slight reverse FM (cross-modulation)
+      mod._fmAccum += str * fmDepth * 15;
+    }
+  }
+
+  for (const p of particles) p.setFMDepth(p._fmAccum);
+}
+
+// ─────────────────────────────────────────────────────────────
 // Physics
+// Every physics parameter has a direct, perceptible audio effect:
+//
+//  gravity   → particles fall → gain speed → pitch rises → wall thud
+//  wind      → sustained horizontal drift → choir pitch-shift effect
+//  viscosity → energy drain → particles slow → pitch drops → fewer grains
+//  bounciness→ bounce hardness → grain loudness on wall/particle hit
+//  attractor → acceleration toward point → rising pitch swirl → FM cluster
 // ─────────────────────────────────────────────────────────────
 
 const mouse = { x: null, y: null, down: false };
 let proximityPairs = [];
 
 function physics() {
-  const grav  = parseFloat(document.getElementById('gravity').value);
-  const wind  = parseFloat(document.getElementById('wind').value);
-  const visc  = parseFloat(document.getElementById('viscosity').value);
-  const bnc   = parseFloat(document.getElementById('bounce').value);
+  const grav = sl('gravity');
+  const wind = sl('wind');
+  const visc = sl('viscosity');
+  const bnc  = sl('bounce');
   proximityPairs = [];
 
   for (const p of particles) {
     p.vy += grav;
     p.vx += wind;
+
+    // Viscosity: per-frame velocity damping
+    // Low viscosity (0.8) = heavy drag; high (1.0) = frictionless
     p.vx *= visc;
     p.vy *= visc;
 
-    // Attractor
+    // Attractor pulls particles → they accelerate → pitch rises as they speed up
     if (mouse.down && mouse.x !== null) {
-      const dx = mouse.x - p.x;
-      const dy = mouse.y - p.y;
+      const dx = mouse.x - p.x, dy = mouse.y - p.y;
       const d  = Math.hypot(dx, dy) + 1;
       const f  = 400 / (d * d);
       p.vx += dx / d * f;
@@ -462,24 +492,58 @@ function physics() {
     p.x += p.vx;
     p.y += p.vy;
 
-    if (p.x - p.r < 0)  { p.x = p.r;     p.vx *= -bnc; }
-    if (p.x + p.r > W)  { p.x = W - p.r; p.vx *= -bnc; }
-    if (p.y - p.r < 0)  { p.y = p.r;     p.vy *= -bnc; }
-    if (p.y + p.r > H)  { p.y = H - p.r; p.vy *= -bnc; }
+    const spd = Math.hypot(p.vx, p.vy);
 
-    p.tension = Math.max(0.1, p.tension * 0.999);
-    p.r       = 6 + p.tension * 10;
+    // Wall bounces:
+    //  - Velocity reflected × bounciness (low bnc = particle sticks/thuds)
+    //  - Tension spike proportional to impact force → louder tone burst
+    //  - Grain triggered if impact speed is significant
+    let bounced = false, impactSpd = 0;
+
+    if (p.x - p.r < 0) {
+      p.x = p.r; impactSpd = Math.abs(p.vx); p.vx = impactSpd * bnc; bounced = true;
+    } else if (p.x + p.r > W) {
+      p.x = W - p.r; impactSpd = Math.abs(p.vx); p.vx = -impactSpd * bnc; bounced = true;
+    }
+    if (p.y - p.r < 0) {
+      p.y = p.r; impactSpd = Math.max(impactSpd, Math.abs(p.vy)); p.vy = Math.abs(p.vy) * bnc; bounced = true;
+    } else if (p.y + p.r > H) {
+      p.y = H - p.r; impactSpd = Math.max(impactSpd, Math.abs(p.vy)); p.vy = -Math.abs(p.vy) * bnc; bounced = true;
+    }
+
+    if (bounced && impactSpd > 1.5) {
+      // Tension spike: harder hit → bigger burst (low bounciness = absorbed, less spike)
+      const spike = Math.min(0.5, impactSpd * 0.015 * bnc);
+      p.tension = Math.min(1, p.tension + spike);
+
+      // Wall grain: always on significant impact, gain proportional to speed × bounciness
+      // Bounciness affects this directly: high bnc = punchy grain, low bnc = muffled thud
+      const grainGain = Math.min(0.55, impactSpd * 0.02 * (0.3 + bnc * 0.7));
+      spawnGrain(warmthToFreq(p.warmth), sl('graintype') !== undefined ? document.getElementById('graintype').value : 'pluck', grainGain);
+    }
+
+    // Tension + warmth decay
+    // Low viscosity = fast decay (high drag = energy lost quickly)
+    const decay = 0.998 - (1 - visc) * 0.08;
+    p.tension = Math.max(0.1, p.tension * decay);
+    p.r = 6 + p.tension * 10;
+
+    // Warmth drifts very slightly with speed (faster = slightly warmer timbre)
+    // and cools slowly when slow (warmth → energy concept)
+    const targetW = Math.min(1, p.warmth + (spd - 3) * 0.0002);
+    p.warmth = Math.max(0, Math.min(1, p.warmth * 0.9998 + targetW * 0.0002));
+
     p.syncAudio(false);
   }
 
-  // Particle–particle
+  // Particle–particle collisions
   for (let i = 0; i < particles.length - 1; i++) {
     for (let j = i + 1; j < particles.length; j++) {
       const a = particles[i], b = particles[j];
-      const dx   = b.x - a.x, dy = b.y - a.y;
-      const dist = Math.hypot(dx, dy);
-      if (dist < 140) proximityPairs.push({ a, b, str: 1 - dist / 140 });
-      resolveCollision(a, b, dx, dy, dist);
+      const dx = b.x - a.x, dy = b.y - a.y;
+      const d  = Math.hypot(dx, dy);
+      if (d < PROX_DIST) proximityPairs.push({ a, b, str: 1 - d / PROX_DIST });
+      resolveCollision(a, b, dx, dy, d);
     }
   }
 }
@@ -487,11 +551,11 @@ function physics() {
 function resolveCollision(a, b, dx, dy, dist) {
   const minD = a.r + b.r;
   if (dist >= minD || dist < 0.01) return;
+  const bnc = sl('bounce');
 
-  const bnc   = parseFloat(document.getElementById('bounce').value);
-  const nx    = dx / dist, ny = dy / dist;
-  const ov    = (minD - dist) * 0.5;
-  const invM  = 1 / (a.mass + b.mass);
+  const nx = dx / dist, ny = dy / dist;
+  const ov = (minD - dist) * 0.5;
+  const invM = 1 / (a.mass + b.mass);
 
   a.x -= nx * ov * b.mass * invM;
   a.y -= ny * ov * b.mass * invM;
@@ -506,44 +570,28 @@ function resolveCollision(a, b, dx, dy, dist) {
   a.vx -= imp * b.mass * nx;  a.vy -= imp * b.mass * ny;
   b.vx += imp * a.mass * nx;  b.vy += imp * a.mass * ny;
 
-  // Thermal exchange
-  const wEx = (a.warmth - b.warmth) * 0.04;
-  a.warmth  = Math.max(0, Math.min(1, a.warmth - wEx));
-  b.warmth  = Math.max(0, Math.min(1, b.warmth + wEx));
-  a.tension = Math.min(1, a.tension + 0.12);
-  b.tension = Math.min(1, b.tension + 0.12);
+  // Warmth exchange on collision (thermal coupling)
+  const wEx = (a.warmth - b.warmth) * 0.05;
+  a.warmth = Math.max(0, Math.min(1, a.warmth - wEx));
+  b.warmth = Math.max(0, Math.min(1, b.warmth + wEx));
 
-  // Grain on collision
-  const density  = parseFloat(document.getElementById('graindensity').value);
-  const now      = performance.now();
-  const minGap   = density > 0 ? 140 / density : Infinity;
-  if (audioStarted && density > 0 && now - a.lastGrainTime > minGap) {
-    a.lastGrainTime = now;
-    const type = document.getElementById('graintype').value;
-    spawnGrain(warmthToFreq((a.warmth + b.warmth) * 0.5), type);
+  // Tension spike: energy transfer creates a burst in both particles
+  const impact = Math.abs(dot);
+  const spike  = Math.min(0.35, impact * 0.012);
+  a.tension = Math.min(1, a.tension + spike);
+  b.tension = Math.min(1, b.tension + spike);
+
+  // Collision grain: only if impact is strong enough to be worth hearing
+  // Threshold rises with bounciness (bouncy collisions are physically sharper)
+  const threshold = 1.5 + bnc * 1.5;
+  if (impact > threshold) {
+    const density = sl('graindensity');
+    if (density > 0) {
+      const grainGain = Math.min(0.5, impact * 0.015 * density * (0.4 + bnc * 0.6));
+      const avgFreq   = warmthToFreq((a.warmth + b.warmth) * 0.5);
+      spawnGrain(avgFreq, document.getElementById('graintype').value, grainGain);
+    }
   }
-}
-
-// ─────────────────────────────────────────────────────────────
-// FM update (proximity-based, using each particle's dedicated fmOsc)
-// ─────────────────────────────────────────────────────────────
-
-function updateFM() {
-  if (!audioStarted) return;
-  const fmDepth = parseFloat(document.getElementById('fmdepth').value);
-
-  // Reset accumulators
-  for (const p of particles) p._fmAccum = 0;
-
-  // Each proximity pair: modulate the higher-warmth (carrier) particle's FM depth
-  for (const { a, b, str } of proximityPairs) {
-    const carrier = a.warmth >= b.warmth ? a : b;
-    const mod     = a.warmth >= b.warmth ? b : a;
-    carrier._fmAccum += warmthToFreq(mod.warmth) * 0.5 * str * fmDepth * 0.15;
-  }
-
-  // Apply
-  for (const p of particles) p.setFMDepth(p._fmAccum || 0);
 }
 
 // ─────────────────────────────────────────────────────────────
@@ -551,73 +599,65 @@ function updateFM() {
 // ─────────────────────────────────────────────────────────────
 
 function draw() {
-  // Motion blur background
   ctx.fillStyle = 'rgba(8,12,16,0.22)';
   ctx.fillRect(0, 0, W, H);
 
-  // Proximity lines
+  // Proximity / FM coupling lines
   ctx.lineCap = 'round';
   for (const { a, b, str } of proximityPairs) {
     ctx.beginPath();
-    ctx.moveTo(a.x, a.y);
-    ctx.lineTo(b.x, b.y);
-    ctx.strokeStyle = `rgba(40,160,255,${str * 0.18})`;
-    ctx.lineWidth   = str * 1.5;
+    ctx.moveTo(a.x, a.y); ctx.lineTo(b.x, b.y);
+    ctx.strokeStyle = `rgba(40,160,255,${str * 0.2})`;
+    ctx.lineWidth   = str * 1.6;
     ctx.stroke();
   }
 
-  // FM resonance rings (strong proximity pairs)
+  // FM resonance rings when very close
   for (const { a, b, str } of proximityPairs) {
-    if (str < 0.55) continue;
+    if (str < 0.5) continue;
     const carrier = a.warmth >= b.warmth ? a : b;
     ctx.beginPath();
-    ctx.arc(carrier.x, carrier.y, carrier.r + str * 22, 0, Math.PI * 2);
-    ctx.strokeStyle = `rgba(60,200,255,${(str - 0.55) * 0.14})`;
+    ctx.arc(carrier.x, carrier.y, carrier.r + str * 24, 0, Math.PI * 2);
+    ctx.strokeStyle = `rgba(60,200,255,${(str - 0.5) * 0.16})`;
     ctx.lineWidth   = 0.6;
     ctx.stroke();
   }
 
-  // Attractor indicator
+  // Attractor
   if (mouse.down && mouse.x !== null) {
     ctx.beginPath();
-    ctx.arc(mouse.x, mouse.y, 18, 0, Math.PI * 2);
+    ctx.arc(mouse.x, mouse.y, 20, 0, Math.PI * 2);
     ctx.strokeStyle = 'rgba(40,160,255,0.4)';
-    ctx.lineWidth   = 1;
-    ctx.stroke();
+    ctx.lineWidth = 1; ctx.stroke();
     ctx.beginPath();
     ctx.arc(mouse.x, mouse.y, 5, 0, Math.PI * 2);
-    ctx.fillStyle = 'rgba(40,160,255,0.6)';
-    ctx.fill();
+    ctx.fillStyle = 'rgba(40,160,255,0.6)'; ctx.fill();
   }
 
   // Particles
   for (const p of particles) {
     const spd = Math.hypot(p.vx, p.vy);
 
-    // Velocity trail
     if (spd > 0.4) {
       ctx.beginPath();
       ctx.moveTo(p.x, p.y);
       ctx.lineTo(p.x - p.vx * 5, p.y - p.vy * 5);
       ctx.strokeStyle = warmthToColor(p.warmth, 0.22);
-      ctx.lineWidth   = p.r * 0.5;
-      ctx.lineCap     = 'round';
+      ctx.lineWidth = p.r * 0.5;
+      ctx.lineCap = 'round';
       ctx.stroke();
     }
 
-    // Outer glow
     ctx.beginPath();
     ctx.arc(p.x, p.y, p.r * 1.45, 0, Math.PI * 2);
     ctx.fillStyle = warmthToColor(p.warmth, 0.08);
     ctx.fill();
 
-    // Body
     ctx.beginPath();
     ctx.arc(p.x, p.y, p.r, 0, Math.PI * 2);
     ctx.fillStyle = warmthToColor(p.warmth, 0.9);
     ctx.fill();
 
-    // Specular highlight
     ctx.beginPath();
     ctx.arc(p.x - p.r * 0.22, p.y - p.r * 0.22, p.r * 0.32, 0, Math.PI * 2);
     ctx.fillStyle = 'rgba(255,255,255,0.18)';
@@ -630,13 +670,9 @@ const scopeBuf = new Float32Array(2048);
 function drawScope() {
   sctx.fillStyle = '#050810';
   sctx.fillRect(0, 0, W, 60);
-
-  // Centre line
   sctx.beginPath();
   sctx.moveTo(0, 30); sctx.lineTo(W, 30);
-  sctx.strokeStyle = '#1a2535';
-  sctx.lineWidth   = 1;
-  sctx.stroke();
+  sctx.strokeStyle = '#1a2535'; sctx.lineWidth = 1; sctx.stroke();
 
   if (analyser) {
     analyser.getFloatTimeDomainData(scopeBuf);
@@ -653,7 +689,7 @@ function drawScope() {
   }
 
   sctx.fillStyle = '#2a4060';
-  sctx.font      = '9px Courier New';
+  sctx.font = '9px Courier New';
   sctx.fillText('OSCILLOSCOPE', 8, 11);
 }
 
@@ -677,6 +713,7 @@ function spawnParticle(x, y) {
 function initParticles(n) {
   for (const p of particles) p.destroy();
   particles.length = 0;
+  activeGrains = 0;
   for (let i = 0; i < n; i++) spawnParticle();
 }
 
@@ -692,12 +729,13 @@ function initAudio() {
     masterGain = AC.createGain();
     masterGain.gain.value = 0.6;
 
+    // Soft limiter — prevents clipping but doesn't crush dynamics
     limiter = AC.createDynamicsCompressor();
-    limiter.threshold.value = -6;
-    limiter.knee.value      = 3;
-    limiter.ratio.value     = 20;
-    limiter.attack.value    = 0.001;
-    limiter.release.value   = 0.1;
+    limiter.threshold.value = -10;
+    limiter.knee.value      = 6;
+    limiter.ratio.value     = 8;
+    limiter.attack.value    = 0.003;
+    limiter.release.value   = 0.15;
 
     reverb     = buildReverb(AC);
     reverbGain = AC.createGain();
@@ -705,7 +743,9 @@ function initAudio() {
 
     analyser = AC.createAnalyser();
     analyser.fftSize = 2048;
+    analyser.smoothingTimeConstant = 0.85;
 
+    // Signal chain: masterGain → (dry)limiter + (wet)reverb→reverbGain→limiter → analyser → out
     masterGain.connect(limiter);
     masterGain.connect(reverb);
     reverb.connect(reverbGain);
@@ -719,24 +759,24 @@ function initAudio() {
     document.getElementById('startBtn').classList.add('running');
 
     for (const p of particles) p.initAudio();
-  } catch (e) { console.error('AudioContext error:', e); }
+  } catch (e) { console.error('AudioContext:', e); }
 }
 
 // ─────────────────────────────────────────────────────────────
 // UI
 // ─────────────────────────────────────────────────────────────
 
-const sliders = {
+const sliderDefs = {
   gravity:'gv', wind:'wv', viscosity:'vv', bounce:'bv',
   fmdepth:'fv', graindensity:'gdv', mastervol:'mvv', reverbamt:'rvv'
 };
 
-for (const [id, lblId] of Object.entries(sliders)) {
-  const el  = document.getElementById(id);
-  const lbl = document.getElementById(lblId);
-  lbl.textContent = parseFloat(el.value).toFixed(2);
+for (const [id, lblId] of Object.entries(sliderDefs)) {
+  const el = document.getElementById(id);
+  const lb = document.getElementById(lblId);
+  lb.textContent = parseFloat(el.value).toFixed(2);
   el.addEventListener('input', function () {
-    lbl.textContent = parseFloat(this.value).toFixed(2);
+    lb.textContent = parseFloat(this.value).toFixed(2);
     if (id === 'mastervol' && masterGain)
       masterGain.gain.setTargetAtTime(parseFloat(this.value), AC.currentTime, 0.05);
     if (id === 'reverbamt' && reverbGain)
@@ -746,9 +786,9 @@ for (const [id, lblId] of Object.entries(sliders)) {
 
 document.getElementById('disturbBtn').addEventListener('click', () => {
   for (const p of particles) {
-    p.vx      += (Math.random() - 0.5) * 18;
-    p.vy      += (Math.random() - 0.5) * 18;
-    p.tension  = Math.min(1, p.tension + 0.6);
+    p.vx += (Math.random() - 0.5) * 18;
+    p.vy += (Math.random() - 0.5) * 18;
+    p.tension = Math.min(1, p.tension + 0.6);
   }
 });
 
@@ -763,42 +803,38 @@ document.getElementById('resetBtn').addEventListener('click', () => {
 
 document.getElementById('startBtn').addEventListener('click', initAudio);
 
-// Attractor — mouse
+// Mouse attractor
 canvas.addEventListener('mousedown', e => {
   if (!audioStarted) initAudio();
   mouse.down = true;
   const r = canvas.getBoundingClientRect();
-  mouse.x = e.clientX - r.left;
-  mouse.y = e.clientY - r.top;
+  mouse.x = e.clientX - r.left; mouse.y = e.clientY - r.top;
 });
 canvas.addEventListener('mousemove', e => {
   if (!mouse.down) return;
   const r = canvas.getBoundingClientRect();
-  mouse.x = e.clientX - r.left;
-  mouse.y = e.clientY - r.top;
+  mouse.x = e.clientX - r.left; mouse.y = e.clientY - r.top;
 });
 canvas.addEventListener('mouseup',    () => { mouse.down = false; });
 canvas.addEventListener('mouseleave', () => { mouse.down = false; });
 
-// Attractor — touch
+// Touch attractor
 canvas.addEventListener('touchstart', e => {
   e.preventDefault();
   if (!audioStarted) initAudio();
   mouse.down = true;
   const r = canvas.getBoundingClientRect();
-  mouse.x = e.touches[0].clientX - r.left;
-  mouse.y = e.touches[0].clientY - r.top;
+  mouse.x = e.touches[0].clientX - r.left; mouse.y = e.touches[0].clientY - r.top;
 }, { passive: false });
 canvas.addEventListener('touchmove', e => {
   e.preventDefault();
   const r = canvas.getBoundingClientRect();
-  mouse.x = e.touches[0].clientX - r.left;
-  mouse.y = e.touches[0].clientY - r.top;
+  mouse.x = e.touches[0].clientX - r.left; mouse.y = e.touches[0].clientY - r.top;
 }, { passive: false });
 canvas.addEventListener('touchend', () => { mouse.down = false; });
 
 // ─────────────────────────────────────────────────────────────
-// Main loop
+// Loop
 // ─────────────────────────────────────────────────────────────
 
 function loop() {

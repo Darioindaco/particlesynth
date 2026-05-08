@@ -210,6 +210,18 @@ input[type=text] {
 /* NLT active state */
 .nlt-btn.active { background:#3af !important; color:#000 !important; border-color:#3af !important; }
 
+/* ── Collision object panel ──────────────────────────────── */
+#collisionPanel {
+  display:none; flex-direction:column; gap:7px;
+}
+#collisionPanel.visible { display:flex; }
+#collisionPanel .c-sub { font-size:10px;color:#3af;letter-spacing:1px;margin:4px 0 2px; }
+#collisionPanel input[type=text] { font-size:10px; }
+.coll-del-btn { border-color:#c44 !important; color:#c44 !important; }
+.coll-del-btn:hover { background:#c44 !important; color:#000 !important; }
+#collisionPanel select { margin-top:2px; }
+
+
 </style>
 </head>
 <body>
@@ -356,6 +368,14 @@ input[type=text] {
       <button class="scene-btn" data-type="vortex">VRTX</button>
       <button class="scene-btn" data-type="gwell">GRAV</button>
     </div>
+    <div style="font-size:10px;color:#667;letter-spacing:1px;margin-top:4px;">COLLISION</div>
+    <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:4px;margin-top:2px;">
+      <button class="scene-btn" data-ctype="wall">WALL</button>
+      <button class="scene-btn" data-ctype="box">BOX</button>
+      <button class="scene-btn" data-ctype="circle">CIRC</button>
+      <button class="scene-btn" data-ctype="tri">TRI</button>
+      <button class="scene-btn" data-ctype="poly">POLY</button>
+    </div>
     <div class="toggle-row">
       <input type="checkbox" id="vortexCW">
       <span>VORTEX CLOCKWISE</span>
@@ -366,6 +386,107 @@ input[type=text] {
     <div id="objList"></div>
   </div>
   <div id="sceneSettings"></div>
+
+  <div id="collisionPanel">
+    <div class="c-sub">COLLISION OBJECT</div>
+    <input type="text" id="collName" placeholder="NAME" value="">
+
+    <div class="c-sub">SOUND ENGINE</div>
+    <select id="collSoundType">
+      <option value="res">RESONATOR</option>
+      <option value="pitched">PITCHED</option>
+      <option value="perc">PERCUSSION</option>
+      <option value="gran">GRANULAR</option>
+      <option value="fm">FM BURST</option>
+      <option value="chord">CHORD STAB</option>
+    </select>
+
+    <div class="ctrl"><label>VOLUME <span id="collVolV">0.70</span></label>
+      <input type="range" id="collVol" min="0" max="1" step="0.05" value="0.7"></div>
+    <div class="ctrl"><label>PAN <span id="collPanV">0.00</span></label>
+      <input type="range" id="collPan" min="-1" max="1" step="0.05" value="0"></div>
+    <div class="ctrl"><label>VEL SENS <span id="collVelV">0.70</span></label>
+      <input type="range" id="collVel" min="0" max="1" step="0.05" value="0.7"></div>
+    <div class="ctrl"><label>COOLDOWN <span id="collCoolV">50</span>ms</label>
+      <input type="range" id="collCool" min="0" max="500" step="10" value="50"></div>
+    <div class="ctrl"><label>BOUNCINESS <span id="collBncV">0.80</span></label>
+      <input type="range" id="collBnc" min="0" max="1" step="0.05" value="0.8"></div>
+
+    <!-- RESONATOR -->
+    <div id="cPanRes">
+      <div class="ctrl"><label>DECAY <span id="collResDV">1.00</span>s</label>
+        <input type="range" id="collResDec" min="0.05" max="4" step="0.05" value="1"></div>
+    </div>
+
+    <!-- PITCHED -->
+    <div id="cPanPitched" style="display:none">
+      <select id="collWave">
+        <option value="sine">SINE</option>
+        <option value="triangle">TRIANGLE</option>
+        <option value="sawtooth">SAW</option>
+        <option value="square">SQUARE</option>
+      </select>
+      <div class="ctrl"><label>ATTACK <span id="collAtkV">5</span>ms</label>
+        <input type="range" id="collAtk" min="1" max="200" step="1" value="5"></div>
+      <div class="ctrl"><label>DECAY <span id="collDecV">300</span>ms</label>
+        <input type="range" id="collDec" min="10" max="2000" step="10" value="300"></div>
+    </div>
+
+    <!-- PERCUSSION -->
+    <div id="cPanPerc" style="display:none">
+      <select id="collPercType">
+        <option value="kick">KICK</option>
+        <option value="snare">SNARE</option>
+        <option value="hat">HI-HAT</option>
+        <option value="tom">TOM</option>
+      </select>
+      <div class="ctrl"><label>FREQ <span id="collPercFV">80</span>Hz</label>
+        <input type="range" id="collPercFreq" min="30" max="400" step="5" value="80"></div>
+      <div class="ctrl"><label>DECAY <span id="collPercDV">0.30</span>s</label>
+        <input type="range" id="collPercDec" min="0.05" max="1.5" step="0.05" value="0.3"></div>
+    </div>
+
+    <!-- GRANULAR -->
+    <div id="cPanGran" style="display:none">
+      <select id="collGranMat">
+        <option value="metal">METAL</option>
+        <option value="wood">WOOD</option>
+        <option value="glass">GLASS</option>
+        <option value="stone">STONE</option>
+      </select>
+      <div class="ctrl"><label>GRAIN SIZE <span id="collGranSzV">80</span>ms</label>
+        <input type="range" id="collGranSz" min="10" max="200" step="5" value="80"></div>
+      <div class="ctrl"><label>DENSITY <span id="collGranDnV">2</span></label>
+        <input type="range" id="collGranDn" min="1" max="8" step="1" value="2"></div>
+    </div>
+
+    <!-- FM BURST -->
+    <div id="cPanFm" style="display:none">
+      <div class="ctrl"><label>CARRIER <span id="collFmCrV">220</span>Hz</label>
+        <input type="range" id="collFmCr" min="40" max="1200" step="10" value="220"></div>
+      <div class="ctrl"><label>RATIO <span id="collFmRaV">2.0</span></label>
+        <input type="range" id="collFmRa" min="0.5" max="8" step="0.5" value="2"></div>
+      <div class="ctrl"><label>INDEX <span id="collFmIdV">4</span></label>
+        <input type="range" id="collFmId" min="0" max="16" step="0.5" value="4"></div>
+      <div class="ctrl"><label>DURATION <span id="collFmDuV">200</span>ms</label>
+        <input type="range" id="collFmDu" min="20" max="1000" step="10" value="200"></div>
+    </div>
+
+    <!-- CHORD STAB -->
+    <div id="cPanChord" style="display:none">
+      <select id="collChordQ">
+        <option value="0">MAJOR</option>
+        <option value="1">MINOR</option>
+        <option value="2">SUS2</option>
+        <option value="3">DOM7</option>
+        <option value="4">MAJ7</option>
+      </select>
+      <div class="ctrl"><label>DURATION <span id="collChordDuV">0.5</span>s</label>
+        <input type="range" id="collChordDu" min="0.1" max="2" step="0.1" value="0.5"></div>
+    </div>
+
+    <button class="btn coll-del-btn" id="collDelBtn" style="margin-top:4px">✕ DELETE</button>
+  </div>
 
   <h2>CONTROL</h2>
   <div class="ctrl"><label>PARTICLE LIMIT <span id="plimv">24</span></label>
@@ -508,8 +629,9 @@ let selectedObj  = null;
 
 function setSelectedTool(type) {
   selectedTool = type;
+  if (type) setCollPlacementType(null);
   canvas.style.cursor = type ? 'crosshair' : 'default';
-  document.querySelectorAll('.scene-btn').forEach(b =>
+  document.querySelectorAll('[data-type]').forEach(b =>
     b.classList.toggle('scene-active', b.dataset.type === type));
 }
 
@@ -737,8 +859,10 @@ function closeSettings() {
 }
 
 document.querySelectorAll('.scene-btn').forEach(b =>
-  b.addEventListener('click', () =>
-    setSelectedTool(selectedTool === b.dataset.type ? null : b.dataset.type)));
+  b.addEventListener('click', () => {
+    if (!b.dataset.type) return; // skip collision shape buttons (data-ctype)
+    setSelectedTool(selectedTool === b.dataset.type ? null : b.dataset.type);
+  }));
 
 // ─────────────────────────────────────────────────────────────
 // Keyboard note playing
@@ -1499,6 +1623,9 @@ function physics() {
     resolveCollision(a, b, dx, dy, d);
   }
 
+  // Collision objects
+  resolveCollisionObjects();
+
   // Remove INSTANT-decay particles that have faded out; cull TIMED expired particles
   let anyRemoved = false;
   const nowMs = performance.now();
@@ -1749,6 +1876,7 @@ function draw() {
   drawOpChains();
 
   drawSceneObjects();
+  drawCollisionObjects();
 
   // Attractor
   if (mouse.down && mouse.x !== null) {
@@ -2155,12 +2283,70 @@ canvas.addEventListener('mousedown', e => {
   const r   = canvas.getBoundingClientRect();
   const cx  = e.clientX - r.left, cy = e.clientY - r.top;
 
+  // ── Collision object right-click remove ──────────────────────
   if (e.button === 2) {
+    const ci = hitTestCollObj(cx, cy);
+    if (ci !== -1) {
+      if (collSelectedObj === collObjects[ci]) closeCollPanel();
+      collObjects.splice(ci, 1); return;
+    }
     const idx = hitTestObj(cx, cy);
     if (idx !== -1) { sceneObjects.splice(idx, 1); updateObjCount(); updateObjList(); }
     return;
   }
 
+  // ── Collision placement mode ──────────────────────────────────
+  if (collPlacementType) {
+    if (collPlacementType === 'tri') {
+      finalizeCollPlacement(makeCollisionObject('tri', { cx, cy, size: 36, angle: -Math.PI/2 }));
+      return;
+    }
+    if (collPlacementType === 'poly') {
+      // Close if clicking near first vertex
+      if (collPolyVerts.length >= 3) {
+        const fv = collPolyVerts[0];
+        if (Math.hypot(cx-fv.x, cy-fv.y) < 14) {
+          finalizeCollPlacement(makeCollisionObject('poly', { verts: [...collPolyVerts] }));
+          return;
+        }
+      }
+      if (collPolyVerts.length < 8) collPolyVerts.push({ x: cx, y: cy });
+      return;
+    }
+    // WALL / BOX / CIRCLE: two-step
+    if (!collPlaceP1) {
+      collPlaceP1 = { x: cx, y: cy };
+      return;
+    }
+    if (collPlacementType === 'wall') {
+      finalizeCollPlacement(makeCollisionObject('wall', { x1: collPlaceP1.x, y1: collPlaceP1.y, x2: cx, y2: cy }));
+    } else if (collPlacementType === 'box') {
+      const bx = Math.min(collPlaceP1.x, cx), by = Math.min(collPlaceP1.y, cy);
+      const bw = Math.max(8, Math.abs(cx-collPlaceP1.x)), bh = Math.max(8, Math.abs(cy-collPlaceP1.y));
+      finalizeCollPlacement(makeCollisionObject('box', { bx, by, bw, bh }));
+    } else if (collPlacementType === 'circle') {
+      const radius = Math.max(8, Math.hypot(cx-collPlaceP1.x, cy-collPlaceP1.y));
+      finalizeCollPlacement(makeCollisionObject('circle', { cx: collPlaceP1.x, cy: collPlaceP1.y, radius }));
+    }
+    return;
+  }
+
+  // ── Hit test collision objects for drag/select ────────────────
+  const ci = hitTestCollObj(cx, cy);
+  if (ci !== -1) {
+    const obj = collObjects[ci];
+    collDragObj = obj;
+    const cen = collObjCenter(obj);
+    collDragStartX = cx; collDragStartY = cy;
+    collDragOriginX = cen.x; collDragOriginY = cen.y;
+    openCollPanel(obj);
+    return;
+  }
+
+  // Deselect collision panel if open and miss
+  if (collSelectedObj) { closeCollPanel(); }
+
+  // ── Scene object hit test ─────────────────────────────────────
   const idx = hitTestObj(cx, cy);
   if (idx !== -1) {
     dragObj = sceneObjects[idx];
@@ -2172,7 +2358,6 @@ canvas.addEventListener('mousedown', e => {
 
   if (selectedTool) {
     sceneObjects.push(createObject(selectedTool, cx, cy));
-    // Cull oldest objects beyond limit
     while (sceneObjects.length > objectLimit) {
       const culled = sceneObjects.shift();
       objFlashes.push({ x: culled.x, y: culled.y, t: performance.now() });
@@ -2190,12 +2375,20 @@ canvas.addEventListener('mousedown', e => {
 canvas.addEventListener('mousemove', e => {
   const r  = canvas.getBoundingClientRect();
   const cx = e.clientX - r.left, cy = e.clientY - r.top;
+  mouse.x = cx; mouse.y = cy;
+  if (collDragObj) {
+    const dx = cx - collDragStartX, dy = cy - collDragStartY;
+    const cen = collObjCenter(collDragObj);
+    const origCX = collDragOriginX, origCY = collDragOriginY;
+    moveCollObj(collDragObj, (origCX + dx) - cen.x, (origCY + dy) - cen.y);
+    return;
+  }
   if (dragObj) { dragObj.x = cx; dragObj.y = cy; return; }
   if (mouse.down) { mouse.x = cx; mouse.y = cy; }
 });
 
-canvas.addEventListener('mouseup',    () => { dragObj = null; mouse.down = false; });
-canvas.addEventListener('mouseleave', () => { dragObj = null; mouse.down = false; });
+canvas.addEventListener('mouseup', () => { collDragObj = null; dragObj = null; mouse.down = false; });
+canvas.addEventListener('mouseleave', () => { collDragObj = null; dragObj = null; mouse.down = false; });
 
 // Touch attractor
 canvas.addEventListener('touchstart', e => {
@@ -2212,10 +2405,21 @@ canvas.addEventListener('touchmove', e => {
 }, { passive: false });
 canvas.addEventListener('touchend', () => { mouse.down = false; });
 
+// Double-click closes polygon placement
+canvas.addEventListener('dblclick', e => {
+  if (collPlacementType === 'poly' && collPolyVerts.length >= 3) {
+    const r = canvas.getBoundingClientRect();
+    finalizeCollPlacement(makeCollisionObject('poly', { verts: [...collPolyVerts] }));
+    e.preventDefault();
+  }
+});
+
 // Keyboard note playing
 document.addEventListener('keydown', e => {
   if (e.key === 'Escape') {
     seqPickingStep = -1;
+    setCollPlacementType(null);
+    closeCollPanel();
     closeSettings(); setSelectedTool(null); return;
   }
   if (e.target.tagName === 'INPUT' && e.target.type === 'text') return;
@@ -2569,6 +2773,670 @@ function seqUpdateVisuals() {
 }
 
 // ─────────────────────────────────────────────────────────────
+// Collision Objects
+// ─────────────────────────────────────────────────────────────
+
+// ─── Data model ───────────────────────────────────────────────
+
+const collObjects = [];
+let collPlacementType = null;
+let collSelectedObj   = null;
+let collDragObj       = null;
+let collDragStartX    = 0, collDragStartY = 0;
+let collDragOriginX   = 0, collDragOriginY = 0;
+let collPlaceP1       = null;
+let collPolyVerts     = [];
+const collSparks      = [];
+
+function makeCollisionObject(type, extra) {
+  return Object.assign({
+    id: Math.random(), type,
+    name: type.toUpperCase(),
+    bounciness: 0.8,
+    lastTriggerMs: 0, flashUntil: 0, hitLevel: 0,
+    sound: {
+      type: 'res', volume: 0.7, pan: 0, velSens: 0.7,
+      retrigger: 'free', cooldown: 50,
+      waveform: 'sine', noteIdx: 0, attack: 5, decay: 300, release: 100,
+      percType: 'kick', percFreq: 80, percDecay: 0.3,
+      granMat: 'metal', granSize: 80, granDensity: 2,
+      fmCarrier: 220, fmRatio: 2, fmIndex: 4, fmDuration: 200,
+      chordQIdx: 0, chordDuration: 0.5,
+      resDec: 1.0,
+    },
+  }, extra);
+}
+
+// ─── Geometry ─────────────────────────────────────────────────
+
+function ptSegClosest(px, py, ax, ay, bx, by) {
+  const dx = bx - ax, dy = by - ay;
+  const len2 = dx*dx + dy*dy;
+  if (len2 < 0.0001) return { x: ax, y: ay };
+  const t = Math.max(0, Math.min(1, ((px-ax)*dx + (py-ay)*dy) / len2));
+  return { x: ax + t*dx, y: ay + t*dy };
+}
+
+function triVerts(obj) {
+  return [0, 2*Math.PI/3, 4*Math.PI/3].map(da => ({
+    x: obj.cx + Math.cos(obj.angle + da) * obj.size,
+    y: obj.cy + Math.sin(obj.angle + da) * obj.size,
+  }));
+}
+
+function collObjEdges(obj) {
+  if (obj.type === 'wall') {
+    return [{ ax: obj.x1, ay: obj.y1, bx: obj.x2, by: obj.y2 }];
+  }
+  if (obj.type === 'box') {
+    const { bx: x, by: y, bw: w, bh: h } = obj;
+    return [
+      { ax: x,   ay: y,   bx: x+w, by: y   },
+      { ax: x+w, ay: y,   bx: x+w, by: y+h },
+      { ax: x+w, ay: y+h, bx: x,   by: y+h },
+      { ax: x,   ay: y+h, bx: x,   by: y   },
+    ];
+  }
+  if (obj.type === 'tri') {
+    const v = triVerts(obj);
+    return [
+      { ax: v[0].x, ay: v[0].y, bx: v[1].x, by: v[1].y },
+      { ax: v[1].x, ay: v[1].y, bx: v[2].x, by: v[2].y },
+      { ax: v[2].x, ay: v[2].y, bx: v[0].x, by: v[0].y },
+    ];
+  }
+  if (obj.type === 'poly') {
+    return obj.verts.map((v, i) => {
+      const n = obj.verts[(i+1) % obj.verts.length];
+      return { ax: v.x, ay: v.y, bx: n.x, by: n.y };
+    });
+  }
+  return [];
+}
+
+function collObjCenter(obj) {
+  if (obj.type === 'wall')   return { x: (obj.x1+obj.x2)/2, y: (obj.y1+obj.y2)/2 };
+  if (obj.type === 'box')    return { x: obj.bx+obj.bw/2, y: obj.by+obj.bh/2 };
+  if (obj.type === 'circle') return { x: obj.cx, y: obj.cy };
+  if (obj.type === 'tri')    return { x: obj.cx, y: obj.cy };
+  if (obj.type === 'poly') {
+    let sx = 0, sy = 0;
+    for (const v of obj.verts) { sx += v.x; sy += v.y; }
+    return { x: sx/obj.verts.length, y: sy/obj.verts.length };
+  }
+  return { x: 0, y: 0 };
+}
+
+function moveCollObj(obj, dx, dy) {
+  if (obj.type === 'wall')   { obj.x1+=dx; obj.y1+=dy; obj.x2+=dx; obj.y2+=dy; }
+  if (obj.type === 'box')    { obj.bx+=dx; obj.by+=dy; }
+  if (obj.type === 'circle') { obj.cx+=dx; obj.cy+=dy; }
+  if (obj.type === 'tri')    { obj.cx+=dx; obj.cy+=dy; }
+  if (obj.type === 'poly')   { for (const v of obj.verts) { v.x+=dx; v.y+=dy; } }
+}
+
+function pointInConvex(px, py, verts) {
+  const n = verts.length;
+  for (let i = 0; i < n; i++) {
+    const a = verts[i], b = verts[(i+1) % n];
+    if ((b.x-a.x)*(py-a.y) - (b.y-a.y)*(px-a.x) < 0) return false;
+  }
+  return true;
+}
+
+function hitTestCollObj(mx, my) {
+  for (let i = collObjects.length-1; i >= 0; i--) {
+    const obj = collObjects[i];
+    if (obj.type === 'wall') {
+      const cp = ptSegClosest(mx, my, obj.x1, obj.y1, obj.x2, obj.y2);
+      if (Math.hypot(mx-cp.x, my-cp.y) < 10) return i;
+    } else if (obj.type === 'box') {
+      if (mx >= obj.bx && mx <= obj.bx+obj.bw && my >= obj.by && my <= obj.by+obj.bh) return i;
+    } else if (obj.type === 'circle') {
+      if (Math.hypot(mx-obj.cx, my-obj.cy) <= obj.radius) return i;
+    } else if (obj.type === 'tri') {
+      if (pointInConvex(mx, my, triVerts(obj))) return i;
+    } else if (obj.type === 'poly' && obj.verts.length >= 3) {
+      if (pointInConvex(mx, my, obj.verts)) return i;
+    }
+  }
+  return -1;
+}
+
+// ─── Physics ──────────────────────────────────────────────────
+
+function resolveCollisionObjects() {
+  for (const p of particles) {
+    for (const obj of collObjects) {
+      let hitNx = 0, hitNy = 0, didHit = false;
+
+      if (obj.type === 'circle') {
+        const dx = p.x - obj.cx, dy = p.y - obj.cy;
+        const d  = Math.hypot(dx, dy);
+        const minD = obj.radius + p.r;
+        if (d < minD && d > 0.01) {
+          const pen = minD - d;
+          const nx = dx/d, ny = dy/d;
+          p.x += nx * pen; p.y += ny * pen;
+          const dot = p.vx*nx + p.vy*ny;
+          if (dot < 0) { p.vx -= (1+obj.bounciness)*dot*nx; p.vy -= (1+obj.bounciness)*dot*ny; }
+          hitNx = nx; hitNy = ny; didHit = true;
+        }
+      } else {
+        const edges = collObjEdges(obj);
+        let bestPen = 0, bestNx = 0, bestNy = 0, bestEdge = false;
+        for (const edge of edges) {
+          const cp = ptSegClosest(p.x, p.y, edge.ax, edge.ay, edge.bx, edge.by);
+          const dx = p.x - cp.x, dy = p.y - cp.y;
+          const dist = Math.hypot(dx, dy);
+          if (dist < p.r && dist > 0.0001) {
+            const pen = p.r - dist;
+            if (pen > bestPen) {
+              bestPen = pen; bestNx = dx/dist; bestNy = dy/dist; bestEdge = true;
+            }
+          }
+        }
+        if (bestEdge) {
+          p.x += bestNx * bestPen; p.y += bestNy * bestPen;
+          const dot = p.vx*bestNx + p.vy*bestNy;
+          if (dot < 0) { p.vx -= (1+obj.bounciness)*dot*bestNx; p.vy -= (1+obj.bounciness)*dot*bestNy; }
+          hitNx = bestNx; hitNy = bestNy; didHit = true;
+        }
+      }
+
+      if (didHit) {
+        const impactSpd = Math.hypot(p.vx, p.vy);
+        p.tension = Math.min(1, p.tension + Math.min(0.4, impactSpd * 0.015));
+        obj.flashUntil = performance.now() + 140;
+        obj.hitLevel   = Math.min(1, obj.hitLevel + impactSpd * 0.06);
+        triggerCollisionSound(obj, impactSpd, p.warmth);
+        const nc = Math.min(8, Math.floor(1 + impactSpd * 0.4));
+        for (let s = 0; s < nc; s++) {
+          const sa = Math.atan2(-hitNy, -hitNx) + (Math.random()-0.5)*2.0;
+          const sv = 0.4 + Math.random() * impactSpd * 0.25;
+          collSparks.push({ x: p.x, y: p.y,
+            vx: Math.cos(sa)*sv, vy: Math.sin(sa)*sv,
+            life: 1, decay: 0.05 + Math.random()*0.06, r: 1.2 + Math.random()*1.2 });
+        }
+      }
+    }
+  }
+}
+
+// ─── Audio voice pool ─────────────────────────────────────────
+
+const COLL_MAX_VOICES = 16;
+const collVoices = [];
+
+function acquireCollVoice(vol, pan) {
+  if (!AC) return null;
+  if (collVoices.length >= COLL_MAX_VOICES) {
+    let minGain = Infinity, minIdx = 0;
+    for (let i = 0; i < collVoices.length; i++) {
+      const g = collVoices[i].gainNode.gain.value;
+      if (g < minGain) { minGain = g; minIdx = i; }
+    }
+    try { collVoices[minIdx].gainNode.disconnect(); } catch {}
+    collVoices.splice(minIdx, 1);
+  }
+  const gainNode = AC.createGain();
+  const panNode  = new StereoPannerNode(AC, { pan: Math.max(-1, Math.min(1, pan)) });
+  gainNode.gain.setValueAtTime(Math.min(vol, 1), AC.currentTime);
+  gainNode.connect(panNode);
+  panNode.connect(masterGain);
+  const voice = { gainNode, panNode, stopAt: null };
+  collVoices.push(voice);
+  return voice;
+}
+
+function pruneCollVoices() {
+  if (!AC) return;
+  const now = AC.currentTime;
+  for (let i = collVoices.length-1; i >= 0; i--) {
+    if (collVoices[i].stopAt && collVoices[i].stopAt < now) {
+      try { collVoices[i].gainNode.disconnect(); } catch {}
+      collVoices.splice(i, 1);
+    }
+  }
+  for (const obj of collObjects) obj.hitLevel = Math.max(0, obj.hitLevel * 0.87);
+}
+
+// ─── Sound generators ─────────────────────────────────────────
+
+const COLL_CHORD_IVLS = [[0,4,7],[0,3,7],[0,2,7],[0,4,7,10],[0,4,7,11]];
+
+function triggerCollisionSound(obj, impactSpd, warmth) {
+  if (!AC || !audioStarted) return;
+  const now = performance.now();
+  if (now - obj.lastTriggerMs < obj.sound.cooldown) return;
+  obj.lastTriggerMs = now;
+  const s   = obj.sound;
+  const vol = Math.min(0.9, s.volume * (0.15 + s.velSens * impactSpd * 0.06));
+  switch (s.type) {
+    case 'pitched': triggerCPitched (obj, impactSpd, warmth, vol); break;
+    case 'perc':    triggerCPerc    (obj, impactSpd, warmth, vol); break;
+    case 'gran':    triggerCGranular(obj, impactSpd, warmth, vol); break;
+    case 'fm':      triggerCFMBurst (obj, impactSpd, warmth, vol); break;
+    case 'chord':   triggerCChord   (obj, impactSpd, warmth, vol); break;
+    default:        triggerCRes     (obj, impactSpd, warmth, vol); break;
+  }
+}
+
+function triggerCPitched(obj, impactSpd, warmth, vol) {
+  const s = obj.sound;
+  const v = acquireCollVoice(vol, s.pan); if (!v) return;
+  const t = AC.currentTime;
+  const notes = SCALES[document.getElementById('scale').value] || SCALES.pentatonic;
+  const total = notes.length * 4;
+  const idx   = Math.min(s.noteIdx, total-1);
+  const midi  = 45 + Math.floor(idx/notes.length)*12 + notes[idx % notes.length];
+  const freq  = 110 * Math.pow(2, (midi-45)/12) * Math.pow(2, (warmth-0.5)*2/12);
+  const osc   = AC.createOscillator();
+  osc.type = s.waveform; osc.frequency.setValueAtTime(freq, t);
+  osc.connect(v.gainNode);
+  const atkT = t + s.attack/1000, decT = atkT + s.decay/1000, relT = decT + s.release/1000;
+  v.gainNode.gain.setValueAtTime(0, t);
+  v.gainNode.gain.linearRampToValueAtTime(vol, atkT);
+  v.gainNode.gain.exponentialRampToValueAtTime(0.001, relT);
+  osc.start(t); osc.stop(relT + 0.05); v.stopAt = relT + 0.05;
+}
+
+function triggerCPerc(obj, impactSpd, warmth, vol) {
+  const s = obj.sound;
+  const v = acquireCollVoice(vol, s.pan); if (!v) return;
+  const t = AC.currentTime, dec = s.percDecay;
+  if (s.percType === 'kick' || s.percType === 'tom') {
+    const mul = s.percType === 'kick' ? 2 : 1.5;
+    const osc = AC.createOscillator();
+    osc.frequency.setValueAtTime(s.percFreq * mul, t);
+    osc.frequency.exponentialRampToValueAtTime(s.percFreq * 0.4, t + dec * 0.6);
+    osc.connect(v.gainNode);
+    v.gainNode.gain.setValueAtTime(vol, t);
+    v.gainNode.gain.exponentialRampToValueAtTime(0.001, t + dec);
+    osc.start(t); osc.stop(t + dec + 0.05); v.stopAt = t + dec + 0.05;
+  } else {
+    const isHat = s.percType === 'hat';
+    const dur   = isHat ? Math.min(dec, 0.25) : dec;
+    const buf   = AC.createBuffer(1, Math.ceil(AC.sampleRate * dur), AC.sampleRate);
+    const d     = buf.getChannelData(0);
+    for (let i = 0; i < d.length; i++) d[i] = Math.random()*2-1;
+    const src = AC.createBufferSource(); src.buffer = buf;
+    const flt = AC.createBiquadFilter();
+    flt.type = 'highpass'; flt.frequency.value = isHat ? 7000 : 400 + s.percFreq * 2;
+    src.connect(flt); flt.connect(v.gainNode);
+    v.gainNode.gain.setValueAtTime(vol, t);
+    v.gainNode.gain.exponentialRampToValueAtTime(0.001, t + dur * (isHat ? 0.5 : 0.9));
+    src.start(t); src.stop(t + dur + 0.02); v.stopAt = t + dur + 0.02;
+  }
+}
+
+function triggerCGranular(obj, impactSpd, warmth, vol) {
+  const s = obj.sound;
+  const den = Math.max(1, Math.round(s.granDensity));
+  const gDur = s.granSize / 1000;
+  const MAT = {
+    metal: { filt:'bandpass', freq: 600+warmth*5000, q:10 },
+    wood:  { filt:'bandpass', freq: 250+warmth*1500, q: 4 },
+    glass: { filt:'highpass', freq: 3000,            q:12 },
+    stone: { filt:'lowpass',  freq: 300+warmth*800,  q: 2 },
+  };
+  const mat = MAT[s.granMat] || MAT.metal;
+  for (let gi = 0; gi < den; gi++) {
+    const v = acquireCollVoice(vol/den, s.pan); if (!v) continue;
+    const t = AC.currentTime + gi * gDur * 0.35;
+    const buf = AC.createBuffer(1, Math.ceil(AC.sampleRate * gDur), AC.sampleRate);
+    const d   = buf.getChannelData(0);
+    for (let i = 0; i < d.length; i++) d[i] = Math.random()*2-1;
+    const src = AC.createBufferSource(); src.buffer = buf;
+    const flt = AC.createBiquadFilter();
+    flt.type = mat.filt; flt.frequency.value = mat.freq; flt.Q.value = mat.q;
+    src.connect(flt); flt.connect(v.gainNode);
+    v.gainNode.gain.setValueAtTime(0, t);
+    v.gainNode.gain.linearRampToValueAtTime(vol/den, t + gDur*0.08);
+    v.gainNode.gain.exponentialRampToValueAtTime(0.001, t + gDur);
+    src.start(t); src.stop(t + gDur + 0.02); v.stopAt = t + gDur + 0.02;
+  }
+}
+
+function triggerCFMBurst(obj, impactSpd, warmth, vol) {
+  const s = obj.sound;
+  const v = acquireCollVoice(vol, s.pan); if (!v) return;
+  const t = AC.currentTime, dur = s.fmDuration / 1000;
+  const pm = Math.pow(2, (warmth-0.5)*2/12);
+  const car = s.fmCarrier * pm, modF = car * s.fmRatio;
+  const mod = AC.createOscillator(), modG = AC.createGain(), osc = AC.createOscillator();
+  mod.frequency.setValueAtTime(modF, t);
+  modG.gain.setValueAtTime(modF * s.fmIndex, t);
+  modG.gain.exponentialRampToValueAtTime(modF * s.fmIndex * 0.05, t + dur);
+  mod.connect(modG); modG.connect(osc.frequency); osc.connect(v.gainNode);
+  v.gainNode.gain.setValueAtTime(vol, t);
+  v.gainNode.gain.exponentialRampToValueAtTime(0.001, t + dur);
+  mod.start(t); mod.stop(t + dur + 0.05);
+  osc.start(t); osc.stop(t + dur + 0.05); v.stopAt = t + dur + 0.05;
+}
+
+function triggerCChord(obj, impactSpd, warmth, vol) {
+  const s = obj.sound;
+  const ivls = COLL_CHORD_IVLS[Math.min(s.chordQIdx, COLL_CHORD_IVLS.length-1)];
+  const dur = s.chordDuration;
+  const rootMidi = 45 + Math.round(warmth * 24);
+  for (const semi of ivls) {
+    const v = acquireCollVoice(vol/ivls.length, s.pan); if (!v) continue;
+    const t = AC.currentTime;
+    const freq = 110 * Math.pow(2, (rootMidi+semi-45)/12);
+    const osc = AC.createOscillator();
+    osc.type = 'sine'; osc.frequency.setValueAtTime(freq, t);
+    osc.connect(v.gainNode);
+    v.gainNode.gain.setValueAtTime(0, t);
+    v.gainNode.gain.linearRampToValueAtTime(vol/ivls.length, t + 0.01);
+    v.gainNode.gain.exponentialRampToValueAtTime(0.001, t + dur);
+    osc.start(t); osc.stop(t + dur + 0.05); v.stopAt = t + dur + 0.05;
+  }
+}
+
+function triggerCRes(obj, impactSpd, warmth, vol) {
+  const s = obj.sound;
+  const v = acquireCollVoice(vol, s.pan); if (!v) return;
+  const t = AC.currentTime, dur = s.resDec;
+  const freq = warmthToFreq(warmth) * Math.pow(2, (warmth-0.5)*2/12);
+  const impDur = 0.02;
+  const buf = AC.createBuffer(1, Math.ceil(AC.sampleRate * impDur), AC.sampleRate);
+  const d   = buf.getChannelData(0);
+  for (let i = 0; i < d.length; i++) d[i] = Math.random()*2-1;
+  const src = AC.createBufferSource(); src.buffer = buf;
+  const flt = AC.createBiquadFilter();
+  flt.type = 'bandpass'; flt.frequency.setValueAtTime(freq, t); flt.Q.value = 25;
+  src.connect(flt); flt.connect(v.gainNode);
+  v.gainNode.gain.setValueAtTime(vol, t);
+  v.gainNode.gain.exponentialRampToValueAtTime(0.001, t + dur);
+  src.start(t); src.stop(t + impDur + 0.01); v.stopAt = t + dur + 0.05;
+}
+
+// ─── Rendering ────────────────────────────────────────────────
+
+function drawCollisionObjects() {
+  const now = performance.now();
+
+  // Sparks (drawn first, behind shapes)
+  for (let i = collSparks.length-1; i >= 0; i--) {
+    const sp = collSparks[i];
+    sp.x += sp.vx; sp.y += sp.vy; sp.vy += 0.04;
+    sp.life = Math.max(0, sp.life - sp.decay);
+    if (sp.life <= 0) { collSparks.splice(i, 1); continue; }
+    ctx.beginPath();
+    ctx.arc(sp.x, sp.y, sp.r * sp.life, 0, Math.PI*2);
+    ctx.fillStyle = `rgba(255,${140+Math.round(100*sp.life)},40,${sp.life * 0.9})`;
+    ctx.fill();
+  }
+
+  ctx.save();
+  ctx.font = '8px Courier New';
+  ctx.textAlign = 'center';
+
+  for (const obj of collObjects) {
+    const flash  = now < obj.flashUntil;
+    const flashF = flash ? Math.min(1, (obj.flashUntil - now) / 140) : 0;
+    const sel    = obj === collSelectedObj;
+    const baseCol = sel ? [120,210,255] : [70,140,220];
+    const r = baseCol[0]+Math.round(flashF*135), g = baseCol[1]+Math.round(flashF*50), b = baseCol[2]-Math.round(flashF*160);
+    const col = `rgba(${r},${g},${b},${0.8+flashF*0.2})`;
+    ctx.strokeStyle = col;
+    ctx.lineWidth   = sel ? 2 : 1.5;
+    ctx.fillStyle   = `rgba(30,70,150,${0.05+flashF*0.18})`;
+
+    if (obj.type === 'wall') {
+      ctx.beginPath(); ctx.moveTo(obj.x1, obj.y1); ctx.lineTo(obj.x2, obj.y2); ctx.stroke();
+      for (const pt of [{x:obj.x1,y:obj.y1},{x:obj.x2,y:obj.y2}]) {
+        ctx.beginPath(); ctx.arc(pt.x, pt.y, 3.5, 0, Math.PI*2);
+        ctx.fillStyle = col; ctx.fill();
+      }
+    } else if (obj.type === 'box') {
+      ctx.beginPath(); ctx.rect(obj.bx, obj.by, obj.bw, obj.bh);
+      ctx.fill(); ctx.stroke();
+    } else if (obj.type === 'circle') {
+      ctx.beginPath(); ctx.arc(obj.cx, obj.cy, obj.radius, 0, Math.PI*2);
+      ctx.fill(); ctx.stroke();
+    } else if (obj.type === 'tri') {
+      const verts = triVerts(obj);
+      ctx.beginPath(); ctx.moveTo(verts[0].x, verts[0].y);
+      ctx.lineTo(verts[1].x, verts[1].y); ctx.lineTo(verts[2].x, verts[2].y);
+      ctx.closePath(); ctx.fill(); ctx.stroke();
+    } else if (obj.type === 'poly' && obj.verts.length >= 2) {
+      ctx.beginPath(); ctx.moveTo(obj.verts[0].x, obj.verts[0].y);
+      for (let i=1; i<obj.verts.length; i++) ctx.lineTo(obj.verts[i].x, obj.verts[i].y);
+      ctx.closePath(); ctx.fill(); ctx.stroke();
+    }
+
+    const cen = collObjCenter(obj);
+
+    // Name
+    ctx.fillStyle = `rgba(140,200,255,${0.45+flashF*0.55})`;
+    ctx.fillText(obj.name, cen.x, cen.y - (obj.type==='wall' ? 8 : 4));
+
+    // Hit level bar
+    if (obj.hitLevel > 0.01 && obj.type !== 'wall') {
+      const mw = 26, mh = 3, mx = cen.x - mw/2, my = cen.y + 8;
+      ctx.fillStyle = 'rgba(10,20,50,0.75)';
+      ctx.fillRect(mx, my, mw, mh);
+      ctx.fillStyle = flash ? `rgba(255,140,40,0.9)` : `rgba(70,170,255,0.85)`;
+      ctx.fillRect(mx, my, mw * obj.hitLevel, mh);
+    }
+
+    // Selected ring
+    if (sel) {
+      ctx.setLineDash([4,4]);
+      ctx.beginPath(); ctx.arc(cen.x, cen.y, 20, 0, Math.PI*2);
+      ctx.strokeStyle = 'rgba(120,210,255,0.35)'; ctx.lineWidth = 1; ctx.stroke();
+      ctx.setLineDash([]);
+    }
+  }
+
+  // Placement preview
+  if (collPlacementType && mouse.x !== null) {
+    ctx.strokeStyle = 'rgba(80,200,255,0.55)';
+    ctx.lineWidth   = 1.5;
+    ctx.setLineDash([5,5]);
+
+    if (collPlaceP1) {
+      if (collPlacementType === 'wall') {
+        ctx.beginPath(); ctx.moveTo(collPlaceP1.x, collPlaceP1.y);
+        ctx.lineTo(mouse.x, mouse.y); ctx.stroke();
+      } else if (collPlacementType === 'box') {
+        const x=Math.min(collPlaceP1.x,mouse.x), y=Math.min(collPlaceP1.y,mouse.y);
+        ctx.beginPath(); ctx.rect(x, y, Math.abs(mouse.x-collPlaceP1.x), Math.abs(mouse.y-collPlaceP1.y)); ctx.stroke();
+      } else if (collPlacementType === 'circle') {
+        const rad = Math.max(8, Math.hypot(mouse.x-collPlaceP1.x, mouse.y-collPlaceP1.y));
+        ctx.beginPath(); ctx.arc(collPlaceP1.x, collPlaceP1.y, rad, 0, Math.PI*2); ctx.stroke();
+      }
+    } else if (collPlacementType === 'tri') {
+      const tmpObj = { type:'tri', cx: mouse.x, cy: mouse.y, size: 36, angle: -Math.PI/2 };
+      const v = triVerts(tmpObj);
+      ctx.beginPath(); ctx.moveTo(v[0].x, v[0].y); ctx.lineTo(v[1].x, v[1].y); ctx.lineTo(v[2].x, v[2].y); ctx.closePath(); ctx.stroke();
+    }
+
+    if (collPlacementType === 'poly' && collPolyVerts.length > 0) {
+      ctx.beginPath(); ctx.moveTo(collPolyVerts[0].x, collPolyVerts[0].y);
+      for (let i=1; i<collPolyVerts.length; i++) ctx.lineTo(collPolyVerts[i].x, collPolyVerts[i].y);
+      ctx.lineTo(mouse.x, mouse.y); ctx.stroke();
+      ctx.setLineDash([]);
+      for (const vv of collPolyVerts) {
+        ctx.beginPath(); ctx.arc(vv.x, vv.y, 4, 0, Math.PI*2);
+        ctx.fillStyle = 'rgba(80,200,255,0.8)'; ctx.fill();
+      }
+    }
+    ctx.setLineDash([]);
+  }
+
+  ctx.restore();
+}
+
+// ─── Panel ────────────────────────────────────────────────────
+
+let collPanelWired = false;
+
+function openCollPanel(obj) {
+  collSelectedObj = obj;
+  const el = document.getElementById('collisionPanel');
+  if (!el) return;
+  el.classList.add('visible');
+  const s = obj.sound;
+  document.getElementById('collName').value           = obj.name;
+  document.getElementById('collSoundType').value      = s.type;
+  document.getElementById('collVol').value            = s.volume;
+  document.getElementById('collVolV').textContent     = s.volume.toFixed(2);
+  document.getElementById('collPan').value            = s.pan;
+  document.getElementById('collPanV').textContent     = s.pan.toFixed(2);
+  document.getElementById('collVel').value            = s.velSens;
+  document.getElementById('collVelV').textContent     = s.velSens.toFixed(2);
+  document.getElementById('collCool').value           = s.cooldown;
+  document.getElementById('collCoolV').textContent    = s.cooldown;
+  document.getElementById('collBnc').value            = obj.bounciness;
+  document.getElementById('collBncV').textContent     = obj.bounciness.toFixed(2);
+  document.getElementById('collWave').value           = s.waveform;
+  document.getElementById('collAtk').value            = s.attack;
+  document.getElementById('collAtkV').textContent     = s.attack;
+  document.getElementById('collDec').value            = s.decay;
+  document.getElementById('collDecV').textContent     = s.decay;
+  document.getElementById('collPercType').value       = s.percType;
+  document.getElementById('collPercFreq').value       = s.percFreq;
+  document.getElementById('collPercFV').textContent   = s.percFreq;
+  document.getElementById('collPercDec').value        = s.percDecay;
+  document.getElementById('collPercDV').textContent   = s.percDecay.toFixed(2);
+  document.getElementById('collGranMat').value        = s.granMat;
+  document.getElementById('collGranSz').value         = s.granSize;
+  document.getElementById('collGranSzV').textContent  = s.granSize;
+  document.getElementById('collGranDn').value         = s.granDensity;
+  document.getElementById('collGranDnV').textContent  = s.granDensity;
+  document.getElementById('collFmCr').value           = s.fmCarrier;
+  document.getElementById('collFmCrV').textContent    = s.fmCarrier;
+  document.getElementById('collFmRa').value           = s.fmRatio;
+  document.getElementById('collFmRaV').textContent    = s.fmRatio.toFixed(1);
+  document.getElementById('collFmId').value           = s.fmIndex;
+  document.getElementById('collFmIdV').textContent    = s.fmIndex;
+  document.getElementById('collFmDu').value           = s.fmDuration;
+  document.getElementById('collFmDuV').textContent    = s.fmDuration;
+  document.getElementById('collChordQ').value         = s.chordQIdx;
+  document.getElementById('collChordDu').value        = s.chordDuration;
+  document.getElementById('collChordDuV').textContent = s.chordDuration.toFixed(1);
+  document.getElementById('collResDec').value         = s.resDec;
+  document.getElementById('collResDV').textContent    = s.resDec.toFixed(2);
+  switchCollSoundPanel(s.type);
+  if (!collPanelWired) wireCollPanelListeners();
+}
+
+function closeCollPanel() {
+  collSelectedObj = null;
+  const el = document.getElementById('collisionPanel');
+  if (el) el.classList.remove('visible');
+}
+
+function switchCollSoundPanel(type) {
+  for (const n of ['Res','Pitched','Perc','Gran','Fm','Chord']) {
+    const el = document.getElementById('cPan'+n);
+    if (el) el.style.display = 'none';
+  }
+  const map = { res:'cPanRes', pitched:'cPanPitched', perc:'cPanPerc', gran:'cPanGran', fm:'cPanFm', chord:'cPanChord' };
+  const el = document.getElementById(map[type]);
+  if (el) el.style.display = '';
+}
+
+function wireCollPanelListeners() {
+  collPanelWired = true;
+
+  function sliderSync(id, prop, dispId, decimals, target) {
+    document.getElementById(id).addEventListener('input', function() {
+      if (!collSelectedObj) return;
+      const v = parseFloat(this.value);
+      if (target === 'obj') collSelectedObj[prop] = v;
+      else collSelectedObj.sound[prop] = v;
+      document.getElementById(dispId).textContent = decimals > 0 ? v.toFixed(decimals) : v;
+    });
+  }
+  function selectSync(id, prop, target) {
+    document.getElementById(id).addEventListener('change', function() {
+      if (!collSelectedObj) return;
+      const v = this.value;
+      if (target === 'obj') collSelectedObj[prop] = v;
+      else collSelectedObj.sound[prop] = target === 'int' ? parseInt(v) : v;
+    });
+  }
+
+  document.getElementById('collName').addEventListener('input', function() {
+    if (collSelectedObj) collSelectedObj.name = this.value || collSelectedObj.type.toUpperCase();
+  });
+  selectSync('collSoundType', 'type', 'sound');
+  document.getElementById('collSoundType').addEventListener('change', function() {
+    if (collSelectedObj) switchCollSoundPanel(this.value);
+  });
+
+  sliderSync('collVol',  'volume',    'collVolV',  2, 'sound');
+  sliderSync('collPan',  'pan',       'collPanV',  2, 'sound');
+  sliderSync('collVel',  'velSens',   'collVelV',  2, 'sound');
+  sliderSync('collCool', 'cooldown',  'collCoolV', 0, 'sound');
+  sliderSync('collBnc',  'bounciness','collBncV',  2, 'obj');
+
+  selectSync('collWave', 'waveform', 'sound');
+  sliderSync('collAtk',  'attack',   'collAtkV',  0, 'sound');
+  sliderSync('collDec',  'decay',    'collDecV',  0, 'sound');
+
+  selectSync('collPercType', 'percType', 'sound');
+  sliderSync('collPercFreq', 'percFreq',  'collPercFV', 0, 'sound');
+  sliderSync('collPercDec',  'percDecay', 'collPercDV', 2, 'sound');
+
+  selectSync('collGranMat', 'granMat', 'sound');
+  sliderSync('collGranSz', 'granSize',    'collGranSzV', 0, 'sound');
+  sliderSync('collGranDn', 'granDensity', 'collGranDnV', 0, 'sound');
+
+  sliderSync('collFmCr', 'fmCarrier',  'collFmCrV', 0, 'sound');
+  sliderSync('collFmRa', 'fmRatio',    'collFmRaV', 1, 'sound');
+  sliderSync('collFmId', 'fmIndex',    'collFmIdV', 0, 'sound');
+  sliderSync('collFmDu', 'fmDuration', 'collFmDuV', 0, 'sound');
+
+  document.getElementById('collChordQ').addEventListener('change', function() {
+    if (collSelectedObj) collSelectedObj.sound.chordQIdx = parseInt(this.value);
+  });
+  sliderSync('collChordDu', 'chordDuration', 'collChordDuV', 1, 'sound');
+  sliderSync('collResDec',  'resDec',        'collResDV',    2, 'sound');
+
+  document.getElementById('collDelBtn').addEventListener('click', () => {
+    if (!collSelectedObj) return;
+    const idx = collObjects.indexOf(collSelectedObj);
+    if (idx !== -1) collObjects.splice(idx, 1);
+    closeCollPanel();
+  });
+}
+
+// ─── Placement ────────────────────────────────────────────────
+
+function setCollPlacementType(type) {
+  collPlacementType = type;
+  collPlaceP1 = null;
+  collPolyVerts = [];
+  document.querySelectorAll('[data-ctype]').forEach(b =>
+    b.classList.toggle('scene-active', b.dataset.ctype === type));
+  canvas.style.cursor = type ? 'crosshair' : 'default';
+}
+
+function finalizeCollPlacement(obj) {
+  collObjects.push(obj);
+  collPlacementType = null;
+  collPlaceP1 = null;
+  collPolyVerts = [];
+  document.querySelectorAll('[data-ctype]').forEach(b => b.classList.remove('scene-active'));
+  canvas.style.cursor = 'default';
+  openCollPanel(obj);
+}
+
+// Wire toolbar buttons
+document.querySelectorAll('[data-ctype]').forEach(b => {
+  b.addEventListener('click', () => {
+    const t = b.dataset.ctype;
+    if (collPlacementType === t) { setCollPlacementType(null); }
+    else { setSelectedTool(null); setCollPlacementType(t); }
+  });
+});
+
+// ─────────────────────────────────────────────────────────────
 // Loop
 // ─────────────────────────────────────────────────────────────
 
@@ -2591,6 +3459,7 @@ function loop() {
   draw();
   drawScope();
   seqUpdateVisuals();
+  pruneCollVoices();
 
   const ft = document.getElementById('frametime');
   if (ft) ft.textContent = frameMs.toFixed(1);

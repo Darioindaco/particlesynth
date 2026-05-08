@@ -1836,7 +1836,7 @@ canvas.addEventListener('touchend', () => { mouse.down = false; });
 // Keyboard note playing
 document.addEventListener('keydown', e => {
   if (e.key === 'Escape') { closeSettings(); setSelectedTool(null); return; }
-  if (e.target.tagName === 'INPUT' || e.target.tagName === 'SELECT') return;
+  if (e.target.tagName === 'INPUT' && e.target.type === 'text') return;
   if (e.repeat) return;
   const key = e.key.toLowerCase();
   const w = keyToWarmth(key);

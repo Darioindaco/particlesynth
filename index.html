@@ -62,6 +62,7 @@ input[type=range]::-webkit-slider-thumb {
 .btn:hover { background:#1a2535; border-color:#3af; }
 .btn:active { background:#3af; color:#000; }
 .btn:disabled { opacity:0.35; cursor:not-allowed; }
+.btn.op-active { background:#3af; color:#000; border-color:#3af; }
 
 .row { display:flex; gap:6px; }
 .row .btn { flex:1; }
@@ -157,6 +158,32 @@ input[type=text] {
   <div id="panel-fm">
     <div class="ctrl"><label>FM DEPTH <span id="fv">3.0</span></label>
       <input type="range" id="fmdepth" min="0" max="12" step="0.5" value="3"></div>
+    <div style="font-size:10px;color:#667;letter-spacing:1px;">FM RATIO</div>
+    <select id="fmratio">
+      <option value="0.5">0.5×</option>
+      <option value="1" selected>1×</option>
+      <option value="1.5">1.5×</option>
+      <option value="2">2×</option>
+      <option value="3">3×</option>
+      <option value="4">4×</option>
+      <option value="free">FREE</option>
+    </select>
+    <div class="ctrl"><label>FM FEEDBACK <span id="fbv">0.00</span></label>
+      <input type="range" id="fmfeedback" min="0" max="1" step="0.05" value="0"></div>
+    <div style="font-size:10px;color:#667;letter-spacing:1px;margin-top:2px;">OPERATORS</div>
+    <div class="row">
+      <button class="btn op-active" id="op2btn">2-OP</button>
+      <button class="btn" id="op4btn">4-OP</button>
+    </div>
+    <div class="ctrl"><label>LFO RATE <span id="lrv">1.00</span></label>
+      <input type="range" id="lforate" min="0.1" max="8" step="0.1" value="1"></div>
+    <div style="font-size:10px;color:#667;letter-spacing:1px;">LFO TARGET</div>
+    <select id="lfotarget">
+      <option value="fmdepth">FM DEPTH</option>
+      <option value="cutoff">FILTER CUTOFF</option>
+      <option value="warmth">WARMTH DRIFT</option>
+      <option value="reverb">REVERB</option>
+    </select>
     <div class="toggle-row">
       <input type="checkbox" id="bubbleOn" checked>
       <span>BUBBLE RESONANCE</span>
@@ -309,6 +336,13 @@ let audioStarted = false;
 let activeGrains = 0;
 let lastGrainTime = 0;
 const MAX_ACTIVE_GRAINS = 5;
+
+// FM extended state
+let opCount      = 2;
+let opChainLinks = [];
+let lfoPhase     = 0;
+let lfoVal       = 0;
+let lastLoopTime = performance.now();
 
 const MAX_P = 24;
 const particles = [];
@@ -673,6 +707,7 @@ class Particle {
     this.filter = null; this.lpf = null; this.oscGain = null;
     this.subFilter = null;
     this.addOscs = null; this.addGains = null; this._addMerger = null;
+    this.fbDelay = null; this.fbGain = null;
     this._fmAccum = 0;
     if (audioStarted) this.initAudio();
   }
@@ -698,6 +733,14 @@ class Particle {
         this.fmGain.gain.setValueAtTime(0, t0);
         this.fmOsc.connect(this.fmGain);
         this.fmGain.connect(this.osc.frequency);
+        // Feedback: osc output → 1-block delay → fbGain → osc.frequency
+        this.fbDelay = AC.createDelay(0.1);
+        this.fbDelay.delayTime.value = 128 / (AC.sampleRate || 44100);
+        this.fbGain  = AC.createGain();
+        this.fbGain.gain.value = 0;
+        this.osc.connect(this.fbDelay);
+        this.fbDelay.connect(this.fbGain);
+        this.fbGain.connect(this.osc.frequency);
         this.osc.connect(this.filter);
         this.filter.connect(this.lpf);
         this.lpf.connect(this.oscGain);
@@ -742,7 +785,12 @@ class Particle {
       const type = w < 0.33 ? 'sine' : w < 0.66 ? 'triangle' : 'sawtooth';
       if (this.osc.type !== type) this.osc.type = type;
       this.osc.frequency.setTargetAtTime(targetFreq, t, tau);
-      this.fmOsc.frequency.setTargetAtTime(freq * this.fmRatio, t, tau);
+      const ratioSel = document.getElementById('fmratio').value;
+      const ratio = ratioSel === 'free' ? this.fmRatio : parseFloat(ratioSel);
+      this.fmOsc.frequency.setTargetAtTime(freq * ratio, t, tau);
+      if (this.fbGain) {
+        this.fbGain.gain.setTargetAtTime(sl('fmfeedback') * freq * 0.35, t, 0.04);
+      }
       const bubbleOn = document.getElementById('bubbleOn').checked;
       if (bubbleOn) {
         this.filter.frequency.setTargetAtTime(freq, t, 0.1);
@@ -751,7 +799,8 @@ class Particle {
         this.filter.frequency.value = 22050; this.filter.Q.value = 0.01;
       }
       const lpfCutoff = w < 0.66 ? 22050 : freq * (3 + (1 - w) * 6);
-      this.lpf.frequency.setTargetAtTime(lpfCutoff, t, 0.08);
+      const lfoCutMod = document.getElementById('lfotarget').value === 'cutoff' ? (1 + lfoVal * 0.4) : 1;
+      this.lpf.frequency.setTargetAtTime(lpfCutoff * lfoCutMod, t, 0.08);
       this.oscGain.gain.setTargetAtTime(this.tension * 0.05, t, tau);
 
     } else if (mode === 'sub' && this.osc) {
@@ -795,7 +844,7 @@ class Particle {
     if (!this.oscGain) return;
     const nodes = [
       this.osc, this.fmOsc, this.fmGain, this.filter, this.lpf,
-      this.oscGain, this.subFilter, this._addMerger,
+      this.oscGain, this.subFilter, this._addMerger, this.fbDelay, this.fbGain,
       ...(this.addOscs || []), ...(this.addGains || [])
     ];
     try { this.oscGain.gain.setTargetAtTime(0, AC.currentTime, 0.015); } catch (_) {}
@@ -807,7 +856,7 @@ class Particle {
     this.osc = null; this.fmOsc = null; this.fmGain = null;
     this.filter = null; this.lpf = null; this.oscGain = null;
     this.subFilter = null; this.addOscs = null; this.addGains = null;
-    this._addMerger = null;
+    this._addMerger = null; this.fbDelay = null; this.fbGain = null;
   }
 }
 
@@ -822,33 +871,73 @@ const PROX_DIST = 140;
 function updateFM() {
   if (!audioStarted || getSynthMode() !== 'fm') return;
   const fmDepth = sl('fmdepth');
+  opChainLinks = [];
 
   for (const p of particles) p._fmAccum = 0;
 
-  for (let i = 0; i < particles.length - 1; i++) {
-    for (let j = i + 1; j < particles.length; j++) {
-      const a = particles[i], b = particles[j];
-      const dx = b.x - a.x, dy = b.y - a.y;
-      const d  = Math.hypot(dx, dy);
-      if (d >= PROX_DIST) continue;
-
-      // Squared falloff: FM kicks in hard only when really close
-      const str = Math.pow(1 - d / PROX_DIST, 2);
-
-      // Carrier = higher warmth particle, mod = lower warmth
-      const carrier = a.warmth >= b.warmth ? a : b;
-      const mod     = a.warmth >= b.warmth ? b : a;
-
-      // Depth in Hz: fmDepth slider directly scales perceptible pitch deviation
-      // At fmDepth=3, str=1 → 150Hz — clearly audible on any carrier frequency
-      carrier._fmAccum += str * fmDepth * 50;
-
-      // The modulated particle also gets slight reverse FM (cross-modulation)
-      mod._fmAccum += str * fmDepth * 15;
+  if (opCount === 2) {
+    for (let i = 0; i < particles.length - 1; i++) {
+      for (let j = i + 1; j < particles.length; j++) {
+        const a = particles[i], b = particles[j];
+        const dx = b.x - a.x, dy = b.y - a.y;
+        const d  = Math.hypot(dx, dy);
+        if (d >= PROX_DIST) continue;
+        const str     = Math.pow(1 - d / PROX_DIST, 2);
+        const carrier = a.warmth >= b.warmth ? a : b;
+        const mod     = a.warmth >= b.warmth ? b : a;
+        carrier._fmAccum += str * fmDepth * 50;
+        mod._fmAccum     += str * fmDepth * 15;
+        opChainLinks.push({ from: mod, to: carrier, str, role: 0 });
+      }
+    }
+  } else {
+    // 4-op: sort by warmth descending, chain each particle to its nearest
+    // higher-warmth neighbours (up to 3 ops modulating the carrier)
+    const sorted = [...particles].sort((a, b) => b.warmth - a.warmth);
+    const seen = new Set();
+    for (let i = 0; i < sorted.length; i++) {
+      const carrier = sorted[i];
+      let opRole = 0;
+      for (let j = i + 1; j < sorted.length && opRole < 3; j++) {
+        const mod = sorted[j];
+        const d = Math.hypot(mod.x - carrier.x, mod.y - carrier.y);
+        if (d >= PROX_DIST) continue;
+        const str = Math.pow(1 - d / PROX_DIST, 2);
+        const depthScale = 1 / (opRole + 1);
+        carrier._fmAccum += str * fmDepth * 50 * depthScale;
+        mod._fmAccum     += str * fmDepth * 8;
+        const key = `${particles.indexOf(mod)}-${particles.indexOf(carrier)}`;
+        if (!seen.has(key)) {
+          seen.add(key);
+          opChainLinks.push({ from: mod, to: carrier, str, role: opRole });
+        }
+        opRole++;
+      }
     }
   }
 
-  for (const p of particles) p.setFMDepth(p._fmAccum);
+  // LFO modulates FM depth
+  const lfoMod = document.getElementById('lfotarget').value === 'fmdepth' ? (1 + lfoVal * 0.5) : 1;
+  for (const p of particles) p.setFMDepth(p._fmAccum * lfoMod);
+}
+
+function updateLFO(dt) {
+  if (getSynthMode() !== 'fm') return;
+  const rate = parseFloat(document.getElementById('lforate').value);
+  lfoPhase = (lfoPhase + rate * 2 * Math.PI * dt) % (Math.PI * 2);
+  lfoVal   = Math.sin(lfoPhase);
+
+  const target = document.getElementById('lfotarget').value;
+  if (target === 'warmth') {
+    const drift = lfoVal * 0.002;
+    for (const p of particles) {
+      if (!p.isKeyNote) p.warmth = Math.max(0, Math.min(1, p.warmth + drift));
+    }
+  }
+  if (target === 'reverb' && reverbGain && AC) {
+    const base = sl('reverbamt');
+    reverbGain.gain.setTargetAtTime(Math.max(0, base * (0.7 + lfoVal * 0.3)), AC.currentTime, 0.05);
+  }
 }
 
 // ─────────────────────────────────────────────────────────────
@@ -1228,16 +1317,52 @@ function drawSceneObjects() {
   ctx.restore();
 }
 
+function drawOpChains() {
+  if (getSynthMode() !== 'fm' || opChainLinks.length === 0) return;
+  ctx.save();
+  ctx.lineCap = 'round';
+  const roleColors = [
+    [40, 180, 255],   // role 0 — blue (direct mod→carrier)
+    [255, 160, 40],   // role 1 — orange (second op)
+    [180, 80, 255],   // role 2 — purple (third op)
+  ];
+  for (const { from, to, str, role } of opChainLinks) {
+    const [r, g, b] = roleColors[Math.min(role, 2)];
+    const alpha = str * (opCount === 4 ? 0.75 : 0.55);
+
+    // Chain line
+    ctx.beginPath();
+    ctx.moveTo(from.x, from.y); ctx.lineTo(to.x, to.y);
+    ctx.strokeStyle = `rgba(${r},${g},${b},${alpha})`;
+    ctx.lineWidth = str * (opCount === 4 ? 2 : 1.8);
+    ctx.stroke();
+
+    // Arrow at 60% along line, pointing toward carrier (to)
+    const ax = from.x + (to.x - from.x) * 0.6;
+    const ay = from.y + (to.y - from.y) * 0.6;
+    const angle = Math.atan2(to.y - from.y, to.x - from.x);
+    const as = 5 + str * 3;
+    ctx.beginPath();
+    ctx.moveTo(ax + Math.cos(angle) * as, ay + Math.sin(angle) * as);
+    ctx.lineTo(ax + Math.cos(angle + 2.5) * as * 0.55, ay + Math.sin(angle + 2.5) * as * 0.55);
+    ctx.lineTo(ax + Math.cos(angle - 2.5) * as * 0.55, ay + Math.sin(angle - 2.5) * as * 0.55);
+    ctx.closePath();
+    ctx.fillStyle = `rgba(${r},${g},${b},${alpha * 1.3})`;
+    ctx.fill();
+  }
+  ctx.restore();
+}
+
 function draw() {
   ctx.fillStyle = 'rgba(8,12,16,0.22)';
   ctx.fillRect(0, 0, W, H);
 
-  // Proximity / FM coupling lines
+  // Proximity / FM coupling lines (background glow only — chains drawn on top)
   ctx.lineCap = 'round';
   for (const { a, b, str } of proximityPairs) {
     ctx.beginPath();
     ctx.moveTo(a.x, a.y); ctx.lineTo(b.x, b.y);
-    ctx.strokeStyle = `rgba(40,160,255,${str * 0.2})`;
+    ctx.strokeStyle = `rgba(40,160,255,${str * 0.12})`;
     ctx.lineWidth   = str * 1.6;
     ctx.stroke();
   }
@@ -1252,6 +1377,8 @@ function draw() {
     ctx.lineWidth   = 0.6;
     ctx.stroke();
   }
+
+  drawOpChains();
 
   drawSceneObjects();
 
@@ -1432,7 +1559,8 @@ function initAudio() {
 
 const sliderDefs = {
   gravity:'gv', wind:'wv', viscosity:'vv', bounce:'bv',
-  fmdepth:'fv', graindensity:'gdv', mastervol:'mvv', reverbamt:'rvv',
+  fmdepth:'fv', fmfeedback:'fbv', lforate:'lrv',
+  graindensity:'gdv', mastervol:'mvv', reverbamt:'rvv',
   bpm:'bpmv', resonance:'resv', filtattack:'fatkv', filtdecay:'fdecv', harmspread:'hspv'
 };
 
@@ -1448,6 +1576,17 @@ for (const [id, lblId] of Object.entries(sliderDefs)) {
       reverbGain.gain.setTargetAtTime(parseFloat(this.value), AC.currentTime, 0.05);
   });
 }
+
+document.getElementById('op2btn').addEventListener('click', () => {
+  opCount = 2;
+  document.getElementById('op2btn').classList.add('op-active');
+  document.getElementById('op4btn').classList.remove('op-active');
+});
+document.getElementById('op4btn').addEventListener('click', () => {
+  opCount = 4;
+  document.getElementById('op4btn').classList.add('op-active');
+  document.getElementById('op2btn').classList.remove('op-active');
+});
 
 document.getElementById('synthmode').addEventListener('change', () => {
   const mode = getSynthMode();
@@ -1599,6 +1738,10 @@ document.addEventListener('keyup', e => {
 // ─────────────────────────────────────────────────────────────
 
 function loop() {
+  const now = performance.now();
+  const dt  = Math.min(0.05, (now - lastLoopTime) / 1000);
+  lastLoopTime = now;
+  updateLFO(dt);
   physics();
   updateFM();
   draw();

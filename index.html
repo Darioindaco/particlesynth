@@ -269,11 +269,6 @@ input[type=text] {
   border-color:#ffa040 !important;
   box-shadow:0 0 6px rgba(255,160,40,0.5) !important;
 }
-.seq-chord-dot::after {
-  content:''; position:absolute; top:1px; right:2px;
-  width:4px; height:4px; border-radius:50%;
-  background:rgba(51,255,160,0.65); pointer-events:none;
-}
 .seq-vel-wrap {
   height:14px; background:#0d1520; border:1px solid #1a2535;
   border-radius:1px; cursor:ns-resize; position:relative; touch-action:none;
@@ -582,11 +577,6 @@ input[type=text] {
       <span class="section-arrow">▼</span>
     </div>
     <div class="section-body">
-      <div class="toggle-row">
-        <input type="checkbox" id="chordOn">
-        <span>CHORD QUALITIES</span>
-      </div>
-      <div id="chordDisplay" style="font-size:16px;color:#3af;letter-spacing:2px;font-weight:bold;min-height:20px;text-align:center;margin:2px 0;"></div>
     </div>
   </div>
 
@@ -1332,8 +1322,6 @@ const SCALES = {
 
 // warmth 0→1 snaps to the nearest scale degree across 4 octaves
 function warmthToFreq(w, p) {
-  // If chord voicing is active and this particle has an assigned chord frequency, use it
-  if (p && p._chordFreq) return p._chordFreq;
   const notes  = SCALES[document.getElementById('scale').value] || SCALES.pentatonic;
   const octaves = 4;
   const total   = notes.length * octaves;
@@ -1345,138 +1333,6 @@ function warmthToFreq(w, p) {
 
 // Harmonic ratios for FM modulators — forces sidebands onto musical intervals
 const HARMONIC_RATIOS = [0.5, 1, 1.5, 2, 3, 4];
-
-// ─────────────────────────────────────────────────────────────
-// Chord quality system
-// ─────────────────────────────────────────────────────────────
-
-const CHORD_QUALITIES = [
-  { name: 'min9',  max: 0.25, intervals: [0, 3,  7, 10, 14] },
-  { name: 'min7',  max: 0.45, intervals: [0, 3,  7, 10]     },
-  { name: 'maj7',  max: 0.6,  intervals: [0, 4,  7, 11]     },
-  { name: 'dom7',  max: 0.72, intervals: [0, 4,  7, 10]     },
-  { name: 'maj9',  max: 0.88, intervals: [0, 4,  7, 11, 14] },
-  { name: 'aug',   max: 1.01, intervals: [0, 4,  8]         },
-];
-
-function warmthToChord(w) {
-  for (const q of CHORD_QUALITIES) if (w < q.max) return q;
-  return CHORD_QUALITIES[CHORD_QUALITIES.length - 1];
-}
-
-let currentChordName    = '';
-let chordOverlayName    = '';
-let chordOverlayChanged = 0;
-let chordLockUntil      = 0; // timestamp — chord quality cannot change before this
-
-const CHORD_CLUSTER_DIST = 130;
-const CHORD_LOCK_MS      = 3000;
-const MAJ7_IDX           = 2; // index in CHORD_QUALITIES — used as soft default
-
-function updateChordVoicing() {
-  if (!document.getElementById('chordOn').checked) {
-    for (const p of particles) { p._chordFreq = null; p._lastSyncedChordFreq = null; }
-    return;
-  }
-
-  // ── 1. Find neighbours ──────────────────────────────────────
-  const neighbourCount = new Array(particles.length).fill(0);
-  for (let i = 0; i < particles.length - 1; i++) {
-    for (let j = i + 1; j < particles.length; j++) {
-      if (Math.hypot(particles[i].x - particles[j].x, particles[i].y - particles[j].y) < CHORD_CLUSTER_DIST) {
-        neighbourCount[i]++;
-        neighbourCount[j]++;
-      }
-    }
-  }
-
-  // ── 2. Flood-fill clusters (only particles with ≥2 neighbours) ──
-  const assigned = new Array(particles.length).fill(-1);
-  const clusters  = [];
-  for (let i = 0; i < particles.length; i++) {
-    if (neighbourCount[i] < 2 || assigned[i] !== -1) continue;
-    const cluster = [];
-    const queue   = [i];
-    assigned[i]   = clusters.length;
-    while (queue.length) {
-      const ci = queue.shift();
-      cluster.push(ci);
-      for (let j = 0; j < particles.length; j++) {
-        if (assigned[j] !== -1 || neighbourCount[j] < 2) continue;
-        if (Math.hypot(particles[ci].x - particles[j].x, particles[ci].y - particles[j].y) < CHORD_CLUSTER_DIST) {
-          assigned[j] = clusters.length;
-          queue.push(j);
-        }
-      }
-    }
-    clusters.push(cluster);
-  }
-
-  // Clear particles not in any qualifying cluster
-  for (let i = 0; i < particles.length; i++) {
-    if (assigned[i] === -1) particles[i]._chordFreq = null;
-  }
-
-  // ── 3. Voice each cluster ────────────────────────────────────
-  let dominantChord = null, dominantSize = 0;
-  const now = performance.now();
-
-  for (const cluster of clusters) {
-    // Rule 5: need ≥3 particles to sound like a chord
-    if (cluster.length < 3) {
-      for (const i of cluster) particles[i]._chordFreq = null;
-      continue;
-    }
-
-    // Average warmth determines the root octave placement
-    const avgWarmth = cluster.reduce((s, i) => s + particles[i].warmth, 0) / cluster.length;
-    // Root in octave 1-2 (220–440 Hz range) — keeps voicing from going too high
-    const rootFreq  = ROOT * Math.pow(2, 1 + avgWarmth);
-
-    // Rule 4: determine chord quality only if lock has expired
-    // Rule 6: use majority-vote histogram; default to maj7 on ties
-    const counts = new Array(CHORD_QUALITIES.length).fill(0);
-    for (const i of cluster) {
-      for (let qi = 0; qi < CHORD_QUALITIES.length; qi++) {
-        if (particles[i].warmth < CHORD_QUALITIES[qi].max) { counts[qi]++; break; }
-      }
-    }
-    let bestQIdx = MAJ7_IDX; // default: maj7
-    if (now >= chordLockUntil) {
-      // Find plurality, preferring maj7 on tie (only upgrade to tense quality if clearly dominant)
-      for (let qi = 0; qi < CHORD_QUALITIES.length; qi++) {
-        if (counts[qi] > counts[bestQIdx] + (qi > MAJ7_IDX ? 1 : 0)) bestQIdx = qi;
-      }
-    }
-    const chord = CHORD_QUALITIES[bestQIdx];
-
-    // Rule 2: sort cluster by warmth, coolest → root/fifth, warmest → extensions
-    const sorted = [...cluster].sort((a, b) => particles[a].warmth - particles[b].warmth);
-
-    // Rule 1: voice all intervals within one octave of the root (close position)
-    sorted.forEach((pi, slot) => {
-      const semi    = chord.intervals[slot % chord.intervals.length];
-      // All semitones kept within 0-14 above root → max one octave span
-      const target  = rootFreq * Math.pow(2, semi / 12);
-      particles[pi]._chordFreq = target;
-    });
-
-    if (cluster.length > dominantSize) {
-      dominantSize  = cluster.length;
-      dominantChord = { name: chord.name.toUpperCase(), qIdx: bestQIdx };
-    }
-  }
-
-  // ── 4. Update display with 3-second lock ─────────────────────
-  const newName = dominantChord ? dominantChord.name : '';
-  if (newName !== currentChordName && now >= chordLockUntil) {
-    currentChordName    = newName;
-    chordOverlayName    = newName;
-    chordOverlayChanged = now;
-    chordLockUntil      = now + CHORD_LOCK_MS;
-    document.getElementById('chordDisplay').textContent = newName;
-  }
-}
 
 function warmthToColor(w, alpha) {
   alpha = alpha !== undefined ? alpha : 1;
@@ -1602,7 +1458,6 @@ class Particle {
     this.addOscs = null; this.addGains = null; this._addMerger = null;
     this.fbDelay = null; this.fbGain = null;
     this._fmAccum = 0;
-    this._chordFreq = null;
     if (audioStarted) this.initAudio();
   }
 
@@ -1674,10 +1529,7 @@ class Particle {
     const spd  = Math.hypot(this.vx, this.vy);
     const mode = getSynthMode();
     const targetFreq = freq * (1 + spd * 0.006);
-    // Use slow glide when chord voicing is active and target changed
-    const freqTau = (!immediate && this._chordFreq && this._chordFreq !== this._lastSyncedChordFreq)
-      ? 0.3 : tau;
-    if (this._chordFreq) this._lastSyncedChordFreq = this._chordFreq;
+    const freqTau = tau;
 
     if (mode === 'fm' && this.osc) {
       const type = w < 0.33 ? 'sine' : w < 0.66 ? 'triangle' : 'sawtooth';
@@ -2416,21 +2268,6 @@ function draw() {
     }
   }
 
-  // Chord name overlay — large faint text, fades over 2s on change
-  if (chordOverlayName) {
-    const age = (performance.now() - chordOverlayChanged) / 2000;
-    if (age < 1) {
-      ctx.save();
-      ctx.globalAlpha = 0.06 * (1 - age);
-      ctx.font = 'bold 64px Courier New';
-      ctx.fillStyle = '#33aaff';
-      ctx.textAlign = 'center';
-      ctx.textBaseline = 'middle';
-      ctx.fillText(chordOverlayName, W / 2, H / 2);
-      ctx.restore();
-    }
-  }
-
   // Scene object cull flashes
   const fnow = performance.now();
   for (let i = objFlashes.length - 1; i >= 0; i--) {
@@ -2641,13 +2478,6 @@ for (const [id, lblId] of Object.entries(sliderDefs)) {
   });
 }
 
-document.getElementById('chordOn').addEventListener('change', function() {
-  if (!this.checked) {
-    currentChordName = '';
-    document.getElementById('chordDisplay').textContent = '';
-    for (const p of particles) p._chordFreq = null;
-  }
-});
 
 // Note lifetime controls
 ['nltInstant', 'nltLive', 'nltTimed'].forEach(id => {
@@ -3243,21 +3073,6 @@ function seqSetStepCount(n) {
   seqRenderCells();
 }
 
-// ─── Chord tone marker ───────────────────────────────────────
-function seqIsChordTone(noteIdx) {
-  if (!currentChordName || !document.getElementById('chordOn').checked) return false;
-  const q = CHORD_QUALITIES.find(cq => cq.name.toUpperCase() === currentChordName);
-  if (!q) return false;
-  const notes = SCALES[document.getElementById('scale').value] || SCALES.pentatonic;
-  const total = notes.length * 4;
-  const idx   = noteIdx % total;
-  const oct   = Math.floor(idx / notes.length);
-  const deg   = notes[idx % notes.length];
-  const midi  = 45 + oct * 12 + deg;
-  const rel   = (midi - 45 + 120) % 12;
-  return q.intervals.some(iv => (iv % 12) === rel);
-}
-
 // ─── DOM cell builder ────────────────────────────────────────
 function seqRenderCells() {
   const container = document.getElementById('seqCells');
@@ -3325,7 +3140,6 @@ function seqBindCells() {
 // ─── Per-frame visual update ─────────────────────────────────
 function seqUpdateVisuals() {
   const now = performance.now();
-  const chordOn = document.getElementById('chordOn').checked;
   const swingVal = parseInt(document.getElementById('swing').value);
   seqCellEls.forEach((cell, i) => {
     if (i >= seqStepCount) return;
@@ -3333,7 +3147,6 @@ function seqUpdateVisuals() {
     cell.classList.toggle('seq-flash',    seqFlashStep === i && now - seqFlashTime < 80);
     cell.classList.toggle('seq-on',       seqSteps[i].active);
     cell.classList.toggle('seq-picking',  i === seqPickingStep);
-    cell.classList.toggle('seq-chord-dot', chordOn && seqIsChordTone(seqSteps[i].noteIdx));
     // Visual swing displacement
     if (swingVal > 50 && i % 2 === 1) {
       cell.style.transform = `translateX(${(swingVal - 50) / 50 * 7}px)`;
@@ -4060,7 +3873,6 @@ function loop() {
   }
 
   updateLFO(dt);
-  updateChordVoicing();
   tickEmitters(dt);
   physics();
   updateFM();
@@ -4096,7 +3908,7 @@ function _presetBaseState() {
       plimit:24, olimit:8, bpm:90, swing:0, nltDur:10,
     },
     checkboxes: {
-      bubbleOn:true, chordOn:false, beatsync:true,
+      bubbleOn:true, beatsync:true,
       droneOn:true, lfoSync:false,
     },
     selects: {
@@ -4123,7 +3935,6 @@ const FACTORY_PRESETS = [
     s.sliders.fmdepth    = 2;
     s.sliders.reverbamt  = 0.6;
     s.sliders.plimit     = 16;
-    s.checkboxes.chordOn = true;
     s.selects.scale      = 'pentatonic';
     return { name: 'AMBIENT DRIFT', state: s };
   })(),
@@ -4163,7 +3974,6 @@ const FACTORY_PRESETS = [
     s.sliders.resonance  = 12;
     s.selects.synthmode  = 'sub';
     s.selects.scale      = 'major';
-    s.checkboxes.chordOn = false;
     return { name: 'LEAD READY', state: s };
   })(),
 
@@ -4224,7 +4034,7 @@ function capturePresetState() {
   const sliderIds   = ['gravity','wind','viscosity','bounce','fmdepth','fmfeedback',
     'lforate','resonance','filtattack','filtdecay','harmspread',
     'graindensity','mastervol','reverbamt','plimit','olimit','bpm','swing','nltDur'];
-  const checkboxIds = ['bubbleOn','chordOn','beatsync','droneOn','lfoSync'];
+  const checkboxIds = ['bubbleOn','beatsync','droneOn','lfoSync'];
   const selectIds   = ['synthmode','fmratio','lfotarget','lfoSyncDiv','scale','graintype'];
 
   const sliders = {};
@@ -4295,10 +4105,7 @@ function applyPresetState(state) {
       document.getElementById('lforate').disabled = lfoSyncOn;
       document.getElementById('lfoSyncDivRow').style.display = lfoSyncOn ? '' : 'none';
     }
-    if (id === 'chordOn' && !checked) {
-      currentChordName = '';
-      const cd = document.getElementById('chordDisplay'); if (cd) cd.textContent = '';
-    }
+
   }
 
   // Selects

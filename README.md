@@ -2,7 +2,33 @@
 
 A browser-based audio-visual playground where physics-simulated particles generate music. Each particle is a living synthesizer — its position, velocity, and "warmth" determine its pitch, timbre, and behaviour. Collide them, heat them, freeze them, spin them into vortices, or sequence them into melodic patterns.
 
-Open `index.html` in any modern browser. No install, no dependencies.
+## Running
+
+**Desktop app (recommended)**
+
+```bash
+npm install
+npm start
+```
+
+Opens a native 1400×900 desktop window via Electron. Hot-reloads automatically when `index.html` is changed.
+
+**Browser**
+
+Open `index.html` in any modern browser — no build step required.
+
+```bash
+# If your browser requires a local server for AudioContext:
+python3 -m http.server 8080
+```
+
+**Build a distributable**
+
+```bash
+npm run build:win    # Windows NSIS installer → dist-electron/
+npm run build:mac    # macOS DMG → dist-electron/
+npm run build:linux  # Linux AppImage → dist-electron/
+```
 
 ---
 

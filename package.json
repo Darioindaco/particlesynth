@@ -1,0 +1,38 @@
+{
+  "name": "particle-synth",
+  "version": "0.1.0",
+  "description": "Particle physics synthesis engine",
+  "main": "electron.js",
+  "scripts": {
+    "start": "node start.js",
+    "build": "electron-builder --mac --win --linux",
+    "build:mac": "electron-builder --mac",
+    "build:win": "electron-builder --win",
+    "build:linux": "electron-builder --linux"
+  },
+  "devDependencies": {
+    "electron": "^42.0.1",
+    "electron-builder": "^24.0.0"
+  },
+  "build": {
+    "appId": "com.dfxvisuals.particlesynth",
+    "productName": "Particle Synth",
+    "directories": {
+      "output": "dist-electron"
+    },
+    "files": [
+      "index.html",
+      "electron.js"
+    ],
+    "mac": {
+      "category": "public.app-category.music",
+      "target": "dmg"
+    },
+    "win": {
+      "target": "nsis"
+    },
+    "linux": {
+      "target": "AppImage"
+    }
+  }
+}

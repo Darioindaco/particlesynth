@@ -433,6 +433,7 @@ input[type=text] {
           <input type="range" id="collVel" min="0" max="1" step="0.05" value="0.7"></div>
         <div class="ctrl"><label>COOLDOWN <span id="collCoolV">50</span>ms</label>
           <input type="range" id="collCool" min="0" max="500" step="10" value="50"></div>
+        <div class="ctrl"><label><input type="checkbox" id="cOneShot"> ONE-SHOT</label></div>
         <div class="ctrl"><label>BOUNCINESS <span id="collBncV">0.80</span></label>
           <input type="range" id="collBnc" min="0" max="1" step="0.05" value="0.8"></div>
         <div id="cPanRes">
@@ -3123,7 +3124,7 @@ function makeCollisionObject(type, extra) {
     lastTriggerMs: 0, flashUntil: 0, hitLevel: 0,
     sound: {
       type: 'res', volume: 0.7, pan: 0, velSens: 0.7,
-      retrigger: 'free', cooldown: 50,
+      retrigger: 'free', cooldown: 50, oneShot: false,
       waveform: 'sine', noteIdx: 0, attack: 5, decay: 300, release: 100,
       percType: 'kick', percFreq: 80, percDecay: 0.3,
       granMat: 'metal', granSize: 80, granDensity: 2,
@@ -3234,6 +3235,8 @@ function hitTestCollObj(mx, my) {
 
 function resolveCollisionObjects() {
   for (const p of particles) {
+    if (!p._touchingColls) p._touchingColls = new Set();
+    const nextTouching = new Set();
     for (const obj of collObjects) {
       let hitNx = 0, hitNy = 0, didHit = false;
 
@@ -3276,7 +3279,11 @@ function resolveCollisionObjects() {
         p.tension = Math.min(1, p.tension + Math.min(0.4, impactSpd * 0.015));
         obj.flashUntil = performance.now() + 140;
         obj.hitLevel   = Math.min(1, obj.hitLevel + impactSpd * 0.06);
-        triggerCollisionSound(obj, impactSpd, p.warmth);
+        const isNewContact = !p._touchingColls.has(obj.id);
+        if (!obj.sound.oneShot || isNewContact) {
+          triggerCollisionSound(obj, impactSpd, p.warmth);
+        }
+        nextTouching.add(obj.id);
         const nc = Math.min(8, Math.floor(1 + impactSpd * 0.4));
         for (let s = 0; s < nc; s++) {
           const sa = Math.atan2(-hitNy, -hitNx) + (Math.random()-0.5)*2.0;
@@ -3287,6 +3294,7 @@ function resolveCollisionObjects() {
         }
       }
     }
+    p._touchingColls = nextTouching;
   }
 }
 
@@ -3617,6 +3625,7 @@ function openCollPanel(obj) {
   document.getElementById('collVelV').textContent     = s.velSens.toFixed(2);
   document.getElementById('collCool').value           = s.cooldown;
   document.getElementById('collCoolV').textContent    = s.cooldown;
+  document.getElementById('cOneShot').checked         = !!s.oneShot;
   document.getElementById('collBnc').value            = obj.bounciness;
   document.getElementById('collBncV').textContent     = obj.bounciness.toFixed(2);
   document.getElementById('collWave').value           = s.waveform;
@@ -3700,6 +3709,9 @@ function wireCollPanelListeners() {
   sliderSync('collPan',  'pan',       'collPanV',  2, 'sound');
   sliderSync('collVel',  'velSens',   'collVelV',  2, 'sound');
   sliderSync('collCool', 'cooldown',  'collCoolV', 0, 'sound');
+  document.getElementById('cOneShot').addEventListener('change', function() {
+    if (collSelectedObj) collSelectedObj.sound.oneShot = this.checked;
+  });
   sliderSync('collBnc',  'bounciness','collBncV',  2, 'obj');
 
   selectSync('collWave', 'waveform', 'sound');

@@ -63,6 +63,27 @@ body {
   padding:0;
 }
 
+/* ── Synth sub-sections (nested collapsibles) ─────────────────── */
+.subsec { display:flex; flex-direction:column; margin:4px 0 0; border-left:2px solid #112030; padding-left:8px; }
+.subsec-hdr {
+  display:flex; align-items:center; justify-content:space-between;
+  cursor:pointer; padding:4px 0 3px; border-bottom:1px solid #0e1a25;
+  user-select:none;
+}
+.subsec-hdr:hover { border-color:#1e3050; }
+.subsec-title { font-size:10px; color:#2a8cc0; letter-spacing:1.5px; font-weight:bold; }
+.subsec-arrow { font-size:8px; color:#2a8cc0; transition:transform 0.15s; display:inline-block; }
+.subsec.collapsed .subsec-arrow { transform:rotate(-90deg); }
+.subsec-body {
+  display:flex; flex-direction:column; gap:6px;
+  padding:6px 0 2px;
+  overflow:hidden;
+  transition:max-height 0.2s ease, opacity 0.2s ease, padding 0.2s ease;
+  max-height:900px; opacity:1;
+}
+.subsec.collapsed .subsec-body { max-height:0; opacity:0; padding:0; }
+.synth-warn { font-size:10px; color:#f80; letter-spacing:1px; padding:2px 0; display:none; }
+
 .ctrl { display:flex; flex-direction:column; gap:4px; }
 .ctrl label {
   color:#667; font-size:12px; letter-spacing:1px;
@@ -390,6 +411,24 @@ input[type=text] {
           <input type="checkbox" id="bubbleOn" checked>
           <span>BUBBLE RESONANCE</span>
         </div>
+        <!-- INTERNAL FM -->
+        <div class="subsec collapsed" id="sub-intfm">
+          <div class="subsec-hdr" onclick="toggleSubsec('sub-intfm')">
+            <span class="subsec-title">INTERNAL FM</span><span class="subsec-arrow">▼</span>
+          </div>
+          <div class="subsec-body">
+            <div class="toggle-row">
+              <input type="checkbox" id="intFmOn"><span>ENABLE</span>
+            </div>
+            <div class="ctrl"><label>RATIO <span id="intFmRatioV">2.00</span></label>
+              <input type="range" id="intFmRatio" min="0.25" max="16" step="0.25" value="2"></div>
+            <div class="ctrl"><label>INDEX <span id="intFmIndexV">3.0</span></label>
+              <input type="range" id="intFmIndex" min="0" max="20" step="0.5" value="3"></div>
+            <div class="toggle-row">
+              <input type="checkbox" id="intFmEnv"><span>FOLLOW TENSION</span>
+            </div>
+          </div>
+        </div>
       </div>
 
       <div id="panel-sub" style="display:none">
@@ -404,6 +443,129 @@ input[type=text] {
       <div id="panel-add" style="display:none">
         <div class="ctrl"><label>HARM SPREAD <span id="hspv">0.60</span></label>
           <input type="range" id="harmspread" min="0" max="1" step="0.05" value="0.6"></div>
+      </div>
+
+      <!-- UNISON -->
+      <div class="subsec collapsed" id="sub-unison">
+        <div class="subsec-hdr" onclick="toggleSubsec('sub-unison')">
+          <span class="subsec-title">UNISON</span><span class="subsec-arrow">▼</span>
+        </div>
+        <div class="subsec-body">
+          <div class="ctrl"><label>VOICES <span id="uniVoicesV">1</span></label>
+            <input type="range" id="uniVoices" min="1" max="8" step="1" value="1"></div>
+          <div class="ctrl"><label>DETUNE <span id="uniDetuneV">0</span>¢</label>
+            <input type="range" id="uniDetune" min="0" max="100" step="1" value="0"></div>
+          <div class="ctrl"><label>WIDTH <span id="uniWidthV">0.50</span></label>
+            <input type="range" id="uniWidth" min="0" max="1" step="0.05" value="0.5"></div>
+          <div class="ctrl"><label>BLEND <span id="uniBlendV">0.70</span></label>
+            <input type="range" id="uniBlend" min="0" max="1" step="0.05" value="0.7"></div>
+          <div id="uniWarn" class="synth-warn">⚠ PARTICLE LIMIT AUTO-REDUCED</div>
+        </div>
+      </div>
+
+      <!-- OSC 2 -->
+      <div class="subsec collapsed" id="sub-osc2">
+        <div class="subsec-hdr" onclick="toggleSubsec('sub-osc2')">
+          <span class="subsec-title">OSC 2</span><span class="subsec-arrow">▼</span>
+        </div>
+        <div class="subsec-body">
+          <div class="toggle-row">
+            <input type="checkbox" id="osc2On"><span>ENABLE OSC 2</span>
+          </div>
+          <div id="osc2Controls" style="display:none;flex-direction:column;gap:6px">
+            <div style="font-size:10px;color:#667;letter-spacing:1px;">WAVEFORM</div>
+            <select id="osc2Wave">
+              <option value="sine">SINE</option>
+              <option value="triangle">TRIANGLE</option>
+              <option value="sawtooth" selected>SAWTOOTH</option>
+              <option value="square">SQUARE</option>
+              <option value="pulse">PULSE</option>
+            </select>
+            <div id="osc2PwRow" style="display:none">
+              <div class="ctrl"><label>PULSE WIDTH <span id="osc2PwV">0.50</span></label>
+                <input type="range" id="osc2Pw" min="0.05" max="0.95" step="0.05" value="0.5"></div>
+            </div>
+            <div style="font-size:10px;color:#667;letter-spacing:1px;">OCTAVE</div>
+            <select id="osc2Oct">
+              <option value="-2">-2</option>
+              <option value="-1">-1</option>
+              <option value="0" selected>0</option>
+              <option value="1">+1</option>
+              <option value="2">+2</option>
+            </select>
+            <div class="ctrl"><label>SEMITONE <span id="osc2SemiV">0</span></label>
+              <input type="range" id="osc2Semi" min="-12" max="12" step="1" value="0"></div>
+            <div class="ctrl"><label>FINE <span id="osc2FineV">0</span>¢</label>
+              <input type="range" id="osc2Fine" min="-50" max="50" step="1" value="0"></div>
+            <div class="ctrl"><label>VOLUME <span id="osc2VolV">0.50</span></label>
+              <input type="range" id="osc2Vol" min="0" max="1" step="0.05" value="0.5"></div>
+            <div class="toggle-row">
+              <input type="checkbox" id="osc2Ring"><span>RING MOD</span>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- NOISE -->
+      <div class="subsec collapsed" id="sub-noise">
+        <div class="subsec-hdr" onclick="toggleSubsec('sub-noise')">
+          <span class="subsec-title">NOISE</span><span class="subsec-arrow">▼</span>
+        </div>
+        <div class="subsec-body">
+          <div style="font-size:10px;color:#667;letter-spacing:1px;">TYPE</div>
+          <select id="noiseType">
+            <option value="white">WHITE</option>
+            <option value="pink">PINK</option>
+            <option value="brown">BROWN</option>
+          </select>
+          <div class="ctrl"><label>NOISE VOL <span id="noiseVolV">0.00</span></label>
+            <input type="range" id="noiseVol" min="0" max="1" step="0.05" value="0"></div>
+          <div class="toggle-row">
+            <input type="checkbox" id="noiseEnv"><span>FOLLOW TENSION</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- FILTER+ -->
+      <div class="subsec collapsed" id="sub-filter">
+        <div class="subsec-hdr" onclick="toggleSubsec('sub-filter')">
+          <span class="subsec-title">FILTER+</span><span class="subsec-arrow">▼</span>
+        </div>
+        <div class="subsec-body">
+          <div style="font-size:10px;color:#667;letter-spacing:1px;">FILTER TYPE (SUB)</div>
+          <select id="subFiltType">
+            <option value="lowpass" selected>LOWPASS</option>
+            <option value="highpass">HIGHPASS</option>
+            <option value="bandpass">BANDPASS</option>
+            <option value="notch">NOTCH</option>
+            <option value="peaking">PEAKING</option>
+            <option value="ladder">LADDER (4-POLE)</option>
+          </select>
+          <div class="ctrl"><label>DRIVE <span id="filtDriveV">0.00</span></label>
+            <input type="range" id="filtDrive" min="0" max="1" step="0.05" value="0"></div>
+          <div class="ctrl"><label>KEYTRACK <span id="filtKeytrackV">0.50</span></label>
+            <input type="range" id="filtKeytrack" min="0" max="1" step="0.05" value="0.5"></div>
+          <div class="ctrl"><label>ENV AMOUNT <span id="filtEnvAmtV">1.00</span></label>
+            <input type="range" id="filtEnvAmt" min="-1" max="1" step="0.05" value="1"></div>
+        </div>
+      </div>
+
+      <!-- CHORUS -->
+      <div class="subsec collapsed" id="sub-chorus">
+        <div class="subsec-hdr" onclick="toggleSubsec('sub-chorus')">
+          <span class="subsec-title">CHORUS</span><span class="subsec-arrow">▼</span>
+        </div>
+        <div class="subsec-body">
+          <div class="toggle-row">
+            <input type="checkbox" id="chorusOn"><span>ENABLE</span>
+          </div>
+          <div class="ctrl"><label>RATE <span id="chorusRateV">0.5</span>Hz</label>
+            <input type="range" id="chorusRate" min="0.1" max="5" step="0.1" value="0.5"></div>
+          <div class="ctrl"><label>DEPTH <span id="chorusDepthV">0.50</span></label>
+            <input type="range" id="chorusDepth" min="0" max="1" step="0.05" value="0.5"></div>
+          <div class="ctrl"><label>MIX <span id="chorusMixV">0.50</span></label>
+            <input type="range" id="chorusMix" min="0" max="1" step="0.05" value="0.5"></div>
+        </div>
       </div>
 
       <div class="ctrl"><label>GRAIN DENSITY <span id="gdv">0.5</span></label>
@@ -721,6 +883,7 @@ input[type=text] {
   <div id="status">
     PARTICLES: <span id="pcount">0/24</span><br>
     OBJECTS: <span id="socount">0/8</span><br>
+    OSCILLATORS: <span id="osccount">0/192</span><br>
     AUDIO: <span id="audstat">STOPPED</span><br>
     FRAME: <span id="frametime">--</span>ms<br>
     <br>
@@ -739,6 +902,9 @@ input[type=text] {
 // ─────────────────────────────────────────────────────────────
 
 function toggleSection(id) {
+  document.getElementById(id).classList.toggle('collapsed');
+}
+function toggleSubsec(id) {
   document.getElementById(id).classList.toggle('collapsed');
 }
 
@@ -1342,6 +1508,53 @@ function warmthToColor(w, alpha) {
 
 function sl(id)  { return parseFloat(document.getElementById(id).value); }
 
+// ─────────────────────────────────────────────────────────────
+// Synthesis engine helpers
+// ─────────────────────────────────────────────────────────────
+
+// WaveShaper curve for filter drive — identity at drive=0
+function makeDriveCurve(drive) {
+  const N = 256;
+  const curve = new Float32Array(N);
+  for (let i = 0; i < N; i++) {
+    const x = (i * 2) / (N - 1) - 1;
+    if (drive < 0.001) { curve[i] = x; }
+    else {
+      const k = drive * 5;
+      curve[i] = Math.tanh(x * (1 + k)) / Math.tanh(1 + k);
+    }
+  }
+  return curve;
+}
+
+// Build a PeriodicWave for a pulse wave with given duty cycle
+function makePulseWave(ac, pw) {
+  const N = 64;
+  const real = new Float32Array(N), imag = new Float32Array(N);
+  for (let n = 1; n < N; n++) imag[n] = (2 / (n * Math.PI)) * Math.sin(n * Math.PI * pw);
+  return ac.createPeriodicWave(real, imag, { disableNormalization: false });
+}
+
+// Count oscillators per particle under current settings
+function countOscsPerParticle() {
+  const mode = getSynthMode();
+  const N    = parseInt(document.getElementById('uniVoices')?.value || '1');
+  let count  = (mode === 'add') ? 6 : N;  // ADD: 6 harmonics; FM/SUB: unison voices
+  if (mode === 'fm') count += 1;           // FM modulator (proximity system)
+  if (document.getElementById('intFmOn')?.checked && mode === 'fm') count += 1; // internal FM osc
+  if (document.getElementById('osc2On')?.checked) count += 1;
+  return count;
+}
+
+// Effective particle limit given oscillator budget
+function effectiveParticleLimit() {
+  const MAX = 192;
+  const perP = Math.max(1, countOscsPerParticle());
+  const auto = Math.max(4, Math.floor(MAX / perP));
+  const slider = parseInt(document.getElementById('plimit')?.value || '24');
+  return Math.min(slider, auto);
+}
+
 // === AUDIO ENGINE ===
 
 // ─────────────────────────────────────────────────────────────
@@ -1440,6 +1653,7 @@ function getSynthMode() {
 
 // ─────────────────────────────────────────────────────────────
 // Particle — three synthesis modes: fm / sub / add
+// Extended: unison, osc2, noise, drive, chorus, internal FM
 // ─────────────────────────────────────────────────────────────
 
 class Particle {
@@ -1452,12 +1666,29 @@ class Particle {
     this.mass = 1 + tension;
     this.r = 6 + tension * 10;
     this.fmRatio = HARMONIC_RATIOS[Math.floor(Math.random() * HARMONIC_RATIOS.length)];
+    // Core nodes
     this.osc = null; this.fmOsc = null; this.fmGain = null;
     this.filter = null; this.lpf = null; this.oscGain = null;
     this.subFilter = null;
     this.addOscs = null; this.addGains = null; this._addMerger = null;
     this.fbDelay = null; this.fbGain = null;
     this._fmAccum = 0;
+    // Internal FM
+    this.intFmOsc = null; this.intFmGain = null;
+    // Unison
+    this.uniMixer = null; this.uniPrimaryGain = null; this.uniPrimaryPanner = null;
+    this.uniExtras = [];
+    // Drive
+    this.drivePreGain = null; this.driveShaper = null;
+    // Ladder filter extras (SUB mode)
+    this.ladderFilt2 = null; this.ladderFilt3 = null; this.ladderFilt4 = null;
+    // OSC 2
+    this.osc2 = null; this.osc2Gain = null; this.osc2RingGain = null;
+    // Noise
+    this.noiseNode = null; this.noiseFilter = null; this.noiseGain = null;
+    // Chorus
+    this.chorDelay = null; this.chorDryGain = null; this.chorWetGain = null; this.chorMixGain = null;
+    this._chorPhase = Math.random() * Math.PI * 2;
     if (audioStarted) this.initAudio();
   }
 
@@ -1482,33 +1713,70 @@ class Particle {
         this.fmGain.gain.setValueAtTime(0, t0);
         this.fmOsc.connect(this.fmGain);
         this.fmGain.connect(this.osc.frequency);
-        // Feedback: osc output → 1-block delay → fbGain → osc.frequency
+        // Internal FM modulator (separate from proximity FM)
+        this.intFmOsc  = AC.createOscillator();
+        this.intFmGain = AC.createGain(); this.intFmGain.gain.value = 0;
+        this.intFmOsc.connect(this.intFmGain);
+        this.intFmGain.connect(this.osc.frequency);
+        // Feedback delay loop
         this.fbDelay = AC.createDelay(0.1);
         this.fbDelay.delayTime.value = 128 / (AC.sampleRate || 44100);
-        this.fbGain  = AC.createGain();
-        this.fbGain.gain.value = 0;
+        this.fbGain  = AC.createGain(); this.fbGain.gain.value = 0;
         this.osc.connect(this.fbDelay);
         this.fbDelay.connect(this.fbGain);
         this.fbGain.connect(this.osc.frequency);
-        this.osc.connect(this.filter);
+        // Unison mixer
+        this.uniMixer = AC.createGain();
+        this.uniPrimaryGain = AC.createGain(); this.uniPrimaryGain.gain.value = 1;
+        this.uniPrimaryPanner = new StereoPannerNode(AC, { pan: 0 });
+        this.osc.connect(this.uniPrimaryGain);
+        this.uniPrimaryGain.connect(this.uniPrimaryPanner);
+        this.uniPrimaryPanner.connect(this.uniMixer);
+        this.uniMixer.connect(this.filter);
         this.filter.connect(this.lpf);
         this.lpf.connect(this.oscGain);
-        this.fmOsc.start(t0); this.osc.start(t0);
+        this.fmOsc.start(t0); this.intFmOsc.start(t0); this.osc.start(t0);
 
       } else if (mode === 'sub') {
         this.osc = AC.createOscillator();
         this.osc.type = 'sawtooth';
+        // Unison mixer
+        this.uniMixer = AC.createGain();
+        this.uniPrimaryGain = AC.createGain(); this.uniPrimaryGain.gain.value = 1;
+        this.uniPrimaryPanner = new StereoPannerNode(AC, { pan: 0 });
+        this.osc.connect(this.uniPrimaryGain);
+        this.uniPrimaryGain.connect(this.uniPrimaryPanner);
+        this.uniPrimaryPanner.connect(this.uniMixer);
+        // Drive waveshaper (identity at drive=0)
+        this.drivePreGain = AC.createGain(); this.drivePreGain.gain.value = 1;
+        this.driveShaper  = AC.createWaveShaper();
+        this.driveShaper.curve = makeDriveCurve(sl('filtDrive') || 0);
+        this.driveShaper.oversample = '2x';
+        // Filter chain
         this.subFilter = AC.createBiquadFilter();
-        this.subFilter.type = 'lowpass';
+        const subFiltTypeEl = document.getElementById('subFiltType');
+        this.subFilter.type = subFiltTypeEl ? subFiltTypeEl.value : 'lowpass';
         this.subFilter.Q.value = sl('resonance');
-        this.osc.connect(this.subFilter);
-        this.subFilter.connect(this.oscGain);
+        // Ladder extras (allpass = transparent when not in ladder mode)
+        this.ladderFilt2 = AC.createBiquadFilter(); this.ladderFilt2.type = 'allpass';
+        this.ladderFilt3 = AC.createBiquadFilter(); this.ladderFilt3.type = 'allpass';
+        this.ladderFilt4 = AC.createBiquadFilter(); this.ladderFilt4.type = 'allpass';
+        this.uniMixer.connect(this.drivePreGain);
+        this.drivePreGain.connect(this.driveShaper);
+        this.driveShaper.connect(this.subFilter);
+        this.subFilter.connect(this.ladderFilt2);
+        this.ladderFilt2.connect(this.ladderFilt3);
+        this.ladderFilt3.connect(this.ladderFilt4);
+        this.ladderFilt4.connect(this.oscGain);
         this.osc.start(t0);
 
       } else { // additive
         this.addOscs = []; this.addGains = [];
         this._addMerger = AC.createGain();
+        // uniMixer collects OSC2/noise; addMerger handles harmonics separately
+        this.uniMixer = AC.createGain();
         this._addMerger.connect(this.oscGain);
+        this.uniMixer.connect(this.oscGain);
         for (let h = 1; h <= 6; h++) {
           const o = AC.createOscillator(); o.type = 'sine';
           const g = AC.createGain(); g.gain.setValueAtTime(0, t0);
@@ -1516,25 +1784,37 @@ class Particle {
           this.addOscs.push(o); this.addGains.push(g);
         }
       }
+      // Build unison extras (FM/SUB only — uniPrimaryGain exists)
+      this._syncUnisonBuild();
+      // Init OSC2 if enabled
+      if (document.getElementById('osc2On')?.checked) this._initOsc2();
+      // Init noise if volume > 0
+      if (sl('noiseVol') > 0) this._initNoise();
+      // Init chorus if enabled
+      if (document.getElementById('chorusOn')?.checked) this._initChorus();
       this.syncAudio(true);
-    } catch (e) {}
+    } catch (e) { console.warn('Particle.initAudio error:', e); }
   }
 
   syncAudio(immediate) {
     if (!this.oscGain || !AC) return;
-    const t   = AC.currentTime;
-    const tau = immediate ? 0 : 0.06;
-    const w   = this.warmth;
-    const freq = warmthToFreq(w, this);
-    const spd  = Math.hypot(this.vx, this.vy);
-    const mode = getSynthMode();
+    const t      = AC.currentTime;
+    const tau    = immediate ? 0 : 0.06;
+    const w      = this.warmth;
+    const freq   = warmthToFreq(w, this);
+    const spd    = Math.hypot(this.vx, this.vy);
+    const mode   = getSynthMode();
     const targetFreq = freq * (1 + spd * 0.006);
-    const freqTau = tau;
+    const freqTau    = tau;
 
     if (mode === 'fm' && this.osc) {
       const type = w < 0.33 ? 'sine' : w < 0.66 ? 'triangle' : 'sawtooth';
       if (this.osc.type !== type) this.osc.type = type;
       this.osc.frequency.setTargetAtTime(targetFreq, t, freqTau);
+      // Update unison extras' frequencies
+      for (const e of this.uniExtras) {
+        e.osc.frequency.setTargetAtTime(targetFreq, t, freqTau);
+      }
       const ratioSel = document.getElementById('fmratio').value;
       const ratio = ratioSel === 'free' ? this.fmRatio : parseFloat(ratioSel);
       this.fmOsc.frequency.setTargetAtTime(freq * ratio, t, freqTau);
@@ -1553,12 +1833,44 @@ class Particle {
       const lfoCutMod = document.getElementById('lfotarget').value === 'cutoff' ? (1 + lfoVal * 0.4) : 1;
       this.lpf.frequency.setTargetAtTime(lpfCutoff * lfoCutMod, t, 0.08);
       this.oscGain.gain.setTargetAtTime(this.tension * 0.05, t, tau);
+      // Internal FM
+      if (this.intFmOsc && document.getElementById('intFmOn')?.checked) {
+        const iRatio = parseFloat(document.getElementById('intFmRatio')?.value || '2');
+        const iIdx   = parseFloat(document.getElementById('intFmIndex')?.value  || '3');
+        const iEnv   = document.getElementById('intFmEnv')?.checked;
+        this.intFmOsc.frequency.setTargetAtTime(freq * iRatio, t, freqTau);
+        this.intFmGain.gain.setTargetAtTime(iIdx * freq * (iEnv ? this.tension : 1), t, 0.04);
+      } else if (this.intFmGain) {
+        this.intFmGain.gain.setTargetAtTime(0, t, 0.04);
+      }
 
     } else if (mode === 'sub' && this.osc) {
       this.osc.frequency.setTargetAtTime(targetFreq, t, freqTau);
-      const baseCutoff = Math.min(8000, freq * (1.5 + spd * 0.12));
+      for (const e of this.uniExtras) {
+        e.osc.frequency.setTargetAtTime(targetFreq, t, freqTau);
+      }
+      const keytrack = parseFloat(document.getElementById('filtKeytrack')?.value || '0.5');
+      const ktMult   = Math.pow(freq / ROOT, keytrack);
+      const baseCutoff = Math.min(8000, freq * (1.5 + spd * 0.12)) * ktMult;
+      const filtType = document.getElementById('subFiltType')?.value || 'lowpass';
+      const isLadder = filtType === 'ladder';
+      this.subFilter.type = isLadder ? 'lowpass' : filtType;
       this.subFilter.frequency.setTargetAtTime(baseCutoff, t, 0.08);
       this.subFilter.Q.value = sl('resonance');
+      if (this.ladderFilt2) {
+        const lType = isLadder ? 'lowpass' : 'allpass';
+        if (this.ladderFilt2.type !== lType) {
+          this.ladderFilt2.type = lType;
+          this.ladderFilt3.type = lType;
+          this.ladderFilt4.type = lType;
+        }
+        if (isLadder) {
+          this.ladderFilt2.frequency.setTargetAtTime(baseCutoff, t, 0.08);
+          this.ladderFilt3.frequency.setTargetAtTime(baseCutoff, t, 0.08);
+          this.ladderFilt4.frequency.setTargetAtTime(baseCutoff, t, 0.08);
+          this.ladderFilt2.Q.value = 0.5; this.ladderFilt3.Q.value = 0.5; this.ladderFilt4.Q.value = 0.5;
+        }
+      }
       this.oscGain.gain.setTargetAtTime(this.tension * 0.05, t, tau);
 
     } else if (mode === 'add' && this.addOscs) {
@@ -1571,19 +1883,62 @@ class Particle {
       }
       this.oscGain.gain.setTargetAtTime(1, t, tau);
     }
+
+    // OSC 2 frequency update
+    if (this.osc2) {
+      const oct  = parseInt(document.getElementById('osc2Oct')?.value  || '0');
+      const semi = parseInt(document.getElementById('osc2Semi')?.value || '0');
+      const fine = parseFloat(document.getElementById('osc2Fine')?.value || '0');
+      const osc2Freq = freq * Math.pow(2, oct) * Math.pow(2, semi / 12) * Math.pow(2, fine / 1200);
+      this.osc2.frequency.setTargetAtTime(osc2Freq, t, freqTau);
+      if (this.osc2Gain && !this.osc2RingGain)
+        this.osc2Gain.gain.setTargetAtTime(sl('osc2Vol'), t, tau);
+    }
+
+    // Noise envelope
+    if (this.noiseGain) {
+      const nVol = sl('noiseVol');
+      const nEnv = document.getElementById('noiseEnv')?.checked;
+      this.noiseGain.gain.setTargetAtTime(nVol * (nEnv ? this.tension : 1) * 0.35, t, tau);
+    }
+
+    // Chorus LFO modulation (JS-driven, no extra oscillator needed)
+    if (this.chorDelay && document.getElementById('chorusOn')?.checked) {
+      const rate  = parseFloat(document.getElementById('chorusRate')?.value  || '0.5');
+      const depth = parseFloat(document.getElementById('chorusDepth')?.value || '0.5');
+      const mix   = parseFloat(document.getElementById('chorusMix')?.value   || '0.5');
+      const lfo   = Math.sin(t * 2 * Math.PI * rate + this._chorPhase);
+      this.chorDelay.delayTime.setValueAtTime(Math.max(0.001, 0.008 + lfo * 0.007 * depth), t);
+      this.chorDryGain.gain.setTargetAtTime(1 - mix * 0.5, t, 0.05);
+      this.chorWetGain.gain.setTargetAtTime(mix * 0.7,     t, 0.05);
+    }
   }
 
   triggerFilterEnv(impact) {
     if (!this.subFilter || !AC) return;
-    const t   = AC.currentTime;
-    const atk = sl('filtattack');
-    const dec = sl('filtdecay');
-    const base = warmthToFreq(this.warmth);
-    const peak = Math.min(9000, base * (3 + impact * 8));
-    this.subFilter.frequency.cancelScheduledValues(t);
-    this.subFilter.frequency.setValueAtTime(this.subFilter.frequency.value, t);
-    this.subFilter.frequency.linearRampToValueAtTime(peak, t + atk);
-    this.subFilter.frequency.setTargetAtTime(base, t + atk, dec / 3);
+    const t       = AC.currentTime;
+    const atk     = sl('filtattack');
+    const dec     = sl('filtdecay');
+    const envAmt  = parseFloat(document.getElementById('filtEnvAmt')?.value || '1');
+    const base    = warmthToFreq(this.warmth);
+    const keytrack = parseFloat(document.getElementById('filtKeytrack')?.value || '0.5');
+    const ktMult  = Math.pow(base / ROOT, keytrack);
+    const baseCutoff = Math.min(8000, base * 1.5) * ktMult;
+    const peakDelta  = base * (3 + impact * 8);
+    const peak = envAmt >= 0
+      ? Math.min(18000, baseCutoff + peakDelta * envAmt)
+      : Math.max(40,    baseCutoff + peakDelta * envAmt);
+    const applyEnv = f => {
+      f.frequency.cancelScheduledValues(t);
+      f.frequency.setValueAtTime(f.frequency.value, t);
+      f.frequency.linearRampToValueAtTime(peak, t + atk);
+      f.frequency.setTargetAtTime(baseCutoff, t + atk, dec / 3);
+    };
+    applyEnv(this.subFilter);
+    const isLadder = document.getElementById('subFiltType')?.value === 'ladder';
+    if (isLadder && this.ladderFilt2) {
+      applyEnv(this.ladderFilt2); applyEnv(this.ladderFilt3); applyEnv(this.ladderFilt4);
+    }
   }
 
   setFMDepth(depthHz) {
@@ -1593,23 +1948,227 @@ class Particle {
 
   destroy() {
     if (!this.oscGain) return;
+    const t = AC.currentTime;
+    try { this.oscGain.gain.setTargetAtTime(0, t, 0.015); } catch (_) {}
+    if (this.chorMixGain) { try { this.chorMixGain.gain.setTargetAtTime(0, t, 0.015); } catch (_) {} }
+    const extras = (this.uniExtras || []).flatMap(e => [e.osc, e.gain, e.panner]);
     const nodes = [
-      this.osc, this.fmOsc, this.fmGain, this.filter, this.lpf,
-      this.oscGain, this.subFilter, this._addMerger, this.fbDelay, this.fbGain,
-      ...(this.addOscs || []), ...(this.addGains || [])
+      this.osc, this.fmOsc, this.fmGain, this.filter, this.lpf, this.oscGain,
+      this.subFilter, this._addMerger, this.fbDelay, this.fbGain,
+      this.intFmOsc, this.intFmGain,
+      this.uniMixer, this.uniPrimaryGain, this.uniPrimaryPanner,
+      this.drivePreGain, this.driveShaper,
+      this.ladderFilt2, this.ladderFilt3, this.ladderFilt4,
+      this.osc2, this.osc2Gain, this.osc2RingGain,
+      this.noiseNode, this.noiseFilter, this.noiseGain,
+      this.chorDelay, this.chorDryGain, this.chorWetGain, this.chorMixGain,
+      ...(this.addOscs || []), ...(this.addGains || []), ...extras,
     ];
-    try { this.oscGain.gain.setTargetAtTime(0, AC.currentTime, 0.015); } catch (_) {}
     setTimeout(() => {
       for (const n of nodes) {
         try { if (n) { n.stop && n.stop(); n.disconnect(); } } catch (_) {}
       }
-    }, 120);
+      // If chorus was active, reconnect oscGain → masterGain (it was disconnected)
+      if (this._hadChorus) {
+        try { if (this.oscGain) this.oscGain.connect(masterGain); } catch (_) {}
+      }
+    }, 150);
+    this._hadChorus = !!this.chorDelay;
     this.osc = null; this.fmOsc = null; this.fmGain = null;
     this.filter = null; this.lpf = null; this.oscGain = null;
     this.subFilter = null; this.addOscs = null; this.addGains = null;
     this._addMerger = null; this.fbDelay = null; this.fbGain = null;
+    this.intFmOsc = null; this.intFmGain = null;
+    this.uniMixer = null; this.uniPrimaryGain = null; this.uniPrimaryPanner = null;
+    this.uniExtras = [];
+    this.drivePreGain = null; this.driveShaper = null;
+    this.ladderFilt2 = null; this.ladderFilt3 = null; this.ladderFilt4 = null;
+    this.osc2 = null; this.osc2Gain = null; this.osc2RingGain = null;
+    this.noiseNode = null; this.noiseFilter = null; this.noiseGain = null;
+    this.chorDelay = null; this.chorDryGain = null; this.chorWetGain = null; this.chorMixGain = null;
   }
 }
+
+// ─────────────────────────────────────────────────────────────
+// Particle — synthesis extension methods
+// ─────────────────────────────────────────────────────────────
+
+// Build / update unison extra voices (FM and SUB modes only)
+Particle.prototype._syncUnisonBuild = function() {
+  if (!this.uniPrimaryGain || !AC) return;
+  const N      = parseInt(document.getElementById('uniVoices')?.value  || '1');
+  const detune = parseFloat(document.getElementById('uniDetune')?.value || '0');
+  const width  = parseFloat(document.getElementById('uniWidth')?.value  || '0.5');
+  const blend  = parseFloat(document.getElementById('uniBlend')?.value  || '0.7');
+  const t      = AC.currentTime;
+
+  // Per-voice detune/pan/gain
+  const detunes = [], pans = [], gains = [];
+  for (let i = 0; i < N; i++) {
+    const pos = N === 1 ? 0 : (i / (N - 1) - 0.5) * 2; // -1..+1
+    detunes.push(N === 1 ? 0 : pos * (detune / 2));
+    pans.push(pos * width);
+    const isCenter = N % 2 === 1 && i === Math.floor((N - 1) / 2);
+    gains.push(isCenter ? 1.0 : blend);
+  }
+  // Center voice always zero detune
+  if (N % 2 === 1) detunes[Math.floor((N - 1) / 2)] = 0;
+
+  // Update primary (voice 0)
+  this.uniPrimaryGain.gain.setTargetAtTime(N === 1 ? 1 : gains[0], t, 0.05);
+  this.uniPrimaryPanner.pan.setTargetAtTime(pans[0], t, 0.05);
+  if (this.osc) this.osc.detune.setTargetAtTime(detunes[0], t, 0.05);
+
+  // Remove voices beyond N
+  while (this.uniExtras.length > N - 1) {
+    const ex = this.uniExtras.pop();
+    ex.gain.gain.setTargetAtTime(0, t, 0.015);
+    setTimeout(() => {
+      try { ex.osc.stop(); } catch (_) {}
+      try { ex.osc.disconnect(); ex.gain.disconnect(); ex.panner.disconnect(); } catch (_) {}
+    }, 150);
+  }
+
+  // Add voices up to N
+  for (let i = this.uniExtras.length + 1; i < N; i++) {
+    const osc  = AC.createOscillator();
+    osc.type   = this.osc ? this.osc.type : 'sine';
+    osc.frequency.setValueAtTime(this.osc ? this.osc.frequency.value : 220, t);
+    osc.detune.setValueAtTime(detunes[i], t);
+    const gain = AC.createGain(); gain.gain.setValueAtTime(0, t);
+    gain.gain.setTargetAtTime(gains[i], t, 0.05);
+    const panner = new StereoPannerNode(AC, { pan: pans[i] });
+    osc.connect(gain); gain.connect(panner); panner.connect(this.uniMixer);
+    osc.start(t);
+    this.uniExtras.push({ osc, gain, panner });
+  }
+
+  // Update existing extras
+  for (let i = 0; i < this.uniExtras.length; i++) {
+    const vi = i + 1;
+    const ex = this.uniExtras[i];
+    const isCenter = N % 2 === 1 && vi === Math.floor((N - 1) / 2);
+    ex.gain.gain.setTargetAtTime(isCenter ? 1 : blend, t, 0.05);
+    ex.panner.pan.setTargetAtTime(pans[vi] || 0, t, 0.05);
+    if (ex.osc) ex.osc.detune.setTargetAtTime(detunes[vi] || 0, t, 0.05);
+  }
+};
+
+Particle.prototype._initOsc2 = function() {
+  if (!this.uniMixer || !AC || this.osc2) return;
+  const t       = AC.currentTime;
+  const waveEl  = document.getElementById('osc2Wave');
+  const wave    = waveEl ? waveEl.value : 'sawtooth';
+  const isRing  = document.getElementById('osc2Ring')?.checked;
+
+  this.osc2 = AC.createOscillator();
+  if (wave === 'pulse') {
+    const pw = parseFloat(document.getElementById('osc2Pw')?.value || '0.5');
+    this.osc2.setPeriodicWave(makePulseWave(AC, pw));
+  } else {
+    this.osc2.type = wave;
+  }
+  this.osc2Gain = AC.createGain();
+  this.osc2Gain.gain.setValueAtTime(sl('osc2Vol'), t);
+
+  if (isRing && this.uniPrimaryPanner) {
+    // Ring mod: primary signal × osc2 amplitude
+    this.osc2RingGain = AC.createGain();
+    this.osc2RingGain.gain.value = 0; // osc2 drives this at audio rate
+    try { this.uniPrimaryPanner.disconnect(this.uniMixer); } catch (_) {}
+    this.uniPrimaryPanner.connect(this.osc2RingGain);
+    this.osc2.connect(this.osc2Gain);         // osc2 → osc2Gain → ringGain.gain param
+    this.osc2Gain.connect(this.osc2RingGain.gain);
+    this.osc2RingGain.connect(this.uniMixer);
+  } else {
+    this.osc2.connect(this.osc2Gain);
+    this.osc2Gain.connect(this.uniMixer);
+  }
+  this.osc2.start(t);
+};
+
+Particle.prototype._destroyOsc2 = function() {
+  if (!this.osc2 || !AC) return;
+  const t = AC.currentTime;
+  if (this.osc2Gain) this.osc2Gain.gain.setTargetAtTime(0, t, 0.015);
+  const wasRing = !!this.osc2RingGain;
+  const savedUniMixer = this.uniMixer;
+  const savedPanner   = this.uniPrimaryPanner;
+  setTimeout(() => {
+    try { this.osc2?.stop(); } catch (_) {}
+    try { this.osc2?.disconnect(); this.osc2Gain?.disconnect(); this.osc2RingGain?.disconnect(); } catch (_) {}
+    if (wasRing && savedPanner && savedUniMixer) {
+      try { savedPanner.connect(savedUniMixer); } catch (_) {}
+    }
+  }, 100);
+  this.osc2 = null; this.osc2Gain = null; this.osc2RingGain = null;
+};
+
+Particle.prototype._initNoise = function() {
+  if (!this.uniMixer || !AC || this.noiseNode) return;
+  const t  = AC.currentTime;
+  const sr = AC.sampleRate;
+  const buf = AC.createBuffer(1, sr, sr); // 1 second
+  const d   = buf.getChannelData(0);
+  for (let i = 0; i < sr; i++) d[i] = Math.random() * 2 - 1;
+
+  this.noiseNode = AC.createBufferSource();
+  this.noiseNode.buffer = buf;
+  this.noiseNode.loop = true;
+
+  const nType = document.getElementById('noiseType')?.value || 'white';
+  this.noiseFilter = AC.createBiquadFilter();
+  if (nType === 'pink')  { this.noiseFilter.type = 'lowpass';  this.noiseFilter.frequency.value = 3000; }
+  else if (nType === 'brown') { this.noiseFilter.type = 'lowpass'; this.noiseFilter.frequency.value = 400; }
+  else { this.noiseFilter.type = 'allpass'; }
+
+  this.noiseGain = AC.createGain(); this.noiseGain.gain.value = 0;
+  this.noiseNode.connect(this.noiseFilter);
+  this.noiseFilter.connect(this.noiseGain);
+  this.noiseGain.connect(this.uniMixer);
+  this.noiseNode.start(t + Math.random() * 0.5);
+};
+
+Particle.prototype._destroyNoise = function() {
+  if (!this.noiseNode || !AC) return;
+  const t = AC.currentTime;
+  if (this.noiseGain) this.noiseGain.gain.setTargetAtTime(0, t, 0.015);
+  setTimeout(() => {
+    try { this.noiseNode?.stop(); } catch (_) {}
+    try { this.noiseNode?.disconnect(); this.noiseFilter?.disconnect(); this.noiseGain?.disconnect(); } catch (_) {}
+  }, 100);
+  this.noiseNode = null; this.noiseFilter = null; this.noiseGain = null;
+};
+
+Particle.prototype._initChorus = function() {
+  if (!this.oscGain || !AC || this.chorDelay) return;
+  const t = AC.currentTime;
+  this.chorDelay   = AC.createDelay(0.04); this.chorDelay.delayTime.value = 0.01;
+  this.chorDryGain = AC.createGain(); this.chorDryGain.gain.value = 0.7;
+  this.chorWetGain = AC.createGain(); this.chorWetGain.gain.value = 0.4;
+  this.chorMixGain = AC.createGain(); this.chorMixGain.gain.value = 1;
+  // Re-route: oscGain ➝ dry+delay ➝ chorMixGain ➝ masterGain
+  try { this.oscGain.disconnect(masterGain); } catch (_) {}
+  this.oscGain.connect(this.chorDryGain);
+  this.oscGain.connect(this.chorDelay);
+  this.chorDryGain.connect(this.chorMixGain);
+  this.chorDelay.connect(this.chorWetGain);
+  this.chorWetGain.connect(this.chorMixGain);
+  this.chorMixGain.connect(masterGain);
+};
+
+Particle.prototype._destroyChorus = function() {
+  if (!this.chorDelay || !AC) return;
+  const t = AC.currentTime;
+  if (this.chorMixGain) this.chorMixGain.gain.setTargetAtTime(0, t, 0.015);
+  const savedOscGain = this.oscGain;
+  setTimeout(() => {
+    try { this.chorDelay?.disconnect(); this.chorDryGain?.disconnect();
+          this.chorWetGain?.disconnect(); this.chorMixGain?.disconnect(); } catch (_) {}
+    try { if (savedOscGain) savedOscGain.connect(masterGain); } catch (_) {}
+  }, 100);
+  this.chorDelay = null; this.chorDryGain = null; this.chorWetGain = null; this.chorMixGain = null;
+};
 
 // === MOD MATRIX ===
 
@@ -2479,6 +3038,144 @@ for (const [id, lblId] of Object.entries(sliderDefs)) {
 }
 
 
+// ── New synthesis engine controls ────────────────────────────
+
+// Simple slider display wiring helper (used for new sliders)
+function wireSynthSlider(id, dispId, decimals) {
+  const el = document.getElementById(id); if (!el) return;
+  const lb = document.getElementById(dispId); if (!lb) return;
+  lb.textContent = parseFloat(el.value).toFixed(decimals);
+  el.addEventListener('input', function() { lb.textContent = parseFloat(this.value).toFixed(decimals); });
+}
+wireSynthSlider('uniVoices', 'uniVoicesV', 0);
+wireSynthSlider('uniDetune', 'uniDetuneV', 0);
+wireSynthSlider('uniWidth',  'uniWidthV',  2);
+wireSynthSlider('uniBlend',  'uniBlendV',  2);
+wireSynthSlider('osc2Semi',  'osc2SemiV',  0);
+wireSynthSlider('osc2Fine',  'osc2FineV',  0);
+wireSynthSlider('osc2Vol',   'osc2VolV',   2);
+wireSynthSlider('osc2Pw',    'osc2PwV',    2);
+wireSynthSlider('noiseVol',  'noiseVolV',  2);
+wireSynthSlider('filtDrive',     'filtDriveV',    2);
+wireSynthSlider('filtKeytrack',  'filtKeytrackV', 2);
+wireSynthSlider('filtEnvAmt',    'filtEnvAmtV',   2);
+wireSynthSlider('chorusRate',    'chorusRateV',   1);
+wireSynthSlider('chorusDepth',   'chorusDepthV',  2);
+wireSynthSlider('chorusMix',     'chorusMixV',    2);
+wireSynthSlider('intFmRatio',    'intFmRatioV',   2);
+wireSynthSlider('intFmIndex',    'intFmIndexV',   1);
+
+// Rebuild unison voices on VOICES / DETUNE / WIDTH / BLEND change
+['uniVoices','uniDetune','uniWidth','uniBlend'].forEach(id => {
+  document.getElementById(id)?.addEventListener('input', () => {
+    for (const p of particles) { if (p.oscGain) p._syncUnisonBuild(); }
+    updateOscLimitDisplay();
+  });
+});
+
+// OSC 2 enable / disable
+document.getElementById('osc2On')?.addEventListener('change', function() {
+  const ctrl = document.getElementById('osc2Controls');
+  if (ctrl) ctrl.style.display = this.checked ? 'flex' : 'none';
+  if (!audioStarted) return;
+  if (this.checked) {
+    for (const p of particles) { if (p.oscGain) p._initOsc2(); }
+  } else {
+    for (const p of particles) p._destroyOsc2();
+  }
+  updateOscLimitDisplay();
+});
+
+// OSC 2 waveform
+document.getElementById('osc2Wave')?.addEventListener('change', function() {
+  const isPulse = this.value === 'pulse';
+  document.getElementById('osc2PwRow').style.display = isPulse ? '' : 'none';
+  if (!audioStarted) return;
+  for (const p of particles) {
+    if (!p.osc2) continue;
+    if (isPulse) {
+      const pw = sl('osc2Pw');
+      p.osc2.setPeriodicWave(makePulseWave(AC, pw));
+    } else {
+      try { p.osc2.type = this.value; } catch (_) {}
+    }
+  }
+});
+
+// Pulse width change
+document.getElementById('osc2Pw')?.addEventListener('input', function() {
+  if (!audioStarted || document.getElementById('osc2Wave')?.value !== 'pulse') return;
+  const pw = parseFloat(this.value);
+  const wave = makePulseWave(AC, pw);
+  for (const p of particles) {
+    if (p.osc2) try { p.osc2.setPeriodicWave(wave); } catch (_) {}
+  }
+});
+
+// OSC 2 ring mod toggle — rebuild osc2 to change routing
+document.getElementById('osc2Ring')?.addEventListener('change', function() {
+  if (!audioStarted) return;
+  for (const p of particles) {
+    p._destroyOsc2();
+    if (document.getElementById('osc2On')?.checked) p._initOsc2();
+  }
+});
+
+// OSC 2 volume (live)
+document.getElementById('osc2Vol')?.addEventListener('input', function() {
+  if (!audioStarted) return;
+  const v = parseFloat(this.value);
+  for (const p of particles) {
+    if (p.osc2Gain) p.osc2Gain.gain.setTargetAtTime(v, AC.currentTime, 0.05);
+  }
+});
+
+// Noise volume
+document.getElementById('noiseVol')?.addEventListener('input', function() {
+  if (!audioStarted) return;
+  const v = parseFloat(this.value);
+  for (const p of particles) {
+    if (v > 0 && !p.noiseNode && p.oscGain) p._initNoise();
+    // gain updated each frame in syncAudio
+  }
+});
+
+// Noise type change — rebuild noise filter
+document.getElementById('noiseType')?.addEventListener('change', function() {
+  if (!audioStarted) return;
+  const t = this.value;
+  for (const p of particles) {
+    if (!p.noiseFilter) continue;
+    if (t === 'pink')       { p.noiseFilter.type = 'lowpass'; p.noiseFilter.frequency.value = 3000; }
+    else if (t === 'brown') { p.noiseFilter.type = 'lowpass'; p.noiseFilter.frequency.value = 400; }
+    else                    { p.noiseFilter.type = 'allpass'; }
+  }
+});
+
+// Filter drive — update WaveShaper curve live
+document.getElementById('filtDrive')?.addEventListener('input', function() {
+  if (!audioStarted) return;
+  const curve = makeDriveCurve(parseFloat(this.value));
+  for (const p of particles) {
+    if (p.driveShaper) p.driveShaper.curve = curve;
+  }
+});
+
+// Chorus enable / disable
+document.getElementById('chorusOn')?.addEventListener('change', function() {
+  if (!audioStarted) return;
+  if (this.checked) {
+    for (const p of particles) { if (p.oscGain && !p.chorDelay) p._initChorus(); }
+  } else {
+    for (const p of particles) p._destroyChorus();
+  }
+});
+
+// Internal FM enable — affects syncAudio logic; triggers updateOscLimitDisplay
+document.getElementById('intFmOn')?.addEventListener('change', updateOscLimitDisplay);
+
+// ── Note lifetime controls ────────────────────────────────────
+
 // Note lifetime controls
 ['nltInstant', 'nltLive', 'nltTimed'].forEach(id => {
   document.getElementById(id).addEventListener('click', () => {
@@ -2494,12 +3191,7 @@ document.getElementById('nltDur').addEventListener('input', function() {
 });
 
 document.getElementById('plimit').addEventListener('input', function() {
-  particleLimit = parseInt(this.value);
-  document.getElementById('plimv').textContent = particleLimit;
-  while (particles.length > particleLimit) {
-    if (!cullOldestParticle()) break;
-  }
-  updateParticleCount();
+  updateOscLimitDisplay(); // respects auto-limit from oscillator budget
 });
 
 document.getElementById('olimit').addEventListener('input', function() {
@@ -3860,6 +4552,25 @@ document.querySelectorAll('[data-ctype]').forEach(b => {
 // Loop
 // ─────────────────────────────────────────────────────────────
 
+// Update oscillator count display + warn when particle limit is auto-reduced
+function updateOscLimitDisplay() {
+  const perP  = Math.max(1, countOscsPerParticle());
+  const MAX   = 192;
+  const auto  = Math.max(4, Math.floor(MAX / perP));
+  const slide = parseInt(document.getElementById('plimit')?.value || '24');
+  const warn  = document.getElementById('uniWarn');
+  if (warn) warn.style.display = auto < slide ? '' : 'none';
+  // Enforce auto-limit
+  particleLimit = Math.min(slide, auto);
+  document.getElementById('plimv').textContent = particleLimit;
+  while (particles.length > particleLimit) {
+    if (!cullOldestParticle()) break;
+  }
+  updateParticleCount();
+  const el = document.getElementById('osccount');
+  if (el) el.textContent = `${particles.length * perP}/${MAX}`;
+}
+
 function loop() {
   const now = performance.now();
   const dt  = Math.min(0.05, (now - lastLoopTime) / 1000);
@@ -3880,6 +4591,15 @@ function loop() {
   drawScope();
   seqUpdateVisuals();
   pruneCollVoices();
+
+  // Oscillator count display (update every 30 frames for performance)
+  if (!loop._oscTick) loop._oscTick = 0;
+  if (++loop._oscTick >= 30) {
+    loop._oscTick = 0;
+    const perP = Math.max(1, countOscsPerParticle());
+    const el = document.getElementById('osccount');
+    if (el) el.textContent = `${particles.length * perP}/192`;
+  }
 
   const ft = document.getElementById('frametime');
   if (ft) ft.textContent = frameMs.toFixed(1);

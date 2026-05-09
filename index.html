@@ -158,8 +158,40 @@ input[type=text] {
   padding:4px 6px; font-family:'Courier New',monospace; font-size:10px;
   width:100%; outline:none; margin-top:3px;
 }
-#sceneSettings { display:none; flex-direction:column; gap:8px; }
-#sceneSettings.visible { display:flex; }
+/* ── Floating contextual popup ───────────────────────────────── */
+#floatPanel {
+  position:absolute;
+  z-index:200;
+  background:#0d1520;
+  border:1px solid #1e3a5a;
+  border-radius:8px;
+  padding:0 10px 10px;
+  width:244px;
+  max-height:80vh;
+  overflow-y:auto;
+  display:none;
+  flex-direction:column;
+  gap:6px;
+  box-shadow:0 4px 24px rgba(0,0,0,0.75);
+  pointer-events:all;
+}
+#floatDragHandle {
+  height:6px;
+  margin:0 -10px 6px;
+  background:linear-gradient(90deg,transparent,#1e3a5a 20%,#2a5080 50%,#1e3a5a 80%,transparent);
+  border-radius:8px 8px 0 0;
+  cursor:grab;
+  flex-shrink:0;
+}
+#floatDragHandle:hover {
+  background:linear-gradient(90deg,transparent,#2a5a8a 20%,#3a70b0 50%,#2a5a8a 80%,transparent);
+}
+#floatDragHandle:active { cursor:grabbing; }
+#floatPanel.visible { display:flex; }
+#floatPanel::-webkit-scrollbar { width:3px; }
+#floatPanel::-webkit-scrollbar-thumb { background:#1e3050; border-radius:2px; }
+#floatSceneContent { display:none; flex-direction:column; gap:8px; }
+#floatSceneContent.visible { display:flex; }
 
 #objList {
   max-height:72px; overflow-y:auto;
@@ -411,94 +443,6 @@ input[type=text] {
         <div style="font-size:10px;color:#445;">OBJECTS: <span id="objcount">0</span>/<span id="objlimdisp">8</span> · R-CLICK REMOVE</div>
         <div id="objList"></div>
       </div>
-      <div id="sceneSettings"></div>
-
-      <div id="collisionPanel">
-        <div class="c-sub">COLLISION OBJECT</div>
-        <input type="text" id="collName" placeholder="NAME" value="">
-        <div class="c-sub">SOUND ENGINE</div>
-        <select id="collSoundType">
-          <option value="res">RESONATOR</option>
-          <option value="pitched">PITCHED</option>
-          <option value="perc">PERCUSSION</option>
-          <option value="gran">GRANULAR</option>
-          <option value="fm">FM BURST</option>
-          <option value="chord">CHORD STAB</option>
-        </select>
-        <div class="ctrl"><label>VOLUME <span id="collVolV">0.70</span></label>
-          <input type="range" id="collVol" min="0" max="1" step="0.05" value="0.7"></div>
-        <div class="ctrl"><label>PAN <span id="collPanV">0.00</span></label>
-          <input type="range" id="collPan" min="-1" max="1" step="0.05" value="0"></div>
-        <div class="ctrl"><label>VEL SENS <span id="collVelV">0.70</span></label>
-          <input type="range" id="collVel" min="0" max="1" step="0.05" value="0.7"></div>
-        <div class="ctrl"><label>COOLDOWN <span id="collCoolV">50</span>ms</label>
-          <input type="range" id="collCool" min="0" max="500" step="10" value="50"></div>
-        <div class="ctrl"><label><input type="checkbox" id="cOneShot"> ONE-SHOT</label></div>
-        <div class="ctrl"><label>BOUNCINESS <span id="collBncV">0.80</span></label>
-          <input type="range" id="collBnc" min="0" max="1" step="0.05" value="0.8"></div>
-        <div id="cPanRes">
-          <div class="ctrl"><label>DECAY <span id="collResDV">1.00</span>s</label>
-            <input type="range" id="collResDec" min="0.05" max="4" step="0.05" value="1"></div>
-        </div>
-        <div id="cPanPitched" style="display:none">
-          <select id="collWave">
-            <option value="sine">SINE</option>
-            <option value="triangle">TRIANGLE</option>
-            <option value="sawtooth">SAW</option>
-            <option value="square">SQUARE</option>
-          </select>
-          <div class="ctrl"><label>ATTACK <span id="collAtkV">5</span>ms</label>
-            <input type="range" id="collAtk" min="1" max="200" step="1" value="5"></div>
-          <div class="ctrl"><label>DECAY <span id="collDecV">300</span>ms</label>
-            <input type="range" id="collDec" min="10" max="2000" step="10" value="300"></div>
-        </div>
-        <div id="cPanPerc" style="display:none">
-          <select id="collPercType">
-            <option value="kick">KICK</option>
-            <option value="snare">SNARE</option>
-            <option value="hat">HI-HAT</option>
-            <option value="tom">TOM</option>
-          </select>
-          <div class="ctrl"><label>FREQ <span id="collPercFV">80</span>Hz</label>
-            <input type="range" id="collPercFreq" min="30" max="400" step="5" value="80"></div>
-          <div class="ctrl"><label>DECAY <span id="collPercDV">0.30</span>s</label>
-            <input type="range" id="collPercDec" min="0.05" max="1.5" step="0.05" value="0.3"></div>
-        </div>
-        <div id="cPanGran" style="display:none">
-          <select id="collGranMat">
-            <option value="metal">METAL</option>
-            <option value="wood">WOOD</option>
-            <option value="glass">GLASS</option>
-            <option value="stone">STONE</option>
-          </select>
-          <div class="ctrl"><label>GRAIN SIZE <span id="collGranSzV">80</span>ms</label>
-            <input type="range" id="collGranSz" min="10" max="200" step="5" value="80"></div>
-          <div class="ctrl"><label>DENSITY <span id="collGranDnV">2</span></label>
-            <input type="range" id="collGranDn" min="1" max="8" step="1" value="2"></div>
-        </div>
-        <div id="cPanFm" style="display:none">
-          <div class="ctrl"><label>CARRIER <span id="collFmCrV">220</span>Hz</label>
-            <input type="range" id="collFmCr" min="40" max="1200" step="10" value="220"></div>
-          <div class="ctrl"><label>RATIO <span id="collFmRaV">2.0</span></label>
-            <input type="range" id="collFmRa" min="0.5" max="8" step="0.5" value="2"></div>
-          <div class="ctrl"><label>INDEX <span id="collFmIdV">4</span></label>
-            <input type="range" id="collFmId" min="0" max="16" step="0.5" value="4"></div>
-          <div class="ctrl"><label>DURATION <span id="collFmDuV">200</span>ms</label>
-            <input type="range" id="collFmDu" min="20" max="1000" step="10" value="200"></div>
-        </div>
-        <div id="cPanChord" style="display:none">
-          <select id="collChordQ">
-            <option value="0">MAJOR</option>
-            <option value="1">MINOR</option>
-            <option value="2">SUS2</option>
-            <option value="3">DOM7</option>
-            <option value="4">MAJ7</option>
-          </select>
-          <div class="ctrl"><label>DURATION <span id="collChordDuV">0.5</span>s</label>
-            <input type="range" id="collChordDu" min="0.1" max="2" step="0.1" value="0.5"></div>
-        </div>
-        <button class="btn coll-del-btn" id="collDelBtn" style="margin-top:4px">✕ DELETE</button>
-      </div>
     </div>
   </div>
 </div>
@@ -506,6 +450,99 @@ input[type=text] {
 <div id="canvasWrap">
   <canvas id="main"></canvas>
   <canvas id="scope"></canvas>
+
+  <!-- Contextual floating popup — scene objects and collision objects -->
+  <div id="floatPanel">
+    <div id="floatDragHandle" title="Verplaatsen"></div>
+    <div id="floatSceneContent"></div>
+    <div id="collisionPanel">
+      <div class="c-sub">COLLISION OBJECT</div>
+      <input type="text" id="collName" placeholder="NAME" value="">
+      <div class="c-sub">SOUND ENGINE</div>
+      <select id="collSoundType">
+        <option value="res">RESONATOR</option>
+        <option value="pitched">PITCHED</option>
+        <option value="perc">PERCUSSION</option>
+        <option value="gran">GRANULAR</option>
+        <option value="fm">FM BURST</option>
+        <option value="chord">CHORD STAB</option>
+      </select>
+      <div class="ctrl"><label>VOLUME <span id="collVolV">0.70</span></label>
+        <input type="range" id="collVol" min="0" max="1" step="0.05" value="0.7"></div>
+      <div class="ctrl"><label>PAN <span id="collPanV">0.00</span></label>
+        <input type="range" id="collPan" min="-1" max="1" step="0.05" value="0"></div>
+      <div class="ctrl"><label>VEL SENS <span id="collVelV">0.70</span></label>
+        <input type="range" id="collVel" min="0" max="1" step="0.05" value="0.7"></div>
+      <div class="ctrl"><label>COOLDOWN <span id="collCoolV">50</span>ms</label>
+        <input type="range" id="collCool" min="0" max="500" step="10" value="50"></div>
+      <div class="ctrl"><label><input type="checkbox" id="cOneShot"> ONE-SHOT</label></div>
+      <div class="ctrl"><label>BOUNCINESS <span id="collBncV">0.80</span></label>
+        <input type="range" id="collBnc" min="0" max="1" step="0.05" value="0.8"></div>
+      <div id="cPanRes">
+        <div class="ctrl"><label>DECAY <span id="collResDV">1.00</span>s</label>
+          <input type="range" id="collResDec" min="0.05" max="4" step="0.05" value="1"></div>
+      </div>
+      <div id="cPanPitched" style="display:none">
+        <select id="collWave">
+          <option value="sine">SINE</option>
+          <option value="triangle">TRIANGLE</option>
+          <option value="sawtooth">SAW</option>
+          <option value="square">SQUARE</option>
+        </select>
+        <div class="ctrl"><label>ATTACK <span id="collAtkV">5</span>ms</label>
+          <input type="range" id="collAtk" min="1" max="200" step="1" value="5"></div>
+        <div class="ctrl"><label>DECAY <span id="collDecV">300</span>ms</label>
+          <input type="range" id="collDec" min="10" max="2000" step="10" value="300"></div>
+      </div>
+      <div id="cPanPerc" style="display:none">
+        <select id="collPercType">
+          <option value="kick">KICK</option>
+          <option value="snare">SNARE</option>
+          <option value="hat">HI-HAT</option>
+          <option value="tom">TOM</option>
+        </select>
+        <div class="ctrl"><label>FREQ <span id="collPercFV">80</span>Hz</label>
+          <input type="range" id="collPercFreq" min="30" max="400" step="5" value="80"></div>
+        <div class="ctrl"><label>DECAY <span id="collPercDV">0.30</span>s</label>
+          <input type="range" id="collPercDec" min="0.05" max="1.5" step="0.05" value="0.3"></div>
+      </div>
+      <div id="cPanGran" style="display:none">
+        <select id="collGranMat">
+          <option value="metal">METAL</option>
+          <option value="wood">WOOD</option>
+          <option value="glass">GLASS</option>
+          <option value="stone">STONE</option>
+        </select>
+        <div class="ctrl"><label>GRAIN SIZE <span id="collGranSzV">80</span>ms</label>
+          <input type="range" id="collGranSz" min="10" max="200" step="5" value="80"></div>
+        <div class="ctrl"><label>DENSITY <span id="collGranDnV">2</span></label>
+          <input type="range" id="collGranDn" min="1" max="8" step="1" value="2"></div>
+      </div>
+      <div id="cPanFm" style="display:none">
+        <div class="ctrl"><label>CARRIER <span id="collFmCrV">220</span>Hz</label>
+          <input type="range" id="collFmCr" min="40" max="1200" step="10" value="220"></div>
+        <div class="ctrl"><label>RATIO <span id="collFmRaV">2.0</span></label>
+          <input type="range" id="collFmRa" min="0.5" max="8" step="0.5" value="2"></div>
+        <div class="ctrl"><label>INDEX <span id="collFmIdV">4</span></label>
+          <input type="range" id="collFmId" min="0" max="16" step="0.5" value="4"></div>
+        <div class="ctrl"><label>DURATION <span id="collFmDuV">200</span>ms</label>
+          <input type="range" id="collFmDu" min="20" max="1000" step="10" value="200"></div>
+      </div>
+      <div id="cPanChord" style="display:none">
+        <select id="collChordQ">
+          <option value="0">MAJOR</option>
+          <option value="1">MINOR</option>
+          <option value="2">SUS2</option>
+          <option value="3">DOM7</option>
+          <option value="4">MAJ7</option>
+        </select>
+        <div class="ctrl"><label>DURATION <span id="collChordDuV">0.5</span>s</label>
+          <input type="range" id="collChordDu" min="0.1" max="2" step="0.1" value="0.5"></div>
+      </div>
+      <button class="btn coll-del-btn" id="collDelBtn" style="margin-top:4px">✕ DELETE</button>
+    </div>
+  </div>
+
   <div id="seqWrap">
     <div id="seqControls">
       <div class="seq-transport">
@@ -1042,19 +1079,100 @@ function wireSettingsListeners(obj) {
   }
 }
 
+function collObjCenter(obj) {
+  switch (obj.type) {
+    case 'circle': return { x: obj.cx, y: obj.cy };
+    case 'box':    return { x: obj.bx + obj.bw / 2, y: obj.by + obj.bh / 2 };
+    case 'wall':   return { x: (obj.x1 + obj.x2) / 2, y: (obj.y1 + obj.y2) / 2 };
+    case 'tri':    return { x: obj.cx, y: obj.cy };
+    case 'poly': {
+      const n = obj.verts.length;
+      return { x: obj.verts.reduce((s, v) => s + v.x, 0) / n, y: obj.verts.reduce((s, v) => s + v.y, 0) / n };
+    }
+  }
+  return { x: 0, y: 0 };
+}
+
+function collObjHintR(obj) {
+  switch (obj.type) {
+    case 'circle': return obj.radius;
+    case 'box':    return Math.max(obj.bw, obj.bh) / 2;
+    case 'wall':   return Math.hypot(obj.x2 - obj.x1, obj.y2 - obj.y1) / 2;
+    case 'tri':    return obj.size;
+    case 'poly': {
+      const c = collObjCenter(obj);
+      return Math.max(...obj.verts.map(v => Math.hypot(v.x - c.x, v.y - c.y)));
+    }
+  }
+  return 60;
+}
+
+function positionFloatPanel(canvasX, canvasY, hintR = 60) {
+  const fp = document.getElementById('floatPanel');
+  const wrapRect = wrap.getBoundingClientRect();
+  const canvasRect = canvas.getBoundingClientRect();
+  const offX = canvasRect.left - wrapRect.left;
+  const offY = canvasRect.top  - wrapRect.top;
+  const FW = 260;
+  const FH = Math.min(fp.scrollHeight || 420, wrapRect.height * 0.82);
+  const GAP = 14;
+  const MARGIN = 12;
+  let px = canvasX + offX + hintR + GAP;
+  let py = canvasY + offY - 20;
+  if (px + FW > wrapRect.width - MARGIN) px = canvasX + offX - hintR - GAP - FW;
+  px = Math.max(MARGIN, px);
+  py = Math.max(MARGIN, Math.min(py, wrapRect.height - FH - MARGIN));
+  fp.style.left = px + 'px';
+  fp.style.top  = py + 'px';
+}
+
+// ── Float panel drag ──────────────────────────────────────────
+(function() {
+  let dragging = false, startX = 0, startY = 0, startLeft = 0, startTop = 0;
+  document.addEventListener('DOMContentLoaded', () => {
+    const handle = document.getElementById('floatDragHandle');
+    const fp     = document.getElementById('floatPanel');
+    handle.addEventListener('mousedown', e => {
+      if (e.button !== 0) return;
+      dragging = true;
+      startX   = e.clientX;
+      startY   = e.clientY;
+      startLeft = parseInt(fp.style.left) || 0;
+      startTop  = parseInt(fp.style.top)  || 0;
+      e.preventDefault();
+    });
+    document.addEventListener('mousemove', e => {
+      if (!dragging) return;
+      const wrapRect = wrap.getBoundingClientRect();
+      const dx = e.clientX - startX;
+      const dy = e.clientY - startY;
+      const MARGIN = 8;
+      const newLeft = Math.max(MARGIN, Math.min(startLeft + dx, wrapRect.width  - fp.offsetWidth  - MARGIN));
+      const newTop  = Math.max(MARGIN, Math.min(startTop  + dy, wrapRect.height - fp.offsetHeight - MARGIN));
+      fp.style.left = newLeft + 'px';
+      fp.style.top  = newTop  + 'px';
+    });
+    document.addEventListener('mouseup', () => { dragging = false; });
+  });
+})();
+
 function openSettings(obj) {
   selectedObj = obj;
-  const el = document.getElementById('sceneSettings');
-  el.innerHTML = buildSettingsHTML(obj);
-  el.classList.add('visible');
-  document.getElementById('sceneDefault').style.display = 'none';
+  const fc = document.getElementById('floatSceneContent');
+  fc.innerHTML = buildSettingsHTML(obj);
+  fc.classList.add('visible');
+  document.getElementById('collisionPanel').classList.remove('visible');
+  document.getElementById('floatPanel').classList.add('visible');
+  positionFloatPanel(obj.x, obj.y, obj.r || 60);
   wireSettingsListeners(obj);
 }
 
 function closeSettings() {
   selectedObj = null;
-  document.getElementById('sceneSettings').classList.remove('visible');
-  document.getElementById('sceneDefault').style.display = '';
+  const fc = document.getElementById('floatSceneContent');
+  fc.classList.remove('visible');
+  fc.innerHTML = '';
+  if (!collSelectedObj) document.getElementById('floatPanel').classList.remove('visible');
 }
 
 document.querySelectorAll('.scene-btn').forEach(b =>
@@ -2699,18 +2817,33 @@ canvas.addEventListener('mousemove', e => {
   const cx = e.clientX - r.left, cy = e.clientY - r.top;
   mouse.x = cx; mouse.y = cy;
   if (collDragObj) {
+    document.getElementById('floatPanel').classList.remove('visible');
     const dx = cx - collDragStartX, dy = cy - collDragStartY;
     const cen = collObjCenter(collDragObj);
     const origCX = collDragOriginX, origCY = collDragOriginY;
     moveCollObj(collDragObj, (origCX + dx) - cen.x, (origCY + dy) - cen.y);
     return;
   }
-  if (dragObj) { dragObj.x = cx; dragObj.y = cy; return; }
+  if (dragObj) {
+    document.getElementById('floatPanel').classList.remove('visible');
+    dragObj.x = cx; dragObj.y = cy; return;
+  }
   if (mouse.down) { mouse.x = cx; mouse.y = cy; }
 });
 
-canvas.addEventListener('mouseup', () => { collDragObj = null; dragObj = null; mouse.down = false; });
-canvas.addEventListener('mouseleave', () => { collDragObj = null; dragObj = null; mouse.down = false; });
+function restoreFloatPanel() {
+  if (selectedObj) {
+    positionFloatPanel(selectedObj.x, selectedObj.y, selectedObj.r || 60);
+    document.getElementById('floatPanel').classList.add('visible');
+  } else if (collSelectedObj) {
+    const c = collObjCenter(collSelectedObj);
+    positionFloatPanel(c.x, c.y, collObjHintR(collSelectedObj));
+    document.getElementById('floatPanel').classList.add('visible');
+  }
+}
+
+canvas.addEventListener('mouseup', () => { collDragObj = null; dragObj = null; mouse.down = false; restoreFloatPanel(); });
+canvas.addEventListener('mouseleave', () => { collDragObj = null; dragObj = null; mouse.down = false; restoreFloatPanel(); });
 
 // Touch attractor
 canvas.addEventListener('touchstart', e => {
@@ -3613,7 +3746,12 @@ function openCollPanel(obj) {
   collSelectedObj = obj;
   const el = document.getElementById('collisionPanel');
   if (!el) return;
+  document.getElementById('floatSceneContent').classList.remove('visible');
+  document.getElementById('floatSceneContent').innerHTML = '';
   el.classList.add('visible');
+  document.getElementById('floatPanel').classList.add('visible');
+  const c = collObjCenter(obj);
+  positionFloatPanel(c.x, c.y, collObjHintR(obj));
   const s = obj.sound;
   document.getElementById('collName').value           = obj.name;
   document.getElementById('collSoundType').value      = s.type;
@@ -3664,6 +3802,7 @@ function closeCollPanel() {
   collSelectedObj = null;
   const el = document.getElementById('collisionPanel');
   if (el) el.classList.remove('visible');
+  if (!selectedObj) document.getElementById('floatPanel').classList.remove('visible');
 }
 
 function switchCollSoundPanel(type) {

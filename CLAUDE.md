@@ -45,9 +45,21 @@ Called via `requestAnimationFrame`. Each frame runs: `updateLFO` → `updateChor
 
 ### Two Kinds of "Objects"
 
-**Scene objects** (`sceneObjects[]`) — force fields (attractor, repulsor, heat, cold, vortex, gwell). Created by `createObject()`, stored as plain objects with `.x .y .r .type`. Settings panel is built dynamically by `buildSettingsHTML()` / `wireSettingsListeners()` and injected into `#sceneSettings`. Toolbar buttons use `data-type` attribute.
+**Scene objects** (`sceneObjects[]`) — force fields (attractor, repulsor, heat, cold, vortex, gwell). Created by `createObject()`, stored as plain objects with `.x .y .r .type`. Settings panel is built dynamically by `buildSettingsHTML()` / `wireSettingsListeners()` and injected into `#floatSceneContent` inside `#floatPanel`. Toolbar buttons use `data-type` attribute.
 
-**Collision objects** (`collObjects[]`) — solid shapes particles bounce off. Created by `makeCollisionObject()`. Shape types: `wall` (x1,y1,x2,y2), `box` (bx,by,bw,bh), `circle` (cx,cy,radius), `tri` (cx,cy,size,angle), `poly` (verts[]). Each has a `sound` sub-object. Toolbar buttons use `data-ctype`. Settings shown in the static `#collisionPanel` div (toggled via `.visible` class). The `.scene-btn` click handler skips buttons without `data-type` to avoid conflict with `data-ctype` buttons.
+**Collision objects** (`collObjects[]`) — solid shapes particles bounce off. Created by `makeCollisionObject()`. Shape types: `wall` (x1,y1,x2,y2), `box` (bx,by,bw,bh), `circle` (cx,cy,radius), `tri` (cx,cy,size,angle), `poly` (verts[]). Each has a `sound` sub-object. Toolbar buttons use `data-ctype`. Settings shown in the static `#collisionPanel` div (inside `#floatPanel`, toggled via `.visible` class). The `.scene-btn` click handler skips buttons without `data-type` to avoid conflict with `data-ctype` buttons.
+
+### Floating Settings Panel
+
+Both scene and collision object settings are shown in a single `#floatPanel` div (`position:absolute` inside `#canvasWrap`). It contains two children that alternate visibility: `#floatSceneContent` (dynamic HTML for scene objects) and `#collisionPanel` (static HTML for collision objects).
+
+- `openSettings(obj)` / `closeSettings()` — show/hide the panel for scene objects
+- `openCollPanel(obj)` / `closeCollPanel()` — show/hide the panel for collision objects
+- `positionFloatPanel(canvasX, canvasY, hintR)` — places the panel to the right of the object (flips left near the edge); `hintR` is the object's visual radius so the panel clears the object
+- `collObjCenter(obj)` — computes the canvas-space center for any collision shape type
+- `collObjHintR(obj)` — computes the visual half-size for accurate panel offset
+- During object drag, the panel is hidden via `mousemove`; `restoreFloatPanel()` re-shows it on `mouseup`/`mouseleave`
+- The panel has a drag handle (`#floatDragHandle`) so users can freely reposition it
 
 ### Chord Voicing System
 

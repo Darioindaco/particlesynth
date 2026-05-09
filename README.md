@@ -17,6 +17,8 @@ The interface has three zones:
 
 Every section header is clickable to collapse/expand it.
 
+Clicking any scene or collision object on the canvas opens a **contextual floating popup** directly next to the object, containing all its settings. The popup can be freely repositioned by dragging the handle bar at its top. It hides automatically while dragging an object and reappears on release.
+
 ---
 
 ## Left Panel
@@ -86,7 +88,7 @@ Six harmonic partials summed together.
 
 ### Scene
 
-Place interactive objects on the canvas. Click a button to select the tool, then click on the canvas to place. Click any placed object to open its settings. Right-click to delete.
+Place interactive objects on the canvas. Click a button to select the tool, then click on the canvas to place. Click any placed object to open its settings in a floating popup next to it. Right-click to delete.
 
 #### Force Objects
 
@@ -342,11 +344,11 @@ The playhead highlights the current step with a white border, and briefly flashe
 |---|---|
 | Click and hold | Creates a temporary attractor at the cursor; particles accelerate toward it |
 | Release | Attractor disappears |
-| Click on a force/emitter object | Opens its settings panel |
-| Drag a force/emitter object | Moves it to a new position |
+| Click on a force/emitter object | Opens a floating settings popup next to the object |
+| Drag a force/emitter object | Moves it; popup hides during drag and reappears on release |
 | Right-click a scene object | Deletes it |
-| Click on a collision object | Opens its settings panel |
-| Drag a collision object | Moves it |
+| Click on a collision object | Opens a floating settings popup next to the object |
+| Drag a collision object | Moves it; popup hides during drag and reappears on release |
 | Right-click a collision object | Deletes it |
 
 When placing a collision polygon, each click adds a vertex. Double-click, or click near the first vertex, to close and finalise the shape.

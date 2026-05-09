@@ -1113,6 +1113,48 @@ function collObjHintR(obj) {
   return 60;
 }
 
+function getCollHandles(obj) {
+  switch (obj.type) {
+    case 'wall':   return [{id:'ep1',x:obj.x1,y:obj.y1},{id:'ep2',x:obj.x2,y:obj.y2}];
+    case 'box':    return [{id:'tl',x:obj.bx,y:obj.by},{id:'tr',x:obj.bx+obj.bw,y:obj.by},
+                           {id:'bl',x:obj.bx,y:obj.by+obj.bh},{id:'br',x:obj.bx+obj.bw,y:obj.by+obj.bh}];
+    case 'circle': return [{id:'r',x:obj.cx+obj.radius,y:obj.cy}];
+    case 'tri':    { const v=triVerts(obj); return [{id:'tip',x:v[0].x,y:v[0].y}]; }
+    case 'poly':   return obj.verts.map((v,i)=>({id:i,x:v.x,y:v.y}));
+  }
+  return [];
+}
+
+function hitTestCollHandle(mx, my, obj) {
+  for (const h of getCollHandles(obj))
+    if (Math.hypot(mx - h.x, my - h.y) < 9) return h.id;
+  return null;
+}
+
+function applyCollHandle(obj, id, mx, my) {
+  switch (obj.type) {
+    case 'wall':
+      if (id==='ep1'){obj.x1=mx;obj.y1=my;} else {obj.x2=mx;obj.y2=my;}
+      break;
+    case 'box':
+      if (id==='br'){obj.bw=Math.max(10,mx-obj.bx);obj.bh=Math.max(10,my-obj.by);}
+      else if(id==='tl'){const r=obj.bx+obj.bw,b=obj.by+obj.bh;obj.bx=Math.min(mx,r-10);obj.by=Math.min(my,b-10);obj.bw=r-obj.bx;obj.bh=b-obj.by;}
+      else if(id==='tr'){const b=obj.by+obj.bh;obj.bw=Math.max(10,mx-obj.bx);obj.by=Math.min(my,b-10);obj.bh=b-obj.by;}
+      else{const r=obj.bx+obj.bw;obj.bx=Math.min(mx,r-10);obj.bw=r-obj.bx;obj.bh=Math.max(10,my-obj.by);}
+      break;
+    case 'circle':
+      obj.radius=Math.max(5,Math.hypot(mx-obj.cx,my-obj.cy));
+      break;
+    case 'tri':
+      obj.size=Math.max(10,Math.hypot(mx-obj.cx,my-obj.cy));
+      obj.angle=Math.atan2(my-obj.cy,mx-obj.cx);
+      break;
+    case 'poly':
+      obj.verts[id].x=mx; obj.verts[id].y=my;
+      break;
+  }
+}
+
 function positionFloatPanel(canvasX, canvasY, hintR = 60) {
   const fp = document.getElementById('floatPanel');
   const wrapRect = wrap.getBoundingClientRect();
@@ -2777,6 +2819,16 @@ canvas.addEventListener('mousedown', e => {
     return;
   }
 
+  // ── Handle hit test (only when an object is already selected) ──
+  if (collSelectedObj) {
+    const hid = hitTestCollHandle(cx, cy, collSelectedObj);
+    if (hid !== null) {
+      collHandleObj = collSelectedObj;
+      collHandleId  = hid;
+      return;
+    }
+  }
+
   // ── Hit test collision objects for drag/select ────────────────
   const ci = hitTestCollObj(cx, cy);
   if (ci !== -1) {
@@ -2822,6 +2874,11 @@ canvas.addEventListener('mousemove', e => {
   const r  = canvas.getBoundingClientRect();
   const cx = e.clientX - r.left, cy = e.clientY - r.top;
   mouse.x = cx; mouse.y = cy;
+  if (collHandleObj) {
+    document.getElementById('floatPanel').classList.remove('visible');
+    applyCollHandle(collHandleObj, collHandleId, cx, cy);
+    return;
+  }
   if (collDragObj) {
     document.getElementById('floatPanel').classList.remove('visible');
     const dx = cx - collDragStartX, dy = cy - collDragStartY;
@@ -2848,8 +2905,8 @@ function restoreFloatPanel() {
   }
 }
 
-canvas.addEventListener('mouseup', () => { collDragObj = null; dragObj = null; mouse.down = false; restoreFloatPanel(); });
-canvas.addEventListener('mouseleave', () => { collDragObj = null; dragObj = null; mouse.down = false; restoreFloatPanel(); });
+canvas.addEventListener('mouseup', () => { collHandleObj = null; collHandleId = null; collDragObj = null; dragObj = null; mouse.down = false; restoreFloatPanel(); });
+canvas.addEventListener('mouseleave', () => { collHandleObj = null; collHandleId = null; collDragObj = null; dragObj = null; mouse.down = false; restoreFloatPanel(); });
 
 // Touch attractor
 canvas.addEventListener('touchstart', e => {
@@ -3251,6 +3308,8 @@ let collSelectedObj   = null;
 let collDragObj       = null;
 let collDragStartX    = 0, collDragStartY = 0;
 let collDragOriginX   = 0, collDragOriginY = 0;
+let collHandleObj     = null;
+let collHandleId      = null;
 let collPlaceP1       = null;
 let collPolyVerts     = [];
 const collSparks      = [];
@@ -3696,12 +3755,22 @@ function drawCollisionObjects() {
       ctx.fillRect(mx, my, mw * obj.hitLevel, mh);
     }
 
-    // Selected ring
+    // Selected ring + resize/rotate handles
     if (sel) {
       ctx.setLineDash([4,4]);
       ctx.beginPath(); ctx.arc(cen.x, cen.y, 20, 0, Math.PI*2);
       ctx.strokeStyle = 'rgba(120,210,255,0.35)'; ctx.lineWidth = 1; ctx.stroke();
       ctx.setLineDash([]);
+      // Draw handles
+      for (const h of getCollHandles(obj)) {
+        ctx.beginPath();
+        ctx.arc(h.x, h.y, 6, 0, Math.PI * 2);
+        ctx.fillStyle = '#ffffff';
+        ctx.fill();
+        ctx.strokeStyle = '#3af';
+        ctx.lineWidth = 1.5;
+        ctx.stroke();
+      }
     }
   }
 

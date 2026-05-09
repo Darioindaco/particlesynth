@@ -61,6 +61,25 @@ Both scene and collision object settings are shown in a single `#floatPanel` div
 - During object drag, the panel is hidden via `mousemove`; `restoreFloatPanel()` re-shows it on `mouseup`/`mouseleave`
 - The panel has a drag handle (`#floatDragHandle`) so users can freely reposition it
 
+### Collision Object Resize / Rotate Handles
+
+When a collision object is selected, white handle circles are drawn on it (inside `drawCollisionObjects()`) at key geometry points. Dragging a handle reshapes the object in place.
+
+State variables: `collHandleObj` (object being handle-dragged), `collHandleId` (which handle).
+
+- `getCollHandles(obj)` — returns `[{id, x, y}]` for the selected object's handle points
+- `hitTestCollHandle(mx, my, obj)` — returns handle id if within 9px, else `null`
+- `applyCollHandle(obj, id, mx, my)` — mutates the object's geometry for the dragged handle
+
+Handle behaviour per shape:
+- **wall** `ep1`/`ep2` — sets x1,y1 or x2,y2 directly
+- **box** `tl`/`tr`/`bl`/`br` — adjusts bx,by,bw,bh from the dragged corner; minimum size 10px
+- **circle** `r` — sets radius = distance from center to mouse; minimum 5px
+- **tri** `tip` — sets size = distance, angle = atan2 from center; minimum size 10px
+- **poly** vertex index — sets verts[i].x/y directly
+
+Mousedown checks `hitTestCollHandle` before `hitTestCollObj` (so handles take priority over body drag). Handle drag hides the float panel (same as body drag); `restoreFloatPanel()` on mouseup re-shows it.
+
 ### Chord Voicing System
 
 When enabled, `updateChordVoicing()` runs each frame: flood-fills proximity clusters (≥3 particles within 130px), determines chord quality by majority vote of warmth values against `CHORD_QUALITIES[]`, then assigns each particle a `_chordFreq` override. A 3-second lock (`chordLockUntil`) prevents rapid chord flipping. The `warmthToFreq` function checks `p._chordFreq` first before computing from warmth.

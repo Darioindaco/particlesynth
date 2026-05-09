@@ -199,6 +199,16 @@ Solid geometry that particles physically bounce off. Each object can be independ
 | TRI | Triangle | Single click (auto-sized) |
 | POLY | Polygon | Click each vertex; double-click or click near start to finish |
 
+After placement, click any collision object to select it. White handle circles appear at key geometry points — drag them to resize or rotate the shape without deleting and redrawing it.
+
+| Shape | Handle(s) | What dragging does |
+|---|---|---|
+| WALL | Both endpoints | Move endpoint freely — changes length and angle |
+| BOX | 4 corners | Drag corner — resizes width/height from that corner |
+| CIRC | Right-edge point | Drag outward/inward — changes radius |
+| TRI | First vertex tip | Drag around center — rotates and scales simultaneously |
+| POLY | Every vertex | Drag any vertex — reshapes the polygon freely |
+
 ##### Collision object settings (all types)
 
 | Setting | Range | Default | Description |

@@ -1642,10 +1642,11 @@ class Particle {
       }
       const bubbleOn = document.getElementById('bubbleOn').checked;
       if (bubbleOn) {
+        this.filter.type = 'bandpass';
         this.filter.frequency.setTargetAtTime(freq, t, 0.1);
         this.filter.Q.value = 12;
       } else {
-        this.filter.frequency.value = 22050; this.filter.Q.value = 0.01;
+        this.filter.type = 'allpass';
       }
       const lpfCutoff = w < 0.66 ? 22050 : freq * (3 + (1 - w) * 6);
       const lfoCutMod = document.getElementById('lfotarget').value === 'cutoff' ? (1 + lfoVal * 0.4) : 1;

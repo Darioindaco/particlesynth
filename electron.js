@@ -1,4 +1,6 @@
 const { app, BrowserWindow, session } = require('electron');
+const path = require('path');
+require('electron-reload')(__dirname, { electron: path.join(__dirname, 'node_modules', 'electron', 'index.js') });
 
 function createWindow() {
   const win = new BrowserWindow({

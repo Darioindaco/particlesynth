@@ -103,6 +103,17 @@ select {
 .toggle-row input[type=checkbox] { accent-color:#3af; cursor:pointer; width:13px; height:13px; }
 .toggle-row span { color:#667; font-size:11px; letter-spacing:1px; }
 
+input[type=text] {
+  background:#0a0f16; border:1px solid #1e3050; color:#3af;
+  padding:6px; font-family:'Courier New',monospace; font-size:11px;
+  width:100%; box-sizing:border-box; outline:none; letter-spacing:1px;
+}
+input[type=text]::placeholder { color:#334; }
+input[type=text]:focus { border-color:#3af; }
+.preset-status { font-size:11px; letter-spacing:1px; padding:4px 0; text-align:center; }
+.preset-confirm { font-size:11px; letter-spacing:1px; margin-bottom:4px; }
+option.preset-factory-opt { color:#fa3; }
+
 #status {
   font-size:11px; color:#445;
   border-top:1px solid #1a2535; padding-top:8px; margin-top:4px; line-height:1.9;
@@ -676,6 +687,44 @@ input[type=text] {
         <div class="kb-b" data-key="o" style="left:75%">O</div>
         <div class="kb-b" data-key="p" style="left:87.5%">P</div>
       </div>
+    </div>
+  </div>
+
+  <!-- PRESETS -->
+  <div class="section" id="sec-presets">
+    <div class="section-header" onclick="toggleSection('sec-presets')">
+      <span class="section-title">PRESETS</span>
+      <span class="section-arrow">▼</span>
+    </div>
+    <div class="section-body">
+      <input type="text" id="presetNameInput" maxlength="24" placeholder="PRESET NAME">
+      <div id="presetSaveRow">
+        <button class="btn" id="presetSaveBtn">SAVE</button>
+      </div>
+      <div id="presetOverwriteRow" style="display:none">
+        <div class="preset-confirm" style="color:#fa3">OVERWRITE?</div>
+        <div class="row">
+          <button class="btn" id="presetOverwriteY">Y</button>
+          <button class="btn" id="presetOverwriteN">N</button>
+        </div>
+      </div>
+      <div id="presetFactoryMsg" style="display:none;font-size:11px;color:#f44;letter-spacing:1px;padding:3px 0"></div>
+      <select id="presetSelect"></select>
+      <div class="row">
+        <button class="btn" id="presetLoadBtn">LOAD</button>
+        <button class="btn" id="presetDupBtn">DUP</button>
+      </div>
+      <div id="presetDeleteRow">
+        <button class="btn" id="presetDeleteBtn" style="border-color:#a00;color:#f44">DELETE</button>
+      </div>
+      <div id="presetDeleteConfirmRow" style="display:none">
+        <div class="preset-confirm" style="color:#f44">DELETE?</div>
+        <div class="row">
+          <button class="btn" id="presetDeleteY" style="border-color:#a00;color:#f44">Y</button>
+          <button class="btn" id="presetDeleteN">N</button>
+        </div>
+      </div>
+      <div id="presetStatus" class="preset-status" style="display:none"></div>
     </div>
   </div>
 
@@ -4029,6 +4078,475 @@ function loop() {
 initParticles(0);
 seqRenderCells();
 loop();
+
+// ── PRESET SYSTEM ────────────────────────────────────────────
+
+const PRESET_KEY_PREFIX = 'particlesynth_preset_';
+const PRESET_INDEX_KEY  = 'particlesynth_preset_index';
+const PRESET_MAX        = 20;
+
+function _presetBaseState() {
+  return {
+    version: 1,
+    sliders: {
+      gravity:0.08, wind:0, viscosity:0.98, bounce:0.75,
+      fmdepth:3, fmfeedback:0, lforate:1, resonance:5,
+      filtattack:0.01, filtdecay:0.3, harmspread:0.6,
+      graindensity:0.5, mastervol:0.6, reverbamt:0.35,
+      plimit:24, olimit:8, bpm:90, swing:0, nltDur:10,
+    },
+    checkboxes: {
+      bubbleOn:true, chordOn:false, beatsync:true,
+      droneOn:true, lfoSync:false,
+    },
+    selects: {
+      synthmode:'fm', fmratio:'1', lfotarget:'fmdepth',
+      lfoSyncDiv:'1', scale:'pentatonic', graintype:'droplet',
+    },
+    opCount: 2,
+    noteLifetimeMode: 'live',
+    noteLifetimeDur: 10,
+    seqStepCount: 16,
+    seqSteps: Array.from({length:32}, () => ({active:false, noteIdx:0, velocity:0.75})),
+    sceneObjects: [],
+    collObjects: [],
+  };
+}
+
+const FACTORY_PRESETS = [
+  // 1 — AMBIENT DRIFT
+  (() => {
+    const s = _presetBaseState();
+    s.sliders.gravity    = 0.04;
+    s.sliders.viscosity  = 0.99;
+    s.sliders.bounce     = 0.3;
+    s.sliders.fmdepth    = 2;
+    s.sliders.reverbamt  = 0.6;
+    s.sliders.plimit     = 16;
+    s.checkboxes.chordOn = true;
+    s.selects.scale      = 'pentatonic';
+    return { name: 'AMBIENT DRIFT', state: s };
+  })(),
+
+  // 2 — RHYTHMIC
+  (() => {
+    const s = _presetBaseState();
+    s.sliders.gravity      = 0.1;
+    s.sliders.viscosity    = 0.96;
+    s.sliders.bounce       = 0.85;
+    s.sliders.fmdepth      = 4;
+    s.sliders.graindensity = 0.7;
+    s.sliders.reverbamt    = 0.3;
+    s.sliders.plimit       = 12;
+    s.selects.scale        = 'minor';
+    for (let i = 0; i < 16; i++) {
+      s.seqSteps[i].active   = (i % 4 === 0);
+      s.seqSteps[i].noteIdx  = [0,4,2,6,1,5,3,7][i % 8];
+      s.seqSteps[i].velocity = i % 4 === 0 ? 0.9 : 0.65;
+    }
+    s.sceneObjects = [{
+      type:'attractor', _pct:true, x:0.5, y:0.5, r:70, name:'Attractor 1',
+      strength:1.0, opacity:0.8, active:true,
+      pullMode:'continuous', pulseRate:2, warmthEffect:0, massThreshold:3.0,
+    }];
+    return { name: 'RHYTHMIC', state: s };
+  })(),
+
+  // 3 — LEAD READY
+  (() => {
+    const s = _presetBaseState();
+    s.sliders.gravity    = 0.05;
+    s.sliders.viscosity  = 0.95;
+    s.sliders.bounce     = 0.6;
+    s.sliders.reverbamt  = 0.15;
+    s.sliders.plimit     = 6;
+    s.sliders.resonance  = 12;
+    s.selects.synthmode  = 'sub';
+    s.selects.scale      = 'major';
+    s.checkboxes.chordOn = false;
+    return { name: 'LEAD READY', state: s };
+  })(),
+
+  // 4 — DRONE
+  (() => {
+    const s = _presetBaseState();
+    s.sliders.gravity    = 0.01;
+    s.sliders.viscosity  = 0.999;
+    s.sliders.bounce     = 0.2;
+    s.sliders.reverbamt  = 0.7;
+    s.sliders.plimit     = 8;
+    s.selects.synthmode  = 'add';
+    s.selects.scale      = 'minor';
+    s.sceneObjects = [{
+      type:'heat', _pct:true, x:0.5, y:0.45, r:100, name:'Heat Source 1',
+      strength:1.5, opacity:0.8, active:true,
+      temperature:0.8, heatRate:0.02, coolingRate:0.001,
+      shimmerIntensity:0.4, soundCharacter:'raw',
+    }];
+    return { name: 'DRONE', state: s };
+  })(),
+
+  // 5 — CHAOS
+  (() => {
+    const s = _presetBaseState();
+    s.sliders.gravity      = 0.3;
+    s.sliders.viscosity    = 0.88;
+    s.sliders.bounce       = 1.0;
+    s.sliders.fmdepth      = 8;
+    s.sliders.fmfeedback   = 0.6;
+    s.sliders.graindensity = 1.0;
+    s.sliders.plimit       = 24;
+    s.selects.scale        = 'chromatic';
+    s._disturbOnLoad       = true;
+    return { name: 'CHAOS', state: s };
+  })(),
+];
+
+// ─── Index management ────────────────────────────────────────
+
+function presetGetIndex() {
+  try { return JSON.parse(localStorage.getItem(PRESET_INDEX_KEY) || '[]'); }
+  catch { return []; }
+}
+function presetSetIndex(arr) {
+  localStorage.setItem(PRESET_INDEX_KEY, JSON.stringify(arr));
+}
+function presetIsFactory(name) {
+  return FACTORY_PRESETS.some(fp => fp.name === name);
+}
+function presetRemoveFromIndex(name) {
+  presetSetIndex(presetGetIndex().filter(n => n !== name));
+}
+
+// ─── Capture ─────────────────────────────────────────────────
+
+function capturePresetState() {
+  const sliderIds   = ['gravity','wind','viscosity','bounce','fmdepth','fmfeedback',
+    'lforate','resonance','filtattack','filtdecay','harmspread',
+    'graindensity','mastervol','reverbamt','plimit','olimit','bpm','swing','nltDur'];
+  const checkboxIds = ['bubbleOn','chordOn','beatsync','droneOn','lfoSync'];
+  const selectIds   = ['synthmode','fmratio','lfotarget','lfoSyncDiv','scale','graintype'];
+
+  const sliders = {};
+  sliderIds.forEach(id => { const el = document.getElementById(id); if (el) sliders[id] = parseFloat(el.value); });
+  const checkboxes = {};
+  checkboxIds.forEach(id => { const el = document.getElementById(id); if (el) checkboxes[id] = el.checked; });
+  const selects = {};
+  selectIds.forEach(id => { const el = document.getElementById(id); if (el) selects[id] = el.value; });
+
+  return {
+    version: 1, sliders, checkboxes, selects,
+    opCount, noteLifetimeMode, noteLifetimeDur, seqStepCount,
+    seqSteps: seqSteps.map(s => ({...s})),
+    sceneObjects: JSON.parse(JSON.stringify(sceneObjects)),
+    collObjects:  JSON.parse(JSON.stringify(collObjects)),
+  };
+}
+
+// ─── Apply ───────────────────────────────────────────────────
+
+function applyPresetState(state) {
+  const sl_ = state.sliders || {};
+
+  // Resolve percentage-based scene object positions
+  const resolvedScene = (state.sceneObjects || []).map(obj => {
+    if (obj._pct) {
+      const o = {...obj}; delete o._pct;
+      o.x = Math.round(o.x * W); o.y = Math.round(o.y * H);
+      return o;
+    }
+    return {...obj};
+  });
+
+  // Sliders — set values
+  for (const [id, val] of Object.entries(sl_)) {
+    const el = document.getElementById(id); if (el) el.value = val;
+  }
+  // Update display spans via existing sliderDefs map
+  for (const [id, lblId] of Object.entries(sliderDefs)) {
+    const el = document.getElementById(id);
+    const lb = document.getElementById(lblId);
+    if (el && lb) lb.textContent = parseFloat(el.value).toFixed(2);
+  }
+  // Special integer sliders
+  if (sl_.plimit !== undefined) {
+    particleLimit = Math.round(sl_.plimit);
+    document.getElementById('plimv').textContent = particleLimit;
+  }
+  if (sl_.olimit !== undefined) {
+    objectLimit = Math.round(sl_.olimit);
+    document.getElementById('olimv').textContent = objectLimit;
+    document.getElementById('objlimdisp').textContent = objectLimit;
+  }
+  if (sl_.nltDur !== undefined) {
+    noteLifetimeDur = Math.round(sl_.nltDur);
+    document.getElementById('nltDur').value = noteLifetimeDur;
+    document.getElementById('nltDurV').textContent = noteLifetimeDur;
+  }
+  if (sl_.bpm  !== undefined) document.getElementById('bpmv').textContent  = Math.round(sl_.bpm);
+  if (sl_.swing !== undefined) document.getElementById('swingv').textContent = Math.round(sl_.swing);
+
+  // Checkboxes
+  for (const [id, checked] of Object.entries(state.checkboxes || {})) {
+    const el = document.getElementById(id); if (!el) continue;
+    el.checked = checked;
+    if (id === 'lfoSync') {
+      lfoSyncOn = checked;
+      document.getElementById('lforate').disabled = lfoSyncOn;
+      document.getElementById('lfoSyncDivRow').style.display = lfoSyncOn ? '' : 'none';
+    }
+    if (id === 'chordOn' && !checked) {
+      currentChordName = '';
+      const cd = document.getElementById('chordDisplay'); if (cd) cd.textContent = '';
+    }
+  }
+
+  // Selects
+  for (const [id, val] of Object.entries(state.selects || {})) {
+    const el = document.getElementById(id); if (el) el.value = val;
+  }
+  // Sync synthmode panel visibility
+  const mode = document.getElementById('synthmode').value;
+  document.getElementById('panel-fm').style.display  = mode === 'fm'  ? '' : 'none';
+  document.getElementById('panel-sub').style.display = mode === 'sub' ? '' : 'none';
+  document.getElementById('panel-add').style.display = mode === 'add' ? '' : 'none';
+
+  // opCount buttons
+  if (state.opCount !== undefined) {
+    opCount = state.opCount;
+    document.getElementById('op2btn').classList.toggle('op-active', opCount === 2);
+    document.getElementById('op4btn').classList.toggle('op-active', opCount === 4);
+  }
+
+  // Note lifetime mode
+  if (state.noteLifetimeMode) {
+    noteLifetimeMode = state.noteLifetimeMode;
+    const idMap = { instant:'nltInstant', live:'nltLive', timed:'nltTimed' };
+    document.querySelectorAll('.nlt-btn').forEach(b => b.classList.remove('active'));
+    const btn = document.getElementById(idMap[noteLifetimeMode]); if (btn) btn.classList.add('active');
+    document.getElementById('nltTimedRow').style.display = noteLifetimeMode === 'timed' ? '' : 'none';
+  }
+
+  // Sequencer
+  if (seqPlaying) seqStop();
+  if (state.seqStepCount !== undefined) {
+    seqStepCount = state.seqStepCount;
+    document.querySelectorAll('.seq-steps-btn').forEach(b =>
+      b.classList.toggle('seq-active', parseInt(b.dataset.steps) === seqStepCount));
+  }
+  if (state.seqSteps) {
+    for (let i = 0; i < seqSteps.length; i++) {
+      seqSteps[i] = state.seqSteps[i] ? {...state.seqSteps[i]} : {active:false, noteIdx:0, velocity:0.75};
+    }
+  }
+  seqRenderCells();
+
+  // Audio ramps (if running)
+  if (audioStarted && AC) {
+    const t = AC.currentTime;
+    if (sl_.mastervol !== undefined && masterGain) masterGain.gain.setTargetAtTime(sl_.mastervol, t, 0.1);
+    if (sl_.reverbamt !== undefined && reverbGain) reverbGain.gain.setTargetAtTime(sl_.reverbamt, t, 0.1);
+    if (state.checkboxes && droneGain) {
+      const dOn = state.checkboxes.droneOn !== undefined ? state.checkboxes.droneOn : true;
+      droneGain.gain.setTargetAtTime(dOn ? 0.038 : 0, t, 0.05);
+    }
+  }
+
+  // Scene + collision objects
+  closeSettings();
+  closeCollPanel();
+  sceneObjects.length = 0;
+  for (const obj of resolvedScene) sceneObjects.push(JSON.parse(JSON.stringify(obj)));
+  updateObjCount(); updateObjList();
+  collObjects.length = 0;
+  for (const obj of (state.collObjects || [])) collObjects.push(JSON.parse(JSON.stringify(obj)));
+
+  // Respawn particles
+  initParticles(particleLimit);
+
+  // Disturbance on load (CHAOS preset)
+  if (state._disturbOnLoad) {
+    setTimeout(() => {
+      particles.forEach((p, i) => {
+        p.vx += (Math.random() - 0.5) * 18;
+        p.vy += (Math.random() - 0.5) * 18;
+        p.tension = Math.min(1, p.tension + 0.6);
+        if (!p.isKeyNote) {
+          p.warmth = i % 2 === 0
+            ? Math.max(0, p.warmth * 0.3 + 0.1 * 0.7)
+            : Math.min(1, p.warmth * 0.3 + 0.9 * 0.7);
+        }
+      });
+    }, 100);
+  }
+}
+
+// ─── Save / Load / Delete / Duplicate ────────────────────────
+
+function presetSave(name) {
+  const index = presetGetIndex();
+  if (!index.includes(name)) {
+    if (index.length >= PRESET_MAX) { presetShowStatus('STORAGE FULL — DELETE A PRESET', 3000); return false; }
+    index.push(name); presetSetIndex(index);
+  }
+  try {
+    localStorage.setItem(PRESET_KEY_PREFIX + name, JSON.stringify(capturePresetState()));
+    return true;
+  } catch { presetShowStatus('STORAGE FULL — DELETE A PRESET', 3000); return false; }
+}
+
+function presetLoad(name) {
+  const fp = FACTORY_PRESETS.find(f => f.name === name);
+  if (fp) { applyPresetState(JSON.parse(JSON.stringify(fp.state))); presetShowStatus('LOADING...', 500); return; }
+  try {
+    const raw = localStorage.getItem(PRESET_KEY_PREFIX + name);
+    if (!raw) throw new Error('missing');
+    applyPresetState(JSON.parse(raw));
+    presetShowStatus('LOADING...', 500);
+  } catch {
+    presetShowStatus('PRESET ERROR — DELETED', 2000);
+    presetRemoveFromIndex(name);
+    try { localStorage.removeItem(PRESET_KEY_PREFIX + name); } catch {}
+    presetPopulateSelect();
+  }
+}
+
+function presetDelete(name) {
+  presetRemoveFromIndex(name);
+  try { localStorage.removeItem(PRESET_KEY_PREFIX + name); } catch {}
+  presetPopulateSelect();
+}
+
+function presetDuplicate(name) {
+  const index = presetGetIndex();
+  if (index.length >= PRESET_MAX) { presetShowStatus('STORAGE FULL — DELETE A PRESET', 3000); return; }
+  const fp = FACTORY_PRESETS.find(f => f.name === name);
+  let state;
+  try { state = fp ? JSON.parse(JSON.stringify(fp.state)) : JSON.parse(localStorage.getItem(PRESET_KEY_PREFIX + name)); }
+  catch { presetShowStatus('PRESET ERROR — DELETED', 2000); return; }
+
+  const allNames = [...FACTORY_PRESETS.map(f => f.name), ...index];
+  let base = (name + ' COPY').slice(0, 24);
+  let finalName = base; let counter = 1;
+  while (allNames.includes(finalName)) { finalName = (base + ' ' + counter).slice(0, 24); counter++; }
+
+  index.push(finalName); presetSetIndex(index);
+  try {
+    localStorage.setItem(PRESET_KEY_PREFIX + finalName, JSON.stringify(state));
+    presetPopulateSelect();
+    document.getElementById('presetSelect').value = finalName;
+    document.getElementById('presetNameInput').value = finalName;
+    presetShowStatus('DUPLICATED: ' + finalName, 2000);
+  } catch { presetShowStatus('STORAGE FULL — DELETE A PRESET', 3000); }
+}
+
+// ─── UI helpers ──────────────────────────────────────────────
+
+function presetPopulateSelect() {
+  const sel = document.getElementById('presetSelect');
+  const current = sel.value;
+  sel.innerHTML = '';
+  for (const fp of FACTORY_PRESETS) {
+    const opt = document.createElement('option');
+    opt.value = fp.name; opt.textContent = '* ' + fp.name;
+    opt.className = 'preset-factory-opt'; sel.appendChild(opt);
+  }
+  const index = presetGetIndex().slice().sort();
+  if (index.length > 0) {
+    const sep = document.createElement('option'); sep.disabled = true;
+    sep.textContent = '──────────────'; sel.appendChild(sep);
+    for (const name of index) {
+      const opt = document.createElement('option');
+      opt.value = name; opt.textContent = name; sel.appendChild(opt);
+    }
+  }
+  if (current && [...sel.options].some(o => o.value === current)) sel.value = current;
+}
+
+function presetShowStatus(msg, ms) {
+  const el = document.getElementById('presetStatus');
+  el.textContent = msg; el.style.display = '';
+  clearTimeout(el._t); el._t = setTimeout(() => { el.style.display = 'none'; }, ms);
+}
+
+// ─── Wire UI ─────────────────────────────────────────────────
+
+(function wirePresetUI() {
+  presetPopulateSelect();
+
+  document.getElementById('presetNameInput').addEventListener('input', function() {
+    const p = this.selectionStart;
+    this.value = this.value.toUpperCase();
+    this.setSelectionRange(p, p);
+  });
+
+  document.getElementById('presetSaveBtn').addEventListener('click', () => {
+    const name = document.getElementById('presetNameInput').value.trim().toUpperCase();
+    if (!name) { presetShowStatus('ENTER A NAME FIRST', 1500); return; }
+    if (presetIsFactory(name)) {
+      const msg = document.getElementById('presetFactoryMsg');
+      msg.textContent = 'FACTORY PRESET — CANNOT OVERWRITE'; msg.style.display = '';
+      setTimeout(() => msg.style.display = 'none', 2500); return;
+    }
+    if (presetGetIndex().includes(name)) {
+      document.getElementById('presetSaveRow').style.display = 'none';
+      document.getElementById('presetOverwriteRow').style.display = '';
+      document.getElementById('presetOverwriteRow').dataset.name = name;
+    } else {
+      if (presetSave(name)) {
+        presetPopulateSelect();
+        document.getElementById('presetSelect').value = name;
+        presetShowStatus('SAVED: ' + name, 1500);
+      }
+    }
+  });
+
+  document.getElementById('presetOverwriteY').addEventListener('click', () => {
+    const name = document.getElementById('presetOverwriteRow').dataset.name;
+    document.getElementById('presetSaveRow').style.display = '';
+    document.getElementById('presetOverwriteRow').style.display = 'none';
+    if (presetSave(name)) {
+      presetPopulateSelect();
+      document.getElementById('presetSelect').value = name;
+      presetShowStatus('OVERWRITTEN: ' + name, 1500);
+    }
+  });
+
+  document.getElementById('presetOverwriteN').addEventListener('click', () => {
+    document.getElementById('presetSaveRow').style.display = '';
+    document.getElementById('presetOverwriteRow').style.display = 'none';
+  });
+
+  document.getElementById('presetLoadBtn').addEventListener('click', () => {
+    const name = document.getElementById('presetSelect').value; if (!name) return;
+    presetLoad(name);
+  });
+
+  document.getElementById('presetDeleteBtn').addEventListener('click', () => {
+    const name = document.getElementById('presetSelect').value; if (!name) return;
+    if (presetIsFactory(name)) { presetShowStatus('FACTORY PRESET — CANNOT DELETE', 2000); return; }
+    document.getElementById('presetDeleteRow').style.display = 'none';
+    document.getElementById('presetDeleteConfirmRow').style.display = '';
+    document.getElementById('presetDeleteConfirmRow').dataset.name = name;
+  });
+
+  document.getElementById('presetDeleteY').addEventListener('click', () => {
+    const name = document.getElementById('presetDeleteConfirmRow').dataset.name;
+    document.getElementById('presetDeleteRow').style.display = '';
+    document.getElementById('presetDeleteConfirmRow').style.display = 'none';
+    presetDelete(name); presetShowStatus('DELETED: ' + name, 1500);
+  });
+
+  document.getElementById('presetDeleteN').addEventListener('click', () => {
+    document.getElementById('presetDeleteRow').style.display = '';
+    document.getElementById('presetDeleteConfirmRow').style.display = 'none';
+  });
+
+  document.getElementById('presetDupBtn').addEventListener('click', () => {
+    const name = document.getElementById('presetSelect').value; if (!name) return;
+    presetDuplicate(name);
+  });
+})();
 </script>
 </body>
 </html>

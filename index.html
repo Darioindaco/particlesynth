@@ -997,6 +997,7 @@ function buildSettingsHTML(obj) {
     h += _sh.row('soEmTensMin','TENSION MIN',o.tensionMin,0.1,1,0.05);
     h += _sh.row('soEmTensMax','TENSION MAX',o.tensionMax,0.1,1,0.05);
   }
+  h += `<button class="btn coll-del-btn" id="soDelBtn" style="margin-top:4px">✕ DELETE</button>`;
   return h;
 }
 
@@ -1012,6 +1013,11 @@ function wireSettingsListeners(obj) {
   const wsel = (id, prop, cb) => { const el = document.getElementById(id); if (el) el.addEventListener('change', function() { obj[prop] = this.value; if (cb) cb(this.value); }); };
 
   document.getElementById('soClose').addEventListener('click', closeSettings);
+  document.getElementById('soDelBtn').addEventListener('click', () => {
+    const idx = sceneObjects.indexOf(obj);
+    if (idx !== -1) { sceneObjects.splice(idx, 1); updateObjCount(); updateObjList(); }
+    closeSettings();
+  });
   document.getElementById('soName').addEventListener('input', function() {
     obj.name = this.value;
     const hdr = document.getElementById('soHdr'); if (hdr) hdr.textContent = obj.name.toUpperCase();

@@ -693,6 +693,8 @@ input[type=text] {
 <script>
 'use strict';
 
+// === STATE & CONFIG ===
+
 // ─────────────────────────────────────────────────────────────
 // Collapsible sections
 // ─────────────────────────────────────────────────────────────
@@ -746,6 +748,8 @@ let lastLoopTime = performance.now();
 let particleLimit = 24;
 const particles = [];
 let candidatePairs = [];
+
+// === SCENE OBJECTS ===
 
 // ─────────────────────────────────────────────────────────────
 // Scene objects
@@ -1085,20 +1089,6 @@ function wireSettingsListeners(obj) {
   }
 }
 
-function collObjCenter(obj) {
-  switch (obj.type) {
-    case 'circle': return { x: obj.cx, y: obj.cy };
-    case 'box':    return { x: obj.bx + obj.bw / 2, y: obj.by + obj.bh / 2 };
-    case 'wall':   return { x: (obj.x1 + obj.x2) / 2, y: (obj.y1 + obj.y2) / 2 };
-    case 'tri':    return { x: obj.cx, y: obj.cy };
-    case 'poly': {
-      const n = obj.verts.length;
-      return { x: obj.verts.reduce((s, v) => s + v.x, 0) / n, y: obj.verts.reduce((s, v) => s + v.y, 0) / n };
-    }
-  }
-  return { x: 0, y: 0 };
-}
-
 function collObjHintR(obj) {
   switch (obj.type) {
     case 'circle': return obj.radius;
@@ -1228,6 +1218,8 @@ document.querySelectorAll('.scene-btn').forEach(b =>
     if (!b.dataset.type) return; // skip collision shape buttons (data-ctype)
     setSelectedTool(selectedTool === b.dataset.type ? null : b.dataset.type);
   }));
+
+// === MUSICAL SYSTEMS ===
 
 // ─────────────────────────────────────────────────────────────
 // Keyboard note playing
@@ -1445,6 +1437,8 @@ function warmthToColor(w, alpha) {
 
 function sl(id)  { return parseFloat(document.getElementById(id).value); }
 
+// === AUDIO ENGINE ===
+
 // ─────────────────────────────────────────────────────────────
 // Reverb impulse
 // ─────────────────────────────────────────────────────────────
@@ -1619,7 +1613,7 @@ class Particle {
         }
       }
       this.syncAudio(true);
-    } catch (e) { console.warn('initAudio:', e); }
+    } catch (e) {}
   }
 
   syncAudio(immediate) {
@@ -1715,6 +1709,8 @@ class Particle {
   }
 }
 
+// === MOD MATRIX ===
+
 // ─────────────────────────────────────────────────────────────
 // FM update — proximity-based, per-frame
 // Carriers (higher warmth) get modulated by nearby particles.
@@ -1797,6 +1793,8 @@ function updateLFO(dt) {
     reverbGain.gain.setTargetAtTime(Math.max(0, base * (0.7 + lfoVal * 0.3)), AC.currentTime, 0.05);
   }
 }
+
+// === PARTICLE PHYSICS ===
 
 // ─────────────────────────────────────────────────────────────
 // Physics
@@ -2067,6 +2065,8 @@ function resolveCollision(a, b, dx, dy, dist) {
   }
 }
 
+// === RENDERING ===
+
 // ─────────────────────────────────────────────────────────────
 // Rendering
 // ─────────────────────────────────────────────────────────────
@@ -2177,10 +2177,6 @@ function drawSceneObjects() {
       const wMin = obj.warmthMin, wMax = obj.warmthMax;
       const cMid = warmthToColor((wMin + wMax) / 2, 0.55);
       const cEdge = warmthToColor((wMin + wMax) / 2, 0.1);
-      const cone = ctx.createConicalGradient
-        ? null  // fallback below
-        : null;
-
       // Draw spread cone as filled sector
       const arcR = r * 0.8;
       ctx.beginPath();
@@ -2566,8 +2562,10 @@ function initAudio() {
     document.getElementById('startBtn').classList.add('running');
 
     for (const p of particles) p.initAudio();
-  } catch (e) { console.error('AudioContext:', e); }
+  } catch (e) {}
 }
+
+// === UI & CONTROLS ===
 
 // ─────────────────────────────────────────────────────────────
 // UI
@@ -3008,6 +3006,8 @@ document.addEventListener('keyup', e => {
   updateKeyboardDisplay();
 });
 
+// === SEQUENCER ===
+
 // ─────────────────────────────────────────────────────────────
 // Sequencer
 // ─────────────────────────────────────────────────────────────
@@ -3295,6 +3295,8 @@ function seqUpdateVisuals() {
     if (noteEl) noteEl.textContent = stepNoteLabel(seqSteps[i].noteIdx);
   });
 }
+
+// === COLLISION OBJECTS ===
 
 // ─────────────────────────────────────────────────────────────
 // Collision Objects
@@ -3988,6 +3990,8 @@ document.querySelectorAll('[data-ctype]').forEach(b => {
     else { setSelectedTool(null); setCollPlacementType(t); }
   });
 });
+
+// === MAIN LOOP ===
 
 // ─────────────────────────────────────────────────────────────
 // Loop

@@ -4,23 +4,37 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Particle Synthesis Engine</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
 <style>
 * { margin:0; padding:0; box-sizing:border-box; }
+
+/* ── Type scale ─────────────────────────────────────────────────
+   Headings / labels / UI:  Inter (sans-serif) — clean, highly legible
+   Numeric values:          Consolas — monospaced, tabular digits
+──────────────────────────────────────────────────────────────── */
+:root {
+  --font-ui:    'Inter', 'Segoe UI', system-ui, -apple-system, sans-serif;
+  --font-mono:  'Consolas', 'Cascadia Code', 'Fira Mono', 'Courier New', monospace;
+}
+
 body {
   background:#080c10;
   color:#aab;
-  font-family:'Courier New',monospace;
+  font-family: var(--font-ui);
   font-size:13px;
+  font-weight:400;
   overflow:hidden;
   height:100vh;
   display:flex;
 }
 
 .panel {
-  width:240px;
-  min-width:240px;
+  width:256px;
+  min-width:256px;
   background:#0a0f16;
-  padding:10px 12px;
+  padding:12px 14px;
   display:flex;
   flex-direction:column;
   gap:0;
@@ -36,22 +50,24 @@ body {
 .section { display:flex; flex-direction:column; }
 .section-header {
   display:flex; align-items:center; justify-content:space-between;
-  cursor:pointer; padding:7px 0 5px;
+  cursor:pointer; padding:10px 0 8px;
   border-bottom:1px solid #1a2535;
   user-select:none;
   margin-bottom:0;
 }
 .section-header:hover { border-color:#2a3f55; }
 .section-title {
-  font-size:11px; color:#3af; letter-spacing:2px; font-weight:bold;
+  font-family: var(--font-ui);
+  font-size:11px; color:#3af; letter-spacing:2.5px; font-weight:700;
+  text-transform:uppercase;
 }
 .section-arrow {
-  font-size:9px; color:#3af; transition:transform 0.15s; display:inline-block;
+  font-size:10px; color:#3af; transition:transform 0.15s; display:inline-block; opacity:0.7;
 }
 .section.collapsed .section-arrow { transform:rotate(-90deg); }
 .section-body {
-  display:flex; flex-direction:column; gap:8px;
-  padding:8px 0 4px;
+  display:flex; flex-direction:column; gap:12px;
+  padding:12px 0 8px;
   overflow:hidden;
   transition:max-height 0.2s ease, opacity 0.2s ease, padding 0.2s ease;
   max-height:1200px;
@@ -64,82 +80,180 @@ body {
 }
 
 /* ── Synth sub-sections (nested collapsibles) ─────────────────── */
-.subsec { display:flex; flex-direction:column; margin:4px 0 0; border-left:2px solid #112030; padding-left:8px; }
+.subsec { display:flex; flex-direction:column; margin:8px 0 0; border-left:2px solid #112030; padding-left:10px; }
 .subsec-hdr {
   display:flex; align-items:center; justify-content:space-between;
-  cursor:pointer; padding:4px 0 3px; border-bottom:1px solid #0e1a25;
+  cursor:pointer; padding:7px 0 6px; border-bottom:1px solid #0e1a25;
   user-select:none;
 }
 .subsec-hdr:hover { border-color:#1e3050; }
-.subsec-title { font-size:10px; color:#2a8cc0; letter-spacing:1.5px; font-weight:bold; }
-.subsec-arrow { font-size:8px; color:#2a8cc0; transition:transform 0.15s; display:inline-block; }
+.subsec-title { font-family:var(--font-ui); font-size:10px; color:#2a8cc0; letter-spacing:2px; font-weight:600; text-transform:uppercase; }
+.subsec-arrow { font-size:9px; color:#2a8cc0; transition:transform 0.15s; display:inline-block; opacity:0.7; }
 .subsec.collapsed .subsec-arrow { transform:rotate(-90deg); }
 .subsec-body {
-  display:flex; flex-direction:column; gap:6px;
-  padding:6px 0 2px;
+  display:flex; flex-direction:column; gap:10px;
+  padding:10px 0 4px;
   overflow:hidden;
   transition:max-height 0.2s ease, opacity 0.2s ease, padding 0.2s ease;
   max-height:900px; opacity:1;
 }
 .subsec.collapsed .subsec-body { max-height:0; opacity:0; padding:0; }
-.synth-warn { font-size:10px; color:#f80; letter-spacing:1px; padding:2px 0; display:none; }
+.synth-warn { font-size:12px; color:#f80; letter-spacing:1px; padding:3px 0; display:none; }
 
-.ctrl { display:flex; flex-direction:column; gap:4px; }
-.ctrl label {
-  color:#667; font-size:12px; letter-spacing:1px;
-  display:flex; justify-content:space-between;
+/* ── Effects Sidebar ──────────────────────────────────────── */
+#fx-sidebar {
+  width:0; min-width:0;
+  background:#090d13;
+  border-left:1px solid #1e2a3a;
+  overflow:hidden;
+  transition:width 0.2s ease, min-width 0.2s ease;
+  display:flex; flex-direction:column;
 }
-.ctrl label span { color:#3af; font-weight:bold; }
+#fx-sidebar.open { width:294px; min-width:294px; }
+#fx-sidebar-inner {
+  width:294px; padding:12px 14px;
+  display:flex; flex-direction:column; gap:0;
+  overflow-y:auto; height:100%;
+}
+#fx-sidebar-inner::-webkit-scrollbar { width:3px; }
+#fx-sidebar-inner::-webkit-scrollbar-thumb { background:#1e3050; border-radius:2px; }
+
+#fxToggleBtn {
+  background:#0c1220; border:1px solid #1e3050; color:#5bb0d0;
+  padding:6px 16px; cursor:pointer;
+  font-family: var(--font-ui); font-size:11px; font-weight:600; letter-spacing:1.5px; text-transform:uppercase;
+  transition:background 0.1s, border-color 0.1s, color 0.1s; border-radius:2px;
+}
+#fxToggleBtn:hover { background:#162030; border-color:#3af; color:#3af; }
+#fxToggleBtn.active { background:#3af; color:#000; border-color:#3af; }
+
+.fx-hdr {
+  font-family: var(--font-ui); font-weight:700;
+  color:#3af; font-size:11px; letter-spacing:2.5px; text-transform:uppercase;
+  padding:6px 0 12px; border-bottom:1px solid #1a2535; margin-bottom:12px;
+}
+
+#fx-meters { margin-bottom:14px; padding-bottom:12px; border-bottom:1px solid #1a2535; }
+.fx-meter-lbl { font-family:var(--font-ui); font-size:10px; font-weight:600; color:#445; letter-spacing:1.5px; text-transform:uppercase; margin-bottom:5px; }
+.fx-meter-bg { background:#060c14; border:1px solid #1a2535; height:6px; border-radius:3px; overflow:hidden; }
+.fx-meter-fill { height:100%; width:0%; border-radius:3px; transition:width 0.4s ease; }
+#fx-cpu-fill { background:linear-gradient(90deg,#2fa,#2fa); }
+#fx-osc-fill { background:linear-gradient(90deg,#3af,#3af); }
+.fx-meter-val { font-family:var(--font-mono); font-size:11px; color:#3af; text-align:right; letter-spacing:0.5px; margin-top:3px; margin-bottom:8px; }
+
+.fx-card { border:1px solid #131f2e; border-radius:4px; margin-bottom:8px; background:#0b1018; user-select:none; overflow:hidden; }
+.fx-card.fx-drag-over { border-color:#3af; }
+.fx-card-hdr {
+  display:flex; align-items:center; gap:8px;
+  padding:10px 12px; cursor:pointer; background:#0d1420;
+}
+.fx-drag-handle { cursor:grab; color:#2a3a4a; font-size:13px; padding-right:2px; line-height:1; }
+.fx-drag-handle:active { cursor:grabbing; }
+.fx-dot { width:7px; height:7px; border-radius:50%; flex-shrink:0; }
+.fx-dot.on  { background:#3fa; box-shadow:0 0 4px #3fa6; }
+.fx-dot.off { background:#223; }
+.fx-card-name { flex:1; font-family:var(--font-ui); font-size:11px; font-weight:700; color:#3af; letter-spacing:1.5px; text-transform:uppercase; }
+.fx-card-en { accent-color:#3af; cursor:pointer; width:14px; height:14px; }
+.fx-card-arr { font-size:9px; color:#3af; transition:transform 0.15s; opacity:0.6; }
+.fx-card.collapsed .fx-card-arr { transform:rotate(-90deg); }
+.fx-card-body {
+  border-top:1px solid #111e2e; padding:10px 12px 12px;
+  display:flex; flex-direction:column; gap:10px;
+  overflow:hidden;
+  transition:max-height 0.2s ease, opacity 0.2s ease, padding 0.2s ease;
+  max-height:300px; opacity:1;
+}
+.fx-card.collapsed .fx-card-body { max-height:0; opacity:0; padding:0 12px; border-top:none; }
+.fx-ctrl { display:flex; flex-direction:column; gap:6px; }
+.fx-ctrl label { font-family:var(--font-ui); font-size:11px; font-weight:500; color:#556; display:flex; justify-content:space-between; letter-spacing:0.3px; }
+.fx-ctrl label span { font-family:var(--font-mono); color:#3af; font-weight:400; }
+.fx-ctrl input[type=range] { width:100%; }
+.fx-sel { background:#0c1220; border:1px solid #1e3050; color:#5bb0d0; padding:7px 10px; font-family:var(--font-ui); font-size:12px; font-weight:500; width:100%; border-radius:2px; }
+
+/* ── Parameter label (above selects / row buttons) ─────────── */
+.param-label {
+  font-family: var(--font-ui);
+  font-size:11px; font-weight:500; color:#556;
+  letter-spacing:0.8px; text-transform:uppercase;
+  margin-bottom:-4px; /* collapses into the 12px section gap nicely */
+}
+
+/* ── Slider control row ─────────────────────────────────────── */
+.ctrl { display:flex; flex-direction:column; gap:6px; }
+.ctrl label {
+  font-family: var(--font-ui);
+  color:#667; font-size:12px; font-weight:500; letter-spacing:0.5px;
+  display:flex; justify-content:space-between; align-items:baseline;
+}
+.ctrl label span {
+  font-family: var(--font-mono); /* monospace for numeric values */
+  color:#3af; font-weight:400; font-size:11px;
+}
 
 input[type=range] {
-  width:100%; height:5px;
+  width:100%; height:6px;
   -webkit-appearance:none; appearance:none;
-  background:#1e2a3a; outline:none; cursor:pointer; border-radius:2px;
+  background:#1a2535; outline:none; cursor:pointer; border-radius:3px;
 }
 input[type=range]::-webkit-slider-thumb {
   -webkit-appearance:none;
-  width:14px; height:14px; background:#3af; border-radius:50%; cursor:pointer;
+  width:16px; height:16px; background:#3af; border-radius:50%; cursor:pointer;
+  box-shadow: 0 0 0 2px rgba(51,170,255,0.15);
 }
+input[type=range]:hover::-webkit-slider-thumb { background:#5cf; }
 
+/* ── Buttons ─────────────────────────────────────────────────── */
 .btn {
-  background:#0a0f16; border:1px solid #1e3050; color:#3af;
-  padding:7px 10px; cursor:pointer; font-family:'Courier New',monospace;
-  font-size:11px; letter-spacing:1px; width:100%; transition:all 0.1s;
+  background:#0c1220; border:1px solid #1e3050; color:#7ab8d8;
+  padding:8px 12px; cursor:pointer;
+  font-family: var(--font-ui); font-size:12px; font-weight:600;
+  letter-spacing:0.8px; text-transform:uppercase;
+  width:100%; transition:background 0.1s, border-color 0.1s, color 0.1s;
 }
-.btn:hover { background:#1a2535; border-color:#3af; }
-.btn:active { background:#3af; color:#000; }
-.btn:disabled { opacity:0.35; cursor:not-allowed; }
+.btn:hover { background:#162030; border-color:#3af; color:#3af; }
+.btn:active { background:#3af; color:#000; border-color:#3af; }
+.btn:disabled { opacity:0.3; cursor:not-allowed; }
 .btn.op-active { background:#3af; color:#000; border-color:#3af; }
 
 .row { display:flex; gap:6px; }
 .row .btn { flex:1; }
 
+/* ── Selects ─────────────────────────────────────────────────── */
 select {
-  background:#0a0f16; border:1px solid #1e3050; color:#3af;
-  padding:6px; font-family:'Courier New',monospace; font-size:11px;
+  background:#0c1220; border:1px solid #1e3050; color:#5bb0d0;
+  padding:8px 10px;
+  font-family: var(--font-ui); font-size:12px; font-weight:500;
   width:100%; cursor:pointer; outline:none;
+  border-radius:2px;
+}
+select:focus { border-color:#2a6090; outline:none; }
+
+/* ── Checkboxes ─────────────────────────────────────────────── */
+.toggle-row { display:flex; align-items:center; gap:10px; }
+.toggle-row input[type=checkbox] { accent-color:#3af; cursor:pointer; width:15px; height:15px; flex-shrink:0; }
+.toggle-row span {
+  font-family: var(--font-ui); color:#667; font-size:12px; font-weight:500; letter-spacing:0.3px;
 }
 
-.toggle-row { display:flex; align-items:center; gap:8px; }
-.toggle-row input[type=checkbox] { accent-color:#3af; cursor:pointer; width:13px; height:13px; }
-.toggle-row span { color:#667; font-size:11px; letter-spacing:1px; }
-
+/* ── Text inputs ─────────────────────────────────────────────── */
 input[type=text] {
-  background:#0a0f16; border:1px solid #1e3050; color:#3af;
-  padding:6px; font-family:'Courier New',monospace; font-size:11px;
-  width:100%; box-sizing:border-box; outline:none; letter-spacing:1px;
+  background:#0c1220; border:1px solid #1e3050; color:#3af;
+  padding:8px 10px; font-family: var(--font-ui); font-size:12px;
+  width:100%; box-sizing:border-box; outline:none; letter-spacing:0.3px;
+  border-radius:2px;
 }
 input[type=text]::placeholder { color:#334; }
-input[type=text]:focus { border-color:#3af; }
-.preset-status { font-size:11px; letter-spacing:1px; padding:4px 0; text-align:center; }
-.preset-confirm { font-size:11px; letter-spacing:1px; margin-bottom:4px; }
+input[type=text]:focus { border-color:#2a6090; }
+.preset-status { font-family:var(--font-ui); font-size:12px; font-weight:500; letter-spacing:0.5px; padding:4px 0; text-align:center; }
+.preset-confirm { font-family:var(--font-ui); font-size:12px; font-weight:500; letter-spacing:0.5px; margin-bottom:4px; }
 option.preset-factory-opt { color:#fa3; }
 
 #status {
-  font-size:11px; color:#445;
-  border-top:1px solid #1a2535; padding-top:8px; margin-top:4px; line-height:1.9;
+  font-family:var(--font-ui); font-size:11px; font-weight:400; color:#3a4a5a;
+  border-top:1px solid #1a2535; padding-top:10px; margin-top:6px; line-height:2;
+  letter-spacing:0.2px;
 }
-#status span { color:#3af; }
+#status span { font-family:var(--font-mono); color:#3af; font-size:11px; }
 #startBtn.running { border-color:#3fa; color:#3fa; }
 #panicBtn { background:#1a0505; border-color:#a00; color:#f44; }
 #panicBtn:hover { background:#2a0808; border-color:#f44; }
@@ -160,7 +274,7 @@ canvas { display:block; }
   flex:1; height:52px;
   background:#0a0f18; border:1px solid #1a2535;
   border-top:none; border-radius:0 0 3px 3px;
-  font-size:9px; color:#2a4060;
+  font-size:11px; color:#2a4060;
   display:flex; align-items:flex-end; justify-content:center;
   padding-bottom:3px; z-index:1; transition:background 0.05s,color 0.05s;
 }
@@ -168,7 +282,7 @@ canvas { display:block; }
   position:absolute; top:0; width:7.5%; height:32px;
   background:#060c14; border:1px solid #1a2535;
   border-top:none; border-radius:0 0 2px 2px;
-  font-size:9px; color:#1e3050;
+  font-size:11px; color:#1e3050;
   display:flex; align-items:flex-end; justify-content:center;
   padding-bottom:2px; z-index:2; transform:translateX(-50%);
   transition:background 0.05s,color 0.05s;
@@ -176,35 +290,37 @@ canvas { display:block; }
 .kb-w.kb-active { color:#fff; }
 .kb-b.kb-active { color:#fff; }
 
+/* ── Synth mode panels — must be flex so gap applies between children ── */
+#panel-fm, #panel-sub, #panel-add {
+  display:flex; flex-direction:column; gap:12px;
+}
+
 #sceneToolbar { display:grid; grid-template-columns:1fr 1fr 1fr; gap:4px; }
 .scene-btn {
-  background:#0a0f16; border:1px solid #1e3050; color:#3af;
-  padding:6px 4px; cursor:pointer; font-family:'Courier New',monospace;
-  font-size:11px; letter-spacing:0.5px; text-align:center; transition:all 0.1s;
+  background:#0c1220; border:1px solid #1e3050; color:#5bb0d0;
+  padding:7px 4px; cursor:pointer;
+  font-family: var(--font-ui); font-size:11px; font-weight:600;
+  letter-spacing:0.5px; text-align:center; transition:background 0.1s, border-color 0.1s, color 0.1s;
 }
 .scene-btn:hover { background:#1a2535; border-color:#3af; }
 .scene-btn.scene-active { background:#3af; color:#000; border-color:#3af; }
 
-input[type=text] {
-  background:#0a0f16; border:1px solid #1e3050; color:#3af;
-  padding:4px 6px; font-family:'Courier New',monospace; font-size:10px;
-  width:100%; outline:none; margin-top:3px;
-}
+/* (input[type=text] rule is defined above — no duplicate needed) */
 /* ── Floating contextual popup ───────────────────────────────── */
 #floatPanel {
   position:absolute;
   z-index:200;
-  background:#0d1520;
+  background:#0b1320;
   border:1px solid #1e3a5a;
   border-radius:8px;
-  padding:0 10px 10px;
-  width:244px;
+  padding:0 12px 12px;
+  width:256px;
   max-height:80vh;
   overflow-y:auto;
   display:none;
   flex-direction:column;
-  gap:6px;
-  box-shadow:0 4px 24px rgba(0,0,0,0.75);
+  gap:10px;
+  box-shadow:0 8px 32px rgba(0,0,0,0.85);
   pointer-events:all;
 }
 #floatDragHandle {
@@ -222,7 +338,7 @@ input[type=text] {
 #floatPanel.visible { display:flex; }
 #floatPanel::-webkit-scrollbar { width:3px; }
 #floatPanel::-webkit-scrollbar-thumb { background:#1e3050; border-radius:2px; }
-#floatSceneContent { display:none; flex-direction:column; gap:8px; }
+#floatSceneContent { display:none; flex-direction:column; gap:10px; }
 #floatSceneContent.visible { display:flex; }
 
 #objList {
@@ -231,7 +347,7 @@ input[type=text] {
 }
 .obj-row {
   display:flex; justify-content:space-between; align-items:center;
-  font-size:9px; color:#445; letter-spacing:0.5px;
+  font-size:11px; color:#445; letter-spacing:0.5px;
   border-bottom:1px solid #0e1520; padding-bottom:2px;
 }
 .obj-rm {
@@ -253,10 +369,10 @@ input[type=text] {
   padding:4px 8px 3px; gap:12px; flex-shrink:0;
 }
 .seq-transport,.seq-tools { display:flex; gap:5px; }
-.seq-transport-btn { padding:5px 16px !important; font-size:13px !important; }
+.seq-transport-btn { padding:5px 18px !important; font-size:12px !important; font-family:var(--font-ui) !important; font-weight:700 !important; letter-spacing:1px !important; }
 .seq-btn {
-  width:auto !important; padding:2px 7px !important;
-  font-size:11px !important; letter-spacing:0.5px !important;
+  width:auto !important; padding:3px 8px !important;
+  font-family:var(--font-ui) !important; font-size:11px !important; font-weight:600 !important; letter-spacing:0.5px !important;
 }
 .seq-btn.seq-active { background:#3af !important; color:#000 !important; border-color:#3af !important; }
 #seqTrack {
@@ -316,15 +432,263 @@ input[type=text] {
 
 /* ── Collision object panel ──────────────────────────────── */
 #collisionPanel {
-  display:none; flex-direction:column; gap:7px;
+  display:none; flex-direction:column; gap:10px;
 }
 #collisionPanel.visible { display:flex; }
-#collisionPanel .c-sub { font-size:10px;color:#3af;letter-spacing:1px;margin:4px 0 2px; }
-#collisionPanel input[type=text] { font-size:10px; }
+#collisionPanel .c-sub {
+  font-family:var(--font-ui); font-size:10px; font-weight:700;
+  color:#3af; letter-spacing:1.5px; text-transform:uppercase;
+  margin:2px 0; padding-top:2px; border-top:1px solid #1a2535;
+}
+#collisionPanel input[type=text] { font-size:12px; }
 .coll-del-btn { border-color:#c44 !important; color:#c44 !important; }
 .coll-del-btn:hover { background:#c44 !important; color:#000 !important; }
-#collisionPanel select { margin-top:2px; }
+#collisionPanel select { margin-top:0; }
 
+/* ════════════════════════════════════════════════════════════════
+   TOP-RIGHT BUTTON CLUSTER
+════════════════════════════════════════════════════════════════ */
+#topbar-btns {
+  position:fixed; top:8px; right:8px;
+  display:flex; gap:6px; z-index:201;
+}
+#mmOpenBtn {
+  background:#0c1220; border:1px solid #1e3050; color:#5bb0d0;
+  padding:6px 16px; cursor:pointer;
+  font-family:var(--font-ui); font-size:11px; font-weight:600;
+  letter-spacing:1.5px; text-transform:uppercase;
+  transition:background 0.1s, border-color 0.1s, color 0.1s; border-radius:2px;
+}
+#mmOpenBtn:hover  { background:#162030; border-color:#3af; color:#3af; }
+#mmOpenBtn.active { background:#3af;    color:#000;        border-color:#3af; }
+
+/* ════════════════════════════════════════════════════════════════
+   MOD MATRIX PAGE
+════════════════════════════════════════════════════════════════ */
+#modMatrixPage {
+  position:fixed; top:0; left:0; width:100vw; height:100vh;
+  background:#060a10; z-index:100;
+  display:flex; flex-direction:column;
+  opacity:0; pointer-events:none;
+  transition:opacity 0.15s ease;
+}
+#modMatrixPage.mm-visible { opacity:1; pointer-events:all; }
+
+/* Top bar */
+.mm-topbar {
+  display:flex; align-items:center; gap:12px;
+  padding:8px 16px; background:#080c14;
+  border-bottom:1px solid #1a2535; flex-shrink:0; height:46px;
+}
+.mm-back-btn {
+  background:#0c1220; border:1px solid #1e3050; color:#5bb0d0;
+  padding:6px 14px; cursor:pointer;
+  font-family:var(--font-ui); font-size:11px; font-weight:600; letter-spacing:1px;
+  transition:all 0.1s; border-radius:2px;
+}
+.mm-back-btn:hover { background:#162030; border-color:#3af; color:#3af; }
+.mm-page-title {
+  font-family:var(--font-ui); font-size:13px; font-weight:700;
+  color:#3af; letter-spacing:3px; text-transform:uppercase; flex:1; text-align:center;
+}
+.mm-topbar-right { display:flex; align-items:center; gap:10px; }
+.mm-badge {
+  font-family:var(--font-ui); font-size:11px; font-weight:500;
+  color:#3a4a5a; letter-spacing:0.5px;
+}
+.mm-badge span { font-family:var(--font-mono); color:#3af; }
+
+/* Body layout */
+.mm-body { display:flex; flex:1; overflow:hidden; min-height:0; }
+
+/* ── Left 65% ── */
+.mm-left {
+  width:65%; border-right:1px solid #1a2535;
+  display:flex; flex-direction:column; overflow:hidden;
+}
+
+/* View toggle bar */
+.mm-view-bar {
+  display:flex; align-items:center; gap:6px;
+  padding:8px 12px; border-bottom:1px solid #1a2535; flex-shrink:0;
+  background:#070b12;
+}
+.mm-vtbtn {
+  background:#0c1220; border:1px solid #1e3050; color:#5bb0d0;
+  padding:5px 14px; cursor:pointer;
+  font-family:var(--font-ui); font-size:11px; font-weight:600; letter-spacing:1px;
+  transition:all 0.1s; border-radius:2px;
+}
+.mm-vtbtn.active { background:#3af; color:#000; border-color:#3af; }
+.mm-conn-count { font-family:var(--font-mono); font-size:11px; color:#3a4a5a; margin-left:4px; }
+
+/* Factory patches */
+.mm-factory-bar {
+  display:flex; align-items:center; gap:10px;
+  padding:6px 12px 4px; flex-shrink:0; border-bottom:1px solid #0d1520;
+}
+.mm-section-lbl {
+  font-family:var(--font-ui); font-size:10px; font-weight:700;
+  color:#445; letter-spacing:1.5px; text-transform:uppercase;
+}
+.mm-clr-first-lbl {
+  font-family:var(--font-ui); font-size:11px; color:#556;
+  display:flex; align-items:center; gap:6px; cursor:pointer;
+}
+.mm-factory-grid {
+  display:grid; grid-template-columns:repeat(4,1fr); gap:4px;
+  padding:6px 12px 8px; flex-shrink:0; border-bottom:1px solid #1a2535;
+}
+.mm-fac-btn {
+  background:#0a1018; border:1px solid #182530; color:#4a7090;
+  padding:6px 4px; cursor:pointer;
+  font-family:var(--font-ui); font-size:10px; font-weight:600;
+  letter-spacing:0.5px; text-align:center; transition:all 0.1s; border-radius:2px;
+}
+.mm-fac-btn:hover  { border-color:#3af; color:#3af; background:#0d1828; }
+.mm-fac-btn:active { background:#3af; color:#000; }
+
+/* Grid view */
+#mmGridView { display:flex; flex-direction:column; flex:1; overflow:hidden; min-height:0; }
+
+/* Builder */
+.mm-builder {
+  padding:12px; border-bottom:1px solid #1a2535; flex-shrink:0; background:#070b12;
+}
+.mm-builder-row { display:flex; gap:10px; align-items:flex-start; }
+.mm-builder-col { flex:1; display:flex; flex-direction:column; gap:6px; }
+.mm-arrow-col {
+  font-size:20px; color:#2a5070; padding-top:22px; flex-shrink:0;
+}
+.mm-sel {
+  background:#0c1220; border:1px solid #1e3050; color:#5bb0d0;
+  padding:7px 8px; font-family:var(--font-ui); font-size:12px;
+  width:100%; cursor:pointer; border-radius:2px; outline:none;
+}
+.mm-knob-wrap { display:flex; flex-direction:column; align-items:center; gap:3px; }
+.mm-knob { cursor:ns-resize; border-radius:50%; display:block; }
+.mm-knob-val { font-family:var(--font-mono); font-size:11px; color:#3af; }
+.mm-bipolar-bar-wrap {
+  position:relative; height:8px; background:#0a1018; border:1px solid #1a2535; border-radius:2px;
+}
+.mm-bipolar-center { position:absolute; left:50%; top:0; width:1px; height:100%; background:#1e3050; }
+.mm-bipolar-bar { position:absolute; height:100%; border-radius:2px; top:0; }
+
+/* List header */
+.mm-list-hdr {
+  display:flex; align-items:center; gap:4px; flex-wrap:wrap;
+  padding:6px 12px; border-bottom:1px solid #111e2e; flex-shrink:0;
+  background:#070b12;
+}
+.mm-sort-btn {
+  background:none; border:1px solid #182530; color:#3a4a5a;
+  padding:3px 8px; cursor:pointer;
+  font-family:var(--font-ui); font-size:10px; font-weight:600; letter-spacing:0.5px;
+  border-radius:2px; transition:all 0.1s;
+}
+.mm-sort-btn.active { border-color:#3af; color:#3af; }
+.mm-sort-btn:hover  { border-color:#2a5070; color:#5bb0d0; }
+
+/* Connection list */
+.mm-conn-list { flex:1; overflow-y:auto; padding:0; min-height:0; }
+.mm-conn-list::-webkit-scrollbar { width:3px; }
+.mm-conn-list::-webkit-scrollbar-thumb { background:#1e3050; border-radius:2px; }
+.mm-conn-row {
+  display:flex; align-items:center; gap:0;
+  height:32px; padding:0 8px 0 12px;
+  border-bottom:1px solid #080e18; border-left:2px solid transparent;
+  transition:background 0.05s; box-sizing:border-box;
+}
+.mm-conn-row:nth-child(even) { background:rgba(255,255,255,0.02); }
+.mm-conn-row:nth-child(odd)  { background:transparent; }
+.mm-conn-row:hover { background:rgba(40,160,255,0.06); }
+.mm-conn-row.selected { border-left-color:#3af; }
+.mm-conn-row input[type=checkbox] { accent-color:#3af; width:13px; height:13px; flex-shrink:0; margin-right:7px; }
+.mm-conn-src {
+  font-family:var(--font-mono); font-size:11px; color:#3af;
+  width:140px; flex-shrink:0; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;
+}
+.mm-conn-arr { color:#334; font-size:12px; flex-shrink:0; width:24px; text-align:center; }
+.mm-conn-dst {
+  font-family:var(--font-mono); font-size:11px; color:#aab;
+  width:140px; flex-shrink:0; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;
+}
+.mm-conn-amt-wrap {
+  flex:1; position:relative; height:6px; background:#1a2535;
+  border-radius:3px; margin:0 8px; min-width:200px; cursor:ew-resize;
+}
+/* Center marker */
+.mm-conn-amt-wrap::after {
+  content:''; position:absolute; top:-2px; left:50%;
+  width:2px; height:calc(100% + 4px); background:#2a3a5a;
+  transform:translateX(-50%); pointer-events:none;
+}
+.mm-conn-amt-bar  { position:absolute; top:0; height:100%; border-radius:2px; }
+/* Live bar uses CSS custom properties — no layout thrashing on update */
+.mm-conn-live-bar {
+  position:absolute; top:0; height:100%; border-radius:2px; opacity:0.4;
+  left:var(--ll,50%); width:var(--lw,0%); background:var(--lc,#3af);
+}
+.mm-conn-amt-txt {
+  width:48px; flex-shrink:0; text-align:right;
+  font-family:var(--font-mono); font-size:10px; color:#7ab; cursor:default; user-select:none;
+}
+.mm-conn-amt-txt.pos  { color:#3af; }
+.mm-conn-amt-txt.neg  { color:#fa3; }
+.mm-conn-amt-txt.zero { color:#445; }
+.mm-conn-del {
+  background:none; border:none; color:#2a3a4a; cursor:pointer;
+  font-size:13px; padding:0; width:24px; text-align:center;
+  flex-shrink:0; transition:color 0.1s; margin-left:4px;
+}
+.mm-conn-del:hover { color:#f64; }
+.mm-conn-label {
+  font-family:var(--font-ui); font-size:10px; color:#334;
+  flex-shrink:0; width:80px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;
+  margin-left:6px;
+}
+
+/* Patch view */
+#mmPatchView { flex:1; position:relative; overflow-y:auto; }
+#mmPatchCanvas { width:100%; display:block; cursor:crosshair; }
+.mm-patch-hint {
+  position:absolute; bottom:12px; left:50%; transform:translateX(-50%);
+  font-family:var(--font-ui); font-size:11px; color:#2a4060; letter-spacing:0.3px;
+  pointer-events:none;
+}
+
+/* ── Right 35% ── */
+.mm-right {
+  width:35%; display:flex; flex-direction:column; overflow:hidden; background:#060a10;
+}
+.mm-right-section {
+  display:flex; flex-direction:column; border-bottom:1px solid #1a2535;
+  padding:10px 12px; gap:8px; flex-shrink:0;
+}
+.mm-right-hdr { display:flex; align-items:center; justify-content:space-between; }
+.mm-mini-canvas { width:100%; display:block; background:#050810; border:1px solid #1a2535; }
+.mm-mini-scope  { width:100%; height:30px; display:block; background:#050810; border-top:none; border:1px solid #111e2e; margin-top:-1px; }
+.mm-lfo-scope   { width:100%; height:50px; display:block; background:#050810; border:1px solid #1a2535; }
+
+/* Source monitor — grows to fill remaining space */
+.mm-srcmon-section { flex:1; overflow:hidden; display:flex; flex-direction:column; padding:10px 12px 6px; gap:6px; }
+.mm-srcmon { flex:1; overflow-y:auto; display:flex; flex-direction:column; gap:8px; min-height:0; }
+.mm-srcmon::-webkit-scrollbar { width:3px; }
+.mm-srcmon::-webkit-scrollbar-thumb { background:#1e3050; }
+.mm-srcmon-group { display:flex; flex-direction:column; gap:4px; }
+.mm-srcmon-grp-lbl {
+  font-family:var(--font-ui); font-size:9px; font-weight:700;
+  color:#2a4050; letter-spacing:1.5px; text-transform:uppercase;
+}
+.mm-srcmon-meters { display:flex; gap:5px; flex-wrap:wrap; }
+.mm-srcmon-item  { display:flex; flex-direction:column; align-items:center; gap:2px; width:34px; }
+.mm-srcmon-bar-bg {
+  width:6px; height:36px; background:#0a1018; border:1px solid #111e2e; border-radius:2px;
+  position:relative; overflow:hidden;
+}
+.mm-srcmon-bar-fill { position:absolute; bottom:0; width:100%; border-radius:1px; }
+.mm-srcmon-name { font-family:var(--font-mono); font-size:8px; color:#2a4050; text-align:center; max-width:34px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+.mm-srcmon-num  { font-family:var(--font-mono); font-size:8px; color:#3af; text-align:center; }
 
 </style>
 </head>
@@ -332,7 +696,7 @@ input[type=text] {
 
 <!-- ═══════════════════════════════ LEFT PANEL ═══════════════════════════════ -->
 <div class="panel" id="panel-left">
-  <div style="color:#3af;font-size:11px;letter-spacing:2px;font-weight:bold;padding:4px 0 6px;">PARTICLE SYNTH</div>
+  <div style="font-family:var(--font-ui);color:#3af;font-size:13px;font-weight:700;letter-spacing:3px;padding:6px 0 8px;text-transform:uppercase;">Particle Synth</div>
 
   <!-- PHYSICS -->
   <div class="section" id="sec-physics">
@@ -359,7 +723,7 @@ input[type=text] {
       <span class="section-arrow">▼</span>
     </div>
     <div class="section-body">
-      <div style="font-size:10px;color:#667;letter-spacing:1px;">MODE</div>
+      <div class="param-label">MODE</div>
       <select id="synthmode">
         <option value="fm">FM</option>
         <option value="sub">SUBTRACTIVE</option>
@@ -369,7 +733,7 @@ input[type=text] {
       <div id="panel-fm">
         <div class="ctrl"><label>FM DEPTH <span id="fv">3.0</span></label>
           <input type="range" id="fmdepth" min="0" max="12" step="0.5" value="3"></div>
-        <div style="font-size:10px;color:#667;letter-spacing:1px;">FM RATIO</div>
+        <div class="param-label">FM RATIO</div>
         <select id="fmratio">
           <option value="0.5">0.5×</option>
           <option value="1" selected>1×</option>
@@ -381,25 +745,25 @@ input[type=text] {
         </select>
         <div class="ctrl"><label>FM FEEDBACK <span id="fbv">0.00</span></label>
           <input type="range" id="fmfeedback" min="0" max="1" step="0.05" value="0"></div>
-        <div style="font-size:10px;color:#667;letter-spacing:1px;margin-top:2px;">OPERATORS</div>
+        <div class="param-label">OPERATORS</div>
         <div class="row">
           <button class="btn op-active" id="op2btn">2-OP</button>
           <button class="btn" id="op4btn">4-OP</button>
         </div>
         <div class="ctrl"><label>LFO RATE <span id="lrv">1.00</span></label>
           <input type="range" id="lforate" min="0.1" max="8" step="0.1" value="1"></div>
-        <div style="font-size:10px;color:#667;letter-spacing:1px;">LFO TARGET</div>
+        <div class="param-label">LFO TARGET</div>
         <select id="lfotarget">
           <option value="fmdepth">FM DEPTH</option>
           <option value="cutoff">FILTER CUTOFF</option>
           <option value="warmth">WARMTH DRIFT</option>
           <option value="reverb">REVERB</option>
         </select>
-        <div class="toggle-row" style="margin-top:4px">
+        <div class="toggle-row">
           <input type="checkbox" id="lfoSync">
           <span>LFO SYNC TO BPM</span>
         </div>
-        <div id="lfoSyncDivRow" style="display:none;margin-top:4px">
+        <div id="lfoSyncDivRow" style="display:none;">
           <select id="lfoSyncDiv">
             <option value="4">1/4 NOTE</option>
             <option value="2">1/2 NOTE</option>
@@ -472,8 +836,8 @@ input[type=text] {
           <div class="toggle-row">
             <input type="checkbox" id="osc2On"><span>ENABLE OSC 2</span>
           </div>
-          <div id="osc2Controls" style="display:none;flex-direction:column;gap:6px">
-            <div style="font-size:10px;color:#667;letter-spacing:1px;">WAVEFORM</div>
+          <div id="osc2Controls" style="display:none;flex-direction:column;gap:12px">
+            <div class="param-label">WAVEFORM</div>
             <select id="osc2Wave">
               <option value="sine">SINE</option>
               <option value="triangle">TRIANGLE</option>
@@ -485,7 +849,7 @@ input[type=text] {
               <div class="ctrl"><label>PULSE WIDTH <span id="osc2PwV">0.50</span></label>
                 <input type="range" id="osc2Pw" min="0.05" max="0.95" step="0.05" value="0.5"></div>
             </div>
-            <div style="font-size:10px;color:#667;letter-spacing:1px;">OCTAVE</div>
+            <div class="param-label">OCTAVE</div>
             <select id="osc2Oct">
               <option value="-2">-2</option>
               <option value="-1">-1</option>
@@ -512,7 +876,7 @@ input[type=text] {
           <span class="subsec-title">NOISE</span><span class="subsec-arrow">▼</span>
         </div>
         <div class="subsec-body">
-          <div style="font-size:10px;color:#667;letter-spacing:1px;">TYPE</div>
+          <div class="param-label">TYPE</div>
           <select id="noiseType">
             <option value="white">WHITE</option>
             <option value="pink">PINK</option>
@@ -532,7 +896,7 @@ input[type=text] {
           <span class="subsec-title">FILTER+</span><span class="subsec-arrow">▼</span>
         </div>
         <div class="subsec-body">
-          <div style="font-size:10px;color:#667;letter-spacing:1px;">FILTER TYPE (SUB)</div>
+          <div class="param-label">FILTER TYPE (SUB)</div>
           <select id="subFiltType">
             <option value="lowpass" selected>LOWPASS</option>
             <option value="highpass">HIGHPASS</option>
@@ -550,23 +914,6 @@ input[type=text] {
         </div>
       </div>
 
-      <!-- CHORUS -->
-      <div class="subsec collapsed" id="sub-chorus">
-        <div class="subsec-hdr" onclick="toggleSubsec('sub-chorus')">
-          <span class="subsec-title">CHORUS</span><span class="subsec-arrow">▼</span>
-        </div>
-        <div class="subsec-body">
-          <div class="toggle-row">
-            <input type="checkbox" id="chorusOn"><span>ENABLE</span>
-          </div>
-          <div class="ctrl"><label>RATE <span id="chorusRateV">0.5</span>Hz</label>
-            <input type="range" id="chorusRate" min="0.1" max="5" step="0.1" value="0.5"></div>
-          <div class="ctrl"><label>DEPTH <span id="chorusDepthV">0.50</span></label>
-            <input type="range" id="chorusDepth" min="0" max="1" step="0.05" value="0.5"></div>
-          <div class="ctrl"><label>MIX <span id="chorusMixV">0.50</span></label>
-            <input type="range" id="chorusMix" min="0" max="1" step="0.05" value="0.5"></div>
-        </div>
-      </div>
 
       <div class="ctrl"><label>GRAIN DENSITY <span id="gdv">0.5</span></label>
         <input type="range" id="graindensity" min="0" max="1" step="0.05" value="0.5"></div>
@@ -594,7 +941,7 @@ input[type=text] {
           <button class="scene-btn" data-type="gwell">GRAV</button>
           <button class="scene-btn" data-type="emitter" style="grid-column:span 3;letter-spacing:1.5px;">⊕ EMITTER</button>
         </div>
-        <div style="font-size:10px;color:#667;letter-spacing:1px;margin-top:6px;">COLLISION</div>
+        <div class="param-label">COLLISION</div>
         <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:4px;margin-top:2px;">
           <button class="scene-btn" data-ctype="wall">WALL</button>
           <button class="scene-btn" data-ctype="box">BOX</button>
@@ -608,7 +955,7 @@ input[type=text] {
         </div>
         <div class="ctrl"><label>OBJECT LIMIT <span id="olimv">8</span></label>
           <input type="range" id="olimit" min="4" max="24" step="1" value="8"></div>
-        <div style="font-size:10px;color:#445;">OBJECTS: <span id="objcount">0</span>/<span id="objlimdisp">8</span> · R-CLICK REMOVE</div>
+        <div style="font-size:12px;color:#445;">OBJECTS: <span id="objcount">0</span>/<span id="objlimdisp">8</span> · R-CLICK REMOVE</div>
         <div id="objList"></div>
       </div>
     </div>
@@ -753,20 +1100,20 @@ input[type=text] {
         <input type="range" id="bpm" min="20" max="200" step="1" value="90"></div>
       <div class="ctrl"><label>SWING <span id="swingv">0</span></label>
         <input type="range" id="swing" min="0" max="100" step="1" value="0"></div>
-      <div style="font-size:10px;color:#667;letter-spacing:1px;">STEPS</div>
+      <div class="param-label">STEPS</div>
       <div class="row">
         <button class="btn seq-steps-btn" data-steps="8">8</button>
         <button class="btn seq-steps-btn seq-active" data-steps="16">16</button>
         <button class="btn seq-steps-btn" data-steps="32">32</button>
       </div>
-      <div style="font-size:10px;color:#667;letter-spacing:1px;">SCALE</div>
+      <div class="param-label">SCALE</div>
       <select id="scale">
         <option value="pentatonic">PENTATONIC</option>
         <option value="minor">MINOR</option>
         <option value="major">MAJOR</option>
         <option value="chromatic">CHROMATIC</option>
       </select>
-      <div style="font-size:10px;color:#667;letter-spacing:1px;margin-top:2px;">GRAIN TYPE</div>
+      <div class="param-label">GRAIN TYPE</div>
       <select id="graintype">
         <option value="droplet">DROPLET</option>
         <option value="pluck">PLUCK</option>
@@ -860,7 +1207,7 @@ input[type=text] {
           <button class="btn" id="presetOverwriteN">N</button>
         </div>
       </div>
-      <div id="presetFactoryMsg" style="display:none;font-size:11px;color:#f44;letter-spacing:1px;padding:3px 0"></div>
+      <div id="presetFactoryMsg" style="display:none;font-size:13px;color:#f44;letter-spacing:1px;padding:3px 0"></div>
       <select id="presetSelect"></select>
       <div class="row">
         <button class="btn" id="presetLoadBtn">LOAD</button>
@@ -892,6 +1239,359 @@ input[type=text] {
   </div>
 </div>
 
+<!-- ══════════════════════════════ EFFECTS SIDEBAR ══════════════════════════════ -->
+<div id="fx-sidebar">
+  <div id="fx-sidebar-inner">
+    <div class="fx-hdr">EFFECTS</div>
+
+    <!-- CPU + voice budget meters -->
+    <div id="fx-meters">
+      <div class="fx-meter-lbl">AUDIO CPU</div>
+      <div class="fx-meter-bg"><div class="fx-meter-fill" id="fx-cpu-fill"></div></div>
+      <div class="fx-meter-val"><span id="fx-cpu-pct">0</span>%</div>
+      <div class="fx-meter-lbl">OSCILLATORS</div>
+      <div class="fx-meter-bg"><div class="fx-meter-fill" id="fx-osc-fill"></div></div>
+      <div class="fx-meter-val"><span id="fx-osc-txt">0/192</span></div>
+    </div>
+
+    <!-- Effect cards (draggable) -->
+    <div id="fx-chain">
+
+      <!-- DRIVE -->
+      <div class="fx-card" id="fxc-drive" draggable="true" data-fx="drive">
+        <div class="fx-card-hdr" onclick="toggleFxCard('fxc-drive')">
+          <span class="fx-drag-handle">⠿</span>
+          <span class="fx-dot off" id="fxdot-drive"></span>
+          <span class="fx-card-name">DRIVE</span>
+          <input type="checkbox" class="fx-card-en" id="fxen-drive"
+                 onclick="event.stopPropagation();toggleFxEffect('drive',this.checked)">
+          <span class="fx-card-arr">▼</span>
+        </div>
+        <div class="fx-card-body">
+          <div class="fx-ctrl">
+            <label>DRIVE <span id="fxDriveV">0.00</span></label>
+            <input type="range" id="fxDrive" min="0" max="1" step="0.01" value="0">
+          </div>
+        </div>
+      </div>
+
+      <!-- FILTER -->
+      <div class="fx-card collapsed" id="fxc-filter" draggable="true" data-fx="filter">
+        <div class="fx-card-hdr" onclick="toggleFxCard('fxc-filter')">
+          <span class="fx-drag-handle">⠿</span>
+          <span class="fx-dot off" id="fxdot-filter"></span>
+          <span class="fx-card-name">FILTER</span>
+          <input type="checkbox" class="fx-card-en" id="fxen-filter"
+                 onclick="event.stopPropagation();toggleFxEffect('filter',this.checked)">
+          <span class="fx-card-arr">▼</span>
+        </div>
+        <div class="fx-card-body">
+          <select class="fx-sel" id="fxFiltType">
+            <option value="lowpass">LOWPASS</option>
+            <option value="highpass">HIGHPASS</option>
+            <option value="bandpass">BANDPASS</option>
+            <option value="notch">NOTCH</option>
+            <option value="ladder">LADDER 4P</option>
+          </select>
+          <div class="fx-ctrl">
+            <label>CUTOFF <span id="fxCutV">2000</span>Hz</label>
+            <input type="range" id="fxCut" min="20" max="18000" step="10" value="2000">
+          </div>
+          <div class="fx-ctrl">
+            <label>RESONANCE <span id="fxResV">1.0</span></label>
+            <input type="range" id="fxRes" min="0.1" max="20" step="0.1" value="1">
+          </div>
+          <div class="fx-ctrl">
+            <label>ENV AMT <span id="fxEnvAmtV">1.00</span></label>
+            <input type="range" id="fxEnvAmt" min="-2" max="2" step="0.05" value="1">
+          </div>
+        </div>
+      </div>
+
+      <!-- CHORUS -->
+      <div class="fx-card collapsed" id="fxc-chorus" draggable="true" data-fx="chorus">
+        <div class="fx-card-hdr" onclick="toggleFxCard('fxc-chorus')">
+          <span class="fx-drag-handle">⠿</span>
+          <span class="fx-dot off" id="fxdot-chorus"></span>
+          <span class="fx-card-name">CHORUS</span>
+          <input type="checkbox" class="fx-card-en" id="fxen-chorus"
+                 onclick="event.stopPropagation();toggleFxEffect('chorus',this.checked)">
+          <span class="fx-card-arr">▼</span>
+        </div>
+        <div class="fx-card-body">
+          <div class="fx-ctrl">
+            <label>RATE <span id="fxChoRateV">0.50</span>Hz</label>
+            <input type="range" id="fxChoRate" min="0.05" max="8" step="0.05" value="0.5">
+          </div>
+          <div class="fx-ctrl">
+            <label>DEPTH <span id="fxChoDepthV">0.50</span></label>
+            <input type="range" id="fxChoDepth" min="0" max="1" step="0.05" value="0.5">
+          </div>
+          <div class="fx-ctrl">
+            <label>MIX <span id="fxChoMixV">0.50</span></label>
+            <input type="range" id="fxChoMix" min="0" max="1" step="0.05" value="0.5">
+          </div>
+          <div class="fx-ctrl">
+            <label>SPREAD <span id="fxChoSpreadV">0.50</span></label>
+            <input type="range" id="fxChoSpread" min="0" max="1" step="0.05" value="0.5">
+          </div>
+        </div>
+      </div>
+
+      <!-- DISTORTION -->
+      <div class="fx-card collapsed" id="fxc-dist" draggable="true" data-fx="dist">
+        <div class="fx-card-hdr" onclick="toggleFxCard('fxc-dist')">
+          <span class="fx-drag-handle">⠿</span>
+          <span class="fx-dot off" id="fxdot-dist"></span>
+          <span class="fx-card-name">DISTORTION</span>
+          <input type="checkbox" class="fx-card-en" id="fxen-dist"
+                 onclick="event.stopPropagation();toggleFxEffect('dist',this.checked)">
+          <span class="fx-card-arr">▼</span>
+        </div>
+        <div class="fx-card-body">
+          <select class="fx-sel" id="fxDistChar">
+            <option value="soft">SOFT CLIP</option>
+            <option value="hard">HARD CLIP</option>
+            <option value="fuzz">FUZZ</option>
+          </select>
+          <div class="fx-ctrl">
+            <label>AMOUNT <span id="fxDistAmtV">0.00</span></label>
+            <input type="range" id="fxDistAmt" min="0" max="1" step="0.01" value="0">
+          </div>
+        </div>
+      </div>
+
+      <!-- DELAY -->
+      <div class="fx-card collapsed" id="fxc-delay" draggable="true" data-fx="delay">
+        <div class="fx-card-hdr" onclick="toggleFxCard('fxc-delay')">
+          <span class="fx-drag-handle">⠿</span>
+          <span class="fx-dot off" id="fxdot-delay"></span>
+          <span class="fx-card-name">DELAY</span>
+          <input type="checkbox" class="fx-card-en" id="fxen-delay"
+                 onclick="event.stopPropagation();toggleFxEffect('delay',this.checked)">
+          <span class="fx-card-arr">▼</span>
+        </div>
+        <div class="fx-card-body">
+          <div class="fx-ctrl">
+            <label>TIME <span id="fxDelTimeV">250</span>ms</label>
+            <input type="range" id="fxDelTime" min="10" max="2000" step="10" value="250">
+          </div>
+          <div class="fx-ctrl">
+            <label>FEEDBACK <span id="fxDelFbV">0.30</span></label>
+            <input type="range" id="fxDelFb" min="0" max="0.95" step="0.01" value="0.3">
+          </div>
+          <div class="fx-ctrl">
+            <label>MIX <span id="fxDelMixV">0.30</span></label>
+            <input type="range" id="fxDelMix" min="0" max="1" step="0.05" value="0.3">
+          </div>
+        </div>
+      </div>
+
+      <!-- PARTICLE REVERB -->
+      <div class="fx-card collapsed" id="fxc-reverb" draggable="true" data-fx="reverb">
+        <div class="fx-card-hdr" onclick="toggleFxCard('fxc-reverb')">
+          <span class="fx-drag-handle">⠿</span>
+          <span class="fx-dot off" id="fxdot-reverb"></span>
+          <span class="fx-card-name">PARTICLE REVERB</span>
+          <input type="checkbox" class="fx-card-en" id="fxen-reverb"
+                 onclick="event.stopPropagation();toggleFxEffect('reverb',this.checked)">
+          <span class="fx-card-arr">▼</span>
+        </div>
+        <div class="fx-card-body">
+          <div class="fx-ctrl">
+            <label>MIX <span id="fxRevMixV">0.35</span></label>
+            <input type="range" id="fxRevMix" min="0" max="1" step="0.05" value="0.35">
+          </div>
+        </div>
+      </div>
+
+    </div><!-- #fx-chain -->
+  </div><!-- #fx-sidebar-inner -->
+</div><!-- #fx-sidebar -->
+
+<!-- Top-right button cluster -->
+<div id="topbar-btns">
+  <button id="fxToggleBtn" onclick="toggleFxSidebar()">EFFECTS</button>
+  <button id="mmOpenBtn" onclick="openModMatrix()">MOD MATRIX</button>
+</div>
+
+<!-- ═══════════════════════════ MOD MATRIX PAGE ═══════════════════════════ -->
+<div id="modMatrixPage">
+  <div class="mm-topbar">
+    <button class="mm-back-btn" onclick="closeModMatrix()">← BACK</button>
+    <span class="mm-page-title">MOD MATRIX</span>
+    <div class="mm-topbar-right">
+      <span class="mm-badge">MATRIX CPU: <span id="mmCpuPct">0</span>%</span>
+      <button class="btn" style="width:auto;padding:5px 14px;" onclick="toggleFxSidebar()">EFFECTS</button>
+    </div>
+  </div>
+
+  <div class="mm-body">
+    <!-- ── LEFT 65% ── -->
+    <div class="mm-left">
+
+      <!-- View toggle + clear -->
+      <div class="mm-view-bar">
+        <button class="mm-vtbtn active" id="mmVtGrid"  onclick="mmSetView('grid')">GRID</button>
+        <button class="mm-vtbtn"        id="mmVtPatch" onclick="mmSetView('patch')">PATCH</button>
+        <span class="mm-conn-count"><span id="mmConnCount">0</span> / 64</span>
+        <button class="btn" style="width:auto;padding:4px 10px;font-size:11px;margin-left:auto;" onclick="mmClearAll()">CLEAR ALL</button>
+        <button class="btn" style="width:auto;padding:4px 10px;font-size:11px;" id="mmEnAllBtn" onclick="mmToggleEnableAll()">DISABLE ALL</button>
+      </div>
+
+      <!-- Factory patches -->
+      <div class="mm-factory-bar">
+        <span class="mm-section-lbl">FACTORY PATCHES</span>
+        <label class="mm-clr-first-lbl" style="margin-left:auto;">
+          <input type="checkbox" id="mmClearFirst"> CLEAR FIRST
+        </label>
+      </div>
+      <div class="mm-factory-grid">
+        <button class="mm-fac-btn" onclick="mmLoadFactory(0)">VELOCITY EXPR.</button>
+        <button class="mm-fac-btn" onclick="mmLoadFactory(1)">SPATIAL MIXER</button>
+        <button class="mm-fac-btn" onclick="mmLoadFactory(2)">RHYTHMIC TIMBRE</button>
+        <button class="mm-fac-btn" onclick="mmLoadFactory(3)">COLLISION CHAOS</button>
+        <button class="mm-fac-btn" onclick="mmLoadFactory(4)">WARMTH HARMONY</button>
+        <button class="mm-fac-btn" onclick="mmLoadFactory(5)">MOUSE CONDUCTOR</button>
+        <button class="mm-fac-btn" onclick="mmLoadFactory(6)">ORGANIC DRIFT</button>
+        <button class="mm-fac-btn" onclick="mmLoadFactory(7)">CLUSTER SWELL</button>
+      </div>
+
+      <!-- GRID VIEW -->
+      <div id="mmGridView">
+        <!-- Builder -->
+        <div class="mm-builder">
+          <div class="mm-builder-row">
+            <div class="mm-builder-col">
+              <div class="param-label">SOURCE</div>
+              <select id="mmSrcSel" class="mm-sel"></select>
+            </div>
+            <div class="mm-arrow-col">→</div>
+            <div class="mm-builder-col">
+              <div class="param-label">DESTINATION</div>
+              <select id="mmDstSel" class="mm-sel"></select>
+            </div>
+          </div>
+          <div class="mm-builder-row" style="align-items:center;gap:16px;margin-top:10px;">
+            <div style="display:flex;flex-direction:column;align-items:center;gap:4px;">
+              <div class="param-label" style="text-align:center;">AMOUNT</div>
+              <div class="mm-knob-wrap">
+                <canvas id="mmAmtKnob" width="60" height="60" class="mm-knob"></canvas>
+                <div class="mm-knob-val" id="mmAmtVal">+0.50</div>
+              </div>
+            </div>
+            <div style="flex:1;display:flex;flex-direction:column;gap:8px;">
+              <div class="mm-bipolar-bar-wrap">
+                <div class="mm-bipolar-bar" id="mmBipolarBar"></div>
+                <div class="mm-bipolar-center"></div>
+              </div>
+              <div style="display:flex;align-items:center;gap:10px;">
+                <label class="toggle-row" style="gap:8px;flex-shrink:0;">
+                  <input type="checkbox" id="mmNewEnabled" checked>
+                  <span>ENABLED</span>
+                </label>
+                <input type="text" id="mmLabelInput" placeholder="optional label…" style="flex:1;">
+              </div>
+              <button class="btn" id="mmAddBtn" onclick="mmAddConnection()">+ ADD CONNECTION</button>
+            </div>
+          </div>
+        </div>
+
+        <!-- List controls -->
+        <div class="mm-list-hdr">
+          <span class="param-label">SORT:</span>
+          <button class="mm-sort-btn active" onclick="mmSetSort(this,'source')">SOURCE</button>
+          <button class="mm-sort-btn"        onclick="mmSetSort(this,'destination')">DEST</button>
+          <button class="mm-sort-btn"        onclick="mmSetSort(this,'amount')">AMOUNT</button>
+          <input type="text" id="mmFilter" placeholder="filter…" style="margin-left:auto;width:110px;" oninput="mmRenderConnList()">
+          <button class="btn" style="width:auto;padding:4px 10px;font-size:11px;" onclick="mmSavePatch()">SAVE</button>
+          <button class="btn" style="width:auto;padding:4px 10px;font-size:11px;" onclick="mmLoadPatch()">LOAD</button>
+        </div>
+
+        <div id="mmConnList" class="mm-conn-list"></div>
+      </div>
+
+      <!-- PATCH VIEW -->
+      <div id="mmPatchView" style="display:none;">
+        <canvas id="mmPatchCanvas"></canvas>
+        <div class="mm-patch-hint">Drag from a source node → destination to connect · Right-click curve to delete</div>
+      </div>
+    </div>
+
+    <!-- ── RIGHT 35% ── -->
+    <div class="mm-right">
+
+      <!-- Live preview -->
+      <div class="mm-right-section">
+        <div class="mm-right-hdr">
+          <span class="mm-section-lbl">LIVE PREVIEW</span>
+          <button class="btn" id="mmFsBtn" style="width:auto;padding:3px 10px;font-size:11px;" onclick="mmToggleFullscreen()">⤢ FULLSCREEN</button>
+        </div>
+        <canvas id="mmMiniCanvas" class="mm-mini-canvas" style="aspect-ratio:16/9;"></canvas>
+        <canvas id="mmMiniScope"  class="mm-mini-scope"></canvas>
+      </div>
+
+      <!-- LFO 1 + 2 -->
+      <div class="mm-right-section">
+        <div class="mm-right-hdr">
+          <span class="mm-section-lbl">LFO 1 &amp; 2</span>
+        </div>
+        <canvas id="mmLfoScope" class="mm-lfo-scope"></canvas>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;">
+          <div class="ctrl">
+            <label>LFO 2 RATE <span id="mmLfo2RateV">1.00</span>Hz</label>
+            <input type="range" id="mmLfo2Rate" min="0.05" max="20" step="0.05" value="1"
+              oninput="document.getElementById('mmLfo2RateV').textContent=parseFloat(this.value).toFixed(2)">
+          </div>
+          <div class="ctrl">
+            <label>LFO 2 DEPTH <span id="mmLfo2DepthV">0.50</span></label>
+            <input type="range" id="mmLfo2Depth" min="0" max="1" step="0.01" value="0.5"
+              oninput="document.getElementById('mmLfo2DepthV').textContent=parseFloat(this.value).toFixed(2)">
+          </div>
+          <div style="display:flex;flex-direction:column;gap:6px;">
+            <div class="param-label">SHAPE</div>
+            <select id="mmLfo2Shape" class="mm-sel" style="font-size:11px;padding:5px 6px;">
+              <option value="sine">SINE</option>
+              <option value="tri">TRIANGLE</option>
+              <option value="saw">SAWTOOTH</option>
+              <option value="ramp">RAMP DOWN</option>
+              <option value="square">SQUARE</option>
+              <option value="sh">SAMPLE+HOLD</option>
+              <option value="rsmooth">RANDOM SMOOTH</option>
+            </select>
+          </div>
+          <div class="ctrl">
+            <label>PHASE <span id="mmLfo2PhaseV">0</span>°</label>
+            <input type="range" id="mmLfo2Phase" min="0" max="360" step="1" value="0"
+              oninput="document.getElementById('mmLfo2PhaseV').textContent=this.value">
+          </div>
+        </div>
+        <div style="display:flex;gap:12px;align-items:center;">
+          <label class="toggle-row">
+            <input type="checkbox" id="mmLfo2Sync">
+            <span>BPM SYNC</span>
+          </label>
+          <select id="mmLfo2SyncDiv" class="mm-sel" style="flex:1;font-size:11px;padding:5px 6px;">
+            <option value="16">1/16</option><option value="8">1/8</option>
+            <option value="4">1/4</option><option value="2">1/2</option>
+            <option value="1" selected>1 BAR</option>
+            <option value="0.5">2 BAR</option><option value="0.25">4 BAR</option>
+          </select>
+        </div>
+      </div>
+
+      <!-- Source monitor -->
+      <div class="mm-srcmon-section">
+        <div class="mm-right-hdr">
+          <span class="mm-section-lbl">SOURCE MONITOR</span>
+        </div>
+        <div id="mmSrcMon" class="mm-srcmon"></div>
+      </div>
+
+    </div><!-- .mm-right -->
+  </div><!-- .mm-body -->
+</div><!-- #modMatrixPage -->
+
 <script>
 'use strict';
 
@@ -920,23 +1620,79 @@ const wrap    = document.getElementById('canvasWrap');
 
 const SEQ_H = 110; // must match #seqWrap height in CSS
 let W = 1, H = 1;
+// Convert a mouse/touch event to canvas buffer coordinates.
+// Divides by (cssSize / bufferSize) so clicks are correct even if the canvas
+// CSS size and buffer size temporarily disagree during a resize transition.
+function canvasPt(e) {
+  const r   = canvas.getBoundingClientRect();
+  const src = e.touches ? e.touches[0] : e;
+  const sx  = r.width  > 0 ? canvas.width  / r.width  : 1;
+  const sy  = r.height > 0 ? canvas.height / r.height : 1;
+  return { x: (src.clientX - r.left) * sx, y: (src.clientY - r.top) * sy };
+}
 function resize() {
   const r = wrap.getBoundingClientRect();
-  W = r.width; H = r.height - 60 - SEQ_H;
-  canvas.width = W;  canvas.height = H;
-  scopeCv.width = W; scopeCv.height = 60;
+  W = Math.floor(r.width);
+  H = Math.floor(r.height - 60 - SEQ_H);
+  if (W < 1 || H < 1) return; // guard against zero-size during init
+  canvas.width  = W;  canvas.height  = H;
+  scopeCv.width = W;  scopeCv.height = 60;
+  // Pin CSS size explicitly so flexbox can never make the CSS size drift
+  // away from the canvas buffer size (the root cause of click offsets)
+  canvas.style.width   = W + 'px';
+  canvas.style.height  = H + 'px';
+  scopeCv.style.width  = W + 'px';
+  scopeCv.style.height = '60px';
 }
 resize();
-window.addEventListener('resize', resize);
+// ResizeObserver fires on ANY layout change (sidebar open/close, panel resize,
+// maximize/minimize, display scaling change) — window.resize alone misses them.
+new ResizeObserver(() => resize()).observe(wrap);
 
 // ─────────────────────────────────────────────────────────────
 // Audio globals
 // ─────────────────────────────────────────────────────────────
 
 let AC = null, masterGain = null, limiter = null;
+
+// Synth params cache — populated once per frame by refreshSynthParams().
+// Avoids repeated getElementById calls inside syncAudio() for every particle.
+const _sp = {};
+function refreshSynthParams() {
+  _sp.mode        = getSynthMode();
+  _sp.fmratio     = document.getElementById('fmratio')?.value ?? '1';
+  _sp.fmfeedback  = parseFloat(document.getElementById('fmfeedback')?.value ?? '0');
+  _sp.bubbleOn    = document.getElementById('bubbleOn')?.checked ?? false;
+  _sp.lfotarget   = document.getElementById('lfotarget')?.value ?? 'none';
+  _sp.harmspread  = parseFloat(document.getElementById('harmspread')?.value ?? '0');
+  _sp.resonance   = parseFloat(document.getElementById('resonance')?.value  ?? '1');
+  _sp.filtKeytrack = parseFloat(document.getElementById('filtKeytrack')?.value ?? '0.5');
+  _sp.subFiltType  = document.getElementById('subFiltType')?.value ?? 'lowpass';
+  _sp.intFmOn      = document.getElementById('intFmOn')?.checked ?? false;
+  _sp.intFmRatio   = parseFloat(document.getElementById('intFmRatio')?.value ?? '2');
+  _sp.intFmIndex   = parseFloat(document.getElementById('intFmIndex')?.value ?? '3');
+  _sp.intFmEnv     = document.getElementById('intFmEnv')?.checked ?? false;
+  _sp.osc2Oct      = parseInt(document.getElementById('osc2Oct')?.value ?? '0');
+  _sp.osc2Semi     = parseInt(document.getElementById('osc2Semi')?.value ?? '0');
+  _sp.osc2Fine     = parseFloat(document.getElementById('osc2Fine')?.value ?? '0');
+  _sp.osc2Vol      = parseFloat(document.getElementById('osc2Vol')?.value ?? '0.5');
+  _sp.noiseVol     = parseFloat(document.getElementById('noiseVol')?.value ?? '0');
+  _sp.noiseEnv     = document.getElementById('noiseEnv')?.checked ?? false;
+  _sp.chorusOn     = document.getElementById('fxen-chorus')?.checked ?? false;
+  _sp.chorusRate   = parseFloat(document.getElementById('fxChoRate')?.value   ?? '0.5');
+  _sp.chorusDepth  = parseFloat(document.getElementById('fxChoDepth')?.value  ?? '0.5');
+  _sp.chorusMix    = parseFloat(document.getElementById('fxChoMix')?.value    ?? '0.5');
+  _sp.chorusSpread = parseFloat(document.getElementById('fxChoSpread')?.value ?? '0.5');
+}
 let reverb = null, reverbGain = null, analyser = null;
 let droneOsc = null, droneGain = null;
 let audioStarted = false;
+let chorusWorkletReady = false;
+
+// Global effects chain nodes (inserted between masterGain and limiter)
+let globalDistDryGain = null, globalDistWetGain = null, globalDistShaper = null, globalDistOut = null;
+let globalDelayNode = null, globalDelayFbGain = null, globalDelayWetGain = null;
+let globalDelayDryGain = null, globalDelayOut = null;
 
 // Global grain limiter — 8 slots; skip new grains when all busy
 let activeGrains = 0;
@@ -1106,7 +1862,7 @@ const _sh = {
   },
   sel: (id, lbl, opts, sel) => {
     const o = opts.map(([v,l]) => `<option value="${v}"${v===sel?' selected':''}>${l}</option>`).join('');
-    return `<div style="font-size:10px;color:#667;letter-spacing:1px;margin-top:4px;">${lbl}</div><select id="${id}">${o}</select>`;
+    return `<div class="param-label">${lbl}</div><select id="${id}">${o}</select>`;
   },
   chk: (id, lbl, checked) =>
     `<div class="toggle-row"><input type="checkbox" id="${id}"${checked?' checked':''}><span>${lbl}</span></div>`,
@@ -1128,7 +1884,7 @@ function emWarmthHint(min, max) {
 function buildSettingsHTML(obj) {
   const o = obj;
   let h = `<div style="display:flex;justify-content:space-between;align-items:center;">
-    <span id="soHdr" style="color:#3af;font-size:11px;font-weight:bold;letter-spacing:1px;">${o.name.toUpperCase()}</span>
+    <span id="soHdr" style="color:#3af;font-size:13px;font-weight:bold;letter-spacing:1px;">${o.name.toUpperCase()}</span>
     <button id="soClose" style="background:none;border:none;color:#667;cursor:pointer;font-size:13px;padding:2px 4px;font-family:inherit;">✕</button>
   </div>
   <div class="ctrl"><label>NAME</label><input type="text" id="soName" value="${o.name}"></div>
@@ -1188,20 +1944,20 @@ function buildSettingsHTML(obj) {
     h += _sh.row('soEmSpeedVar','SPEED VARIANCE',o.speedVariance,0,1,0.05);
     h += _sh.sep();
     // Warmth range with gradient preview
-    h += `<div style="font-size:10px;color:#667;letter-spacing:1px;margin-top:2px;">WARMTH RANGE</div>
+    h += `<div class="param-label">WARMTH RANGE</div>
     <div style="display:flex;gap:4px;align-items:center;margin-top:4px;">
-      <span style="font-size:9px;color:#3af;width:20px;text-align:right;" id="soEmWminV">${o.warmthMin.toFixed(2)}</span>
+      <span style="font-size:13px;color:#3af;width:20px;text-align:right;" id="soEmWminV">${o.warmthMin.toFixed(2)}</span>
       <input type="range" id="soEmWmin" min="0" max="1" step="0.05" value="${o.warmthMin}" style="flex:1">
     </div>
     <div style="display:flex;gap:4px;align-items:center;margin-top:4px;">
-      <span style="font-size:9px;color:#3af;width:20px;text-align:right;" id="soEmWmaxV">${o.warmthMax.toFixed(2)}</span>
+      <span style="font-size:13px;color:#3af;width:20px;text-align:right;" id="soEmWmaxV">${o.warmthMax.toFixed(2)}</span>
       <input type="range" id="soEmWmax" min="0" max="1" step="0.05" value="${o.warmthMax}" style="flex:1">
     </div>
     <div id="emWarmthPreview">
       <div class="em-min-thumb" id="emMinThumb" style="left:${o.warmthMin*100}%"></div>
       <div class="em-max-thumb" id="emMaxThumb" style="left:${o.warmthMax*100}%"></div>
     </div>`;
-    h += `<div style="font-size:9px;color:#445;margin-top:3px;text-align:center;" id="emWarmthHint">${emWarmthHint(o.warmthMin,o.warmthMax)}</div>`;
+    h += `<div style="font-size:13px;color:#445;margin-top:3px;text-align:center;" id="emWarmthHint">${emWarmthHint(o.warmthMin,o.warmthMax)}</div>`;
     h += _sh.sep();
     h += _sh.row('soEmTensMin','TENSION MIN',o.tensionMin,0.1,1,0.05);
     h += _sh.row('soEmTensMax','TENSION MAX',o.tensionMax,0.1,1,0.05);
@@ -1535,24 +2291,60 @@ function makePulseWave(ac, pw) {
   return ac.createPeriodicWave(real, imag, { disableNormalization: false });
 }
 
-// Count oscillators per particle under current settings
+// Count oscillators per particle under current settings (used for display)
 function countOscsPerParticle() {
   const mode = getSynthMode();
   const N    = parseInt(document.getElementById('uniVoices')?.value || '1');
-  let count  = (mode === 'add') ? 6 : N;  // ADD: 6 harmonics; FM/SUB: unison voices
-  if (mode === 'fm') count += 1;           // FM modulator (proximity system)
-  if (document.getElementById('intFmOn')?.checked && mode === 'fm') count += 1; // internal FM osc
+  let count  = (mode === 'add') ? 6 : N;
+  if (mode === 'fm') count += 1;
+  if (document.getElementById('intFmOn')?.checked && mode === 'fm') count += 1;
   if (document.getElementById('osc2On')?.checked) count += 1;
   return count;
 }
 
-// Effective particle limit given oscillator budget
+// Node-weight per particle — counts the actual Web Audio processing cost.
+// Each unison extra voice creates osc + gain + panner (3 nodes); budget them as 2.
+// OSC2 + ring mod adds osc + gain + ringGain (3 nodes); budget as 2.
+function nodeWeightPerParticle() {
+  const mode = getSynthMode();
+  const N    = parseInt(document.getElementById('uniVoices')?.value || '1');
+  let w;
+  if (mode === 'add') {
+    w = 6; // 6 harmonic oscillators, no panner/gain overhead per voice
+  } else {
+    // Primary voice weight = 1; each extra unison voice = osc + gain + panner → weight 2
+    w = 1 + Math.max(0, N - 1) * 2;
+  }
+  if (mode === 'fm') w += 1;
+  if (document.getElementById('intFmOn')?.checked && mode === 'fm') w += 1;
+  if (document.getElementById('osc2On')?.checked) w += 2; // osc2 + gain (+ ringGain if ring)
+  return Math.max(1, w);
+}
+
+// Effective particle limit given node-weight budget
 function effectiveParticleLimit() {
-  const MAX = 192;
-  const perP = Math.max(1, countOscsPerParticle());
-  const auto = Math.max(4, Math.floor(MAX / perP));
+  const MAX  = 192;
+  const auto = Math.max(4, Math.floor(MAX / nodeWeightPerParticle()));
   const slider = parseInt(document.getElementById('plimit')?.value || '24');
   return Math.min(slider, auto);
+}
+
+// Spread multi-particle node operations across frames to avoid audio thread spikes.
+// Returns a cancel function. batchSize = particles processed per rAF tick.
+let _staggerCancel = null;
+function staggerParticles(fn, batchSize) {
+  if (_staggerCancel) _staggerCancel();
+  let i = 0;
+  let cancelled = false;
+  _staggerCancel = () => { cancelled = true; };
+  function step() {
+    if (cancelled) return;
+    const end = Math.min(i + batchSize, particles.length);
+    for (; i < end; i++) fn(particles[i]);
+    if (i < particles.length) requestAnimationFrame(step);
+    else _staggerCancel = null;
+  }
+  requestAnimationFrame(step);
 }
 
 // === AUDIO ENGINE ===
@@ -1673,6 +2465,10 @@ class Particle {
     this.addOscs = null; this.addGains = null; this._addMerger = null;
     this.fbDelay = null; this.fbGain = null;
     this._fmAccum = 0;
+    // Mod matrix per-particle state
+    this.spawnTime = performance.now();
+    this._mods = {};
+    this._collImp = 0;
     // Internal FM
     this.intFmOsc = null; this.intFmGain = null;
     // Unison
@@ -1686,9 +2482,9 @@ class Particle {
     this.osc2 = null; this.osc2Gain = null; this.osc2RingGain = null;
     // Noise
     this.noiseNode = null; this.noiseFilter = null; this.noiseGain = null;
-    // Chorus
-    this.chorDelay = null; this.chorDryGain = null; this.chorWetGain = null; this.chorMixGain = null;
-    this._chorPhase = Math.random() * Math.PI * 2;
+    // Chorus (AudioWorklet node)
+    this.chorNode = null;
+    this._chorPhase = Math.random() * Math.PI * 2; // random phase for stereo spread
     if (audioStarted) this.initAudio();
   }
 
@@ -1790,8 +2586,8 @@ class Particle {
       if (document.getElementById('osc2On')?.checked) this._initOsc2();
       // Init noise if volume > 0
       if (sl('noiseVol') > 0) this._initNoise();
-      // Init chorus if enabled
-      if (document.getElementById('chorusOn')?.checked) this._initChorus();
+      // Init chorus if enabled (sidebar toggle)
+      if (document.getElementById('fxen-chorus')?.checked) this._initChorus();
       this.syncAudio(true);
     } catch (e) { console.warn('Particle.initAudio error:', e); }
   }
@@ -1803,26 +2599,35 @@ class Particle {
     const w      = this.warmth;
     const freq   = warmthToFreq(w, this);
     const spd    = Math.hypot(this.vx, this.vy);
-    const mode   = getSynthMode();
-    const targetFreq = freq * (1 + spd * 0.006);
+    const mode   = _sp.mode || getSynthMode();  // use cached value; fallback on first frame
+    // Mod matrix: read per-particle mods (zero-cost when no connections active)
+    const _mm = this._mods || {};
+    // Pitch mods: pitch_offset (semitones) + pitch_bend (cents)
+    const _mmFreqMult = (_mm.pitch_offset || _mm.pitch_bend)
+      ? Math.pow(2, ((_mm.pitch_offset || 0) * 24 + (_mm.pitch_bend || 0) * 100) / 1200)
+      : 1;
+    const _mmAmpMod = _mm.amplitude ? Math.max(0, 1 + _mm.amplitude) : 1;
+
+    const targetFreq = freq * _mmFreqMult * (1 + spd * 0.006);
     const freqTau    = tau;
 
     if (mode === 'fm' && this.osc) {
       const type = w < 0.33 ? 'sine' : w < 0.66 ? 'triangle' : 'sawtooth';
       if (this.osc.type !== type) this.osc.type = type;
       this.osc.frequency.setTargetAtTime(targetFreq, t, freqTau);
-      // Update unison extras' frequencies
       for (const e of this.uniExtras) {
         e.osc.frequency.setTargetAtTime(targetFreq, t, freqTau);
       }
-      const ratioSel = document.getElementById('fmratio').value;
-      const ratio = ratioSel === 'free' ? this.fmRatio : parseFloat(ratioSel);
-      this.fmOsc.frequency.setTargetAtTime(freq * ratio, t, freqTau);
+      const ratio = _sp.fmratio === 'free' ? this.fmRatio : parseFloat(_sp.fmratio);
+      // fm_ratio mod
+      const ratioMod = _mm.fm_ratio ? Math.max(0.1, ratio + _mm.fm_ratio * 3.5) : ratio;
+      this.fmOsc.frequency.setTargetAtTime(freq * ratioMod, t, freqTau);
       if (this.fbGain) {
-        this.fbGain.gain.setTargetAtTime(sl('fmfeedback') * freq * 0.35, t, 0.04);
+        // fm_feedback mod
+        const fbMod = _mm.fm_feedback ? Math.max(0, Math.min(1, _sp.fmfeedback + _mm.fm_feedback)) : _sp.fmfeedback;
+        this.fbGain.gain.setTargetAtTime(fbMod * freq * 0.35, t, 0.04);
       }
-      const bubbleOn = document.getElementById('bubbleOn').checked;
-      if (bubbleOn) {
+      if (_sp.bubbleOn) {
         this.filter.type = 'bandpass';
         this.filter.frequency.setTargetAtTime(freq, t, 0.1);
         this.filter.Q.value = 12;
@@ -1830,16 +2635,14 @@ class Particle {
         this.filter.type = 'allpass';
       }
       const lpfCutoff = w < 0.66 ? 22050 : freq * (3 + (1 - w) * 6);
-      const lfoCutMod = document.getElementById('lfotarget').value === 'cutoff' ? (1 + lfoVal * 0.4) : 1;
+      const lfoCutMod = _sp.lfotarget === 'cutoff' ? (1 + lfoVal * 0.4) : 1;
       this.lpf.frequency.setTargetAtTime(lpfCutoff * lfoCutMod, t, 0.08);
-      this.oscGain.gain.setTargetAtTime(this.tension * 0.05, t, tau);
-      // Internal FM
-      if (this.intFmOsc && document.getElementById('intFmOn')?.checked) {
-        const iRatio = parseFloat(document.getElementById('intFmRatio')?.value || '2');
-        const iIdx   = parseFloat(document.getElementById('intFmIndex')?.value  || '3');
-        const iEnv   = document.getElementById('intFmEnv')?.checked;
-        this.intFmOsc.frequency.setTargetAtTime(freq * iRatio, t, freqTau);
-        this.intFmGain.gain.setTargetAtTime(iIdx * freq * (iEnv ? this.tension : 1), t, 0.04);
+      this.oscGain.gain.setTargetAtTime(this.tension * 0.05 * _mmAmpMod, t, tau);
+      if (this.intFmOsc && _sp.intFmOn) {
+        const intRatioMod = _mm.int_fm_ratio ? Math.max(0.25, _sp.intFmRatio + _mm.int_fm_ratio * 8) : _sp.intFmRatio;
+        const intIdxMod   = _mm.int_fm_index ? Math.max(0, _sp.intFmIndex + _mm.int_fm_index * 10) : _sp.intFmIndex;
+        this.intFmOsc.frequency.setTargetAtTime(freq * intRatioMod, t, freqTau);
+        this.intFmGain.gain.setTargetAtTime(intIdxMod * freq * (_sp.intFmEnv ? this.tension : 1), t, 0.04);
       } else if (this.intFmGain) {
         this.intFmGain.gain.setTargetAtTime(0, t, 0.04);
       }
@@ -1849,14 +2652,18 @@ class Particle {
       for (const e of this.uniExtras) {
         e.osc.frequency.setTargetAtTime(targetFreq, t, freqTau);
       }
-      const keytrack = parseFloat(document.getElementById('filtKeytrack')?.value || '0.5');
-      const ktMult   = Math.pow(freq / ROOT, keytrack);
-      const baseCutoff = Math.min(8000, freq * (1.5 + spd * 0.12)) * ktMult;
-      const filtType = document.getElementById('subFiltType')?.value || 'lowpass';
-      const isLadder = filtType === 'ladder';
-      this.subFilter.type = isLadder ? 'lowpass' : filtType;
+      const ktMult    = Math.pow(freq / ROOT, _sp.filtKeytrack);
+      const _baseCutoffRaw = Math.min(8000, freq * (1.5 + spd * 0.12)) * ktMult;
+      // filter_cutoff mod: ±3 octaves shift
+      const baseCutoff = _mm.filter_cutoff
+        ? Math.max(80, Math.min(18000, _baseCutoffRaw * Math.pow(2, _mm.filter_cutoff * 3)))
+        : _baseCutoffRaw;
+      const isLadder  = _sp.subFiltType === 'ladder';
+      this.subFilter.type = isLadder ? 'lowpass' : _sp.subFiltType;
       this.subFilter.frequency.setTargetAtTime(baseCutoff, t, 0.08);
-      this.subFilter.Q.value = sl('resonance');
+      // filter_res mod
+      const resMod = _mm.filter_res ? Math.max(0.1, Math.min(20, _sp.resonance + _mm.filter_res * 10)) : _sp.resonance;
+      this.subFilter.Q.value = resMod;
       if (this.ladderFilt2) {
         const lType = isLadder ? 'lowpass' : 'allpass';
         if (this.ladderFilt2.type !== lType) {
@@ -1871,47 +2678,47 @@ class Particle {
           this.ladderFilt2.Q.value = 0.5; this.ladderFilt3.Q.value = 0.5; this.ladderFilt4.Q.value = 0.5;
         }
       }
-      this.oscGain.gain.setTargetAtTime(this.tension * 0.05, t, tau);
+      this.oscGain.gain.setTargetAtTime(this.tension * 0.05 * _mmAmpMod, t, tau);
 
     } else if (mode === 'add' && this.addOscs) {
-      const spread = sl('harmspread');
+      // harmonic_tilt mod: positive = tilt toward fundamentals, negative = boost highs
+      const htilt = _mm.harmonic_tilt || 0;
+      // harmonic_spread mod
+      const hspr = _sp.harmspread + (_mm.harmonic_spread || 0);
       for (let h = 0; h < 6; h++) {
         const harmN = h + 1;
         this.addOscs[h].frequency.setTargetAtTime(targetFreq * harmN, t, freqTau);
-        const amp = (1 / harmN) * (1 + w * spread * h);
-        this.addGains[h].gain.setTargetAtTime(this.tension * 0.008 * amp, t, tau);
+        const tiltFactor = Math.pow(1 / harmN, Math.max(0, htilt));
+        const amp = (1 / harmN) * tiltFactor * (1 + w * hspr * h);
+        this.addGains[h].gain.setTargetAtTime(this.tension * 0.008 * amp * _mmAmpMod, t, tau);
       }
       this.oscGain.gain.setTargetAtTime(1, t, tau);
     }
 
     // OSC 2 frequency update
     if (this.osc2) {
-      const oct  = parseInt(document.getElementById('osc2Oct')?.value  || '0');
-      const semi = parseInt(document.getElementById('osc2Semi')?.value || '0');
-      const fine = parseFloat(document.getElementById('osc2Fine')?.value || '0');
-      const osc2Freq = freq * Math.pow(2, oct) * Math.pow(2, semi / 12) * Math.pow(2, fine / 1200);
+      const osc2FineMod = _mm.osc2_detune ? _sp.osc2Fine + _mm.osc2_detune * 50 : _sp.osc2Fine;
+      const osc2Freq = freq * Math.pow(2, _sp.osc2Oct) * Math.pow(2, _sp.osc2Semi / 12) * Math.pow(2, osc2FineMod / 1200);
       this.osc2.frequency.setTargetAtTime(osc2Freq, t, freqTau);
-      if (this.osc2Gain && !this.osc2RingGain)
-        this.osc2Gain.gain.setTargetAtTime(sl('osc2Vol'), t, tau);
+      if (this.osc2Gain && !this.osc2RingGain) {
+        const osc2VolMod = _mm.osc2_volume ? Math.max(0, Math.min(1, _sp.osc2Vol + _mm.osc2_volume)) : _sp.osc2Vol;
+        this.osc2Gain.gain.setTargetAtTime(osc2VolMod, t, tau);
+      }
     }
 
     // Noise envelope
     if (this.noiseGain) {
-      const nVol = sl('noiseVol');
-      const nEnv = document.getElementById('noiseEnv')?.checked;
-      this.noiseGain.gain.setTargetAtTime(nVol * (nEnv ? this.tension : 1) * 0.35, t, tau);
+      this.noiseGain.gain.setTargetAtTime(_sp.noiseVol * (_sp.noiseEnv ? this.tension : 1) * 0.35, t, tau);
     }
 
-    // Chorus LFO modulation (JS-driven, no extra oscillator needed)
-    if (this.chorDelay && document.getElementById('chorusOn')?.checked) {
-      const rate  = parseFloat(document.getElementById('chorusRate')?.value  || '0.5');
-      const depth = parseFloat(document.getElementById('chorusDepth')?.value || '0.5');
-      const mix   = parseFloat(document.getElementById('chorusMix')?.value   || '0.5');
-      const lfo   = Math.sin(t * 2 * Math.PI * rate + this._chorPhase);
-      this.chorDelay.delayTime.setValueAtTime(Math.max(0.001, 0.008 + lfo * 0.007 * depth), t);
-      this.chorDryGain.gain.setTargetAtTime(1 - mix * 0.5, t, 0.05);
-      this.chorWetGain.gain.setTargetAtTime(mix * 0.7,     t, 0.05);
+    // Pan mod
+    if (_mm.pan && this.uniPrimaryPanner) {
+      this.uniPrimaryPanner.pan.setTargetAtTime(Math.max(-1, Math.min(1, _mm.pan)), t, 0.1);
     }
+
+    // Chorus AudioWorklet params are pushed from slider handlers, not per-frame.
+    // Only phaseOffset (per-particle) needs updating, and only when spread changes —
+    // handled by the fxChoSpread slider's onChange.
   }
 
   triggerFilterEnv(impact) {
@@ -1950,7 +2757,7 @@ class Particle {
     if (!this.oscGain) return;
     const t = AC.currentTime;
     try { this.oscGain.gain.setTargetAtTime(0, t, 0.015); } catch (_) {}
-    if (this.chorMixGain) { try { this.chorMixGain.gain.setTargetAtTime(0, t, 0.015); } catch (_) {} }
+    if (this.chorNode) { try { this.chorNode.disconnect(); } catch (_) {} }
     const extras = (this.uniExtras || []).flatMap(e => [e.osc, e.gain, e.panner]);
     const nodes = [
       this.osc, this.fmOsc, this.fmGain, this.filter, this.lpf, this.oscGain,
@@ -1961,7 +2768,7 @@ class Particle {
       this.ladderFilt2, this.ladderFilt3, this.ladderFilt4,
       this.osc2, this.osc2Gain, this.osc2RingGain,
       this.noiseNode, this.noiseFilter, this.noiseGain,
-      this.chorDelay, this.chorDryGain, this.chorWetGain, this.chorMixGain,
+      this.chorNode,
       ...(this.addOscs || []), ...(this.addGains || []), ...extras,
     ];
     setTimeout(() => {
@@ -1972,8 +2779,9 @@ class Particle {
       if (this._hadChorus) {
         try { if (this.oscGain) this.oscGain.connect(masterGain); } catch (_) {}
       }
+      this._hadChorus = false;
     }, 150);
-    this._hadChorus = !!this.chorDelay;
+    this._hadChorus = !!this.chorNode;
     this.osc = null; this.fmOsc = null; this.fmGain = null;
     this.filter = null; this.lpf = null; this.oscGain = null;
     this.subFilter = null; this.addOscs = null; this.addGains = null;
@@ -1985,7 +2793,7 @@ class Particle {
     this.ladderFilt2 = null; this.ladderFilt3 = null; this.ladderFilt4 = null;
     this.osc2 = null; this.osc2Gain = null; this.osc2RingGain = null;
     this.noiseNode = null; this.noiseFilter = null; this.noiseGain = null;
-    this.chorDelay = null; this.chorDryGain = null; this.chorWetGain = null; this.chorMixGain = null;
+    this.chorNode = null;
   }
 }
 
@@ -2141,33 +2949,36 @@ Particle.prototype._destroyNoise = function() {
 };
 
 Particle.prototype._initChorus = function() {
-  if (!this.oscGain || !AC || this.chorDelay) return;
-  const t = AC.currentTime;
-  this.chorDelay   = AC.createDelay(0.04); this.chorDelay.delayTime.value = 0.01;
-  this.chorDryGain = AC.createGain(); this.chorDryGain.gain.value = 0.7;
-  this.chorWetGain = AC.createGain(); this.chorWetGain.gain.value = 0.4;
-  this.chorMixGain = AC.createGain(); this.chorMixGain.gain.value = 1;
-  // Re-route: oscGain ➝ dry+delay ➝ chorMixGain ➝ masterGain
-  try { this.oscGain.disconnect(masterGain); } catch (_) {}
-  this.oscGain.connect(this.chorDryGain);
-  this.oscGain.connect(this.chorDelay);
-  this.chorDryGain.connect(this.chorMixGain);
-  this.chorDelay.connect(this.chorWetGain);
-  this.chorWetGain.connect(this.chorMixGain);
-  this.chorMixGain.connect(masterGain);
+  if (!this.oscGain || !AC || this.chorNode || !chorusWorkletReady) return;
+  try {
+    this.chorNode = new AudioWorkletNode(AC, 'chorus-processor', {
+      numberOfInputs: 1, numberOfOutputs: 1, channelCount: 1,
+      outputChannelCount: [1],
+    });
+    // Set initial params from current slider values
+    const t0     = AC.currentTime;
+    const spread = parseFloat(document.getElementById('fxChoSpread')?.value ?? '0.5');
+    const pr = this.chorNode.parameters;
+    pr.get('rate').setValueAtTime(parseFloat(document.getElementById('fxChoRate')?.value   ?? '0.5'), t0);
+    pr.get('depth').setValueAtTime(parseFloat(document.getElementById('fxChoDepth')?.value  ?? '0.5'), t0);
+    pr.get('mix').setValueAtTime(parseFloat(document.getElementById('fxChoMix')?.value      ?? '0.5'), t0);
+    pr.get('phaseOffset').setValueAtTime(this._chorPhase * spread, t0);
+    // Re-route: oscGain → chorNode → masterGain
+    try { this.oscGain.disconnect(masterGain); } catch (_) {}
+    this.oscGain.connect(this.chorNode);
+    this.chorNode.connect(masterGain);
+  } catch (e) { console.warn('_initChorus error:', e); this.chorNode = null; }
 };
 
 Particle.prototype._destroyChorus = function() {
-  if (!this.chorDelay || !AC) return;
-  const t = AC.currentTime;
-  if (this.chorMixGain) this.chorMixGain.gain.setTargetAtTime(0, t, 0.015);
+  if (!this.chorNode || !AC) return;
   const savedOscGain = this.oscGain;
+  const node = this.chorNode;
+  this.chorNode = null;
   setTimeout(() => {
-    try { this.chorDelay?.disconnect(); this.chorDryGain?.disconnect();
-          this.chorWetGain?.disconnect(); this.chorMixGain?.disconnect(); } catch (_) {}
+    try { node.disconnect(); } catch (_) {}
     try { if (savedOscGain) savedOscGain.connect(masterGain); } catch (_) {}
-  }, 100);
-  this.chorDelay = null; this.chorDryGain = null; this.chorWetGain = null; this.chorMixGain = null;
+  }, 30);
 };
 
 // === MOD MATRIX ===
@@ -2227,7 +3038,12 @@ function updateFM() {
 
   // LFO modulates FM depth
   const lfoMod = document.getElementById('lfotarget').value === 'fmdepth' ? (1 + lfoVal * 0.5) : 1;
-  for (const p of particles) p.setFMDepth(p._fmAccum * lfoMod);
+  for (const p of particles) {
+    // fm_depth mod: adds direct per-particle depth (same scale as a close-proximity pair)
+    const fmDepthMod = p._mods?.fm_depth || 0;
+    const directDepth = fmDepthMod > 0 ? fmDepthMod * fmDepth * 50 : 0;
+    p.setFMDepth((p._fmAccum + directDepth) * lfoMod);
+  }
 }
 
 function updateLFO(dt) {
@@ -2435,6 +3251,18 @@ function physics() {
       }
     }
 
+    // Mod matrix evaluation — must run before syncAudio so mods are ready
+    if (modMatrix.connections.length > 0) mmEvaluateParticle(p);
+    else p._mods = {};
+
+    // Apply physics-space mods after evaluation
+    if (p._mods.warmth_drift) {
+      p.warmth = Math.max(0, Math.min(1, p.warmth + p._mods.warmth_drift * 0.008));
+    }
+    if (p._mods.tension_decay) {
+      p.tension = Math.max(0.01, p.tension * (1 + p._mods.tension_decay * 0.04));
+    }
+
     p.syncAudio(false);
   }
 
@@ -2510,6 +3338,10 @@ function resolveCollision(a, b, dx, dy, dist) {
   const spike  = Math.min(0.35, impact * 0.012);
   a.tension = Math.min(1, a.tension + spike);
   b.tension = Math.min(1, b.tension + spike);
+  // Mod matrix collision impulse source
+  const _collImpulse = Math.min(1, Math.abs(impact) * 0.15);
+  if (_collImpulse > (a._collImp || 0)) a._collImp = _collImpulse;
+  if (_collImpulse > (b._collImp || 0)) b._collImp = _collImpulse;
 
   const threshold = 1.5 + bnc * 1.5;
   if (impact > threshold) {
@@ -2959,10 +3791,19 @@ function tickEmitters(dtSec) {
 // Audio init
 // ─────────────────────────────────────────────────────────────
 
-function initAudio() {
+async function initAudio() {
   if (audioStarted) return;
   try {
-    AC = new (window.AudioContext || window.webkitAudioContext)();
+    // 'balanced' doubles the render quantum vs 'interactive', giving the audio
+    // thread more time per callback — prevents deadline misses under heavy load.
+    // Trade-off is ~5–15ms extra latency, imperceptible in this context.
+    AC = new (window.AudioContext || window.webkitAudioContext)({ latencyHint: 'balanced' });
+
+    // Load AudioWorklet chorus module
+    try {
+      await AC.audioWorklet.addModule('src/audio/worklets/chorus.worklet.js');
+      chorusWorkletReady = true;
+    } catch (e) { console.warn('Chorus worklet failed to load:', e); }
 
     masterGain = AC.createGain();
     masterGain.gain.value = 0.6;
@@ -2983,8 +3824,39 @@ function initAudio() {
     analyser.fftSize = 2048;
     analyser.smoothingTimeConstant = 0.85;
 
-    // Signal chain: masterGain → (dry)limiter + (wet)reverb→reverbGain→limiter → analyser → out
-    masterGain.connect(limiter);
+    // Global distortion (always in chain; dry/wet mix controls amount)
+    globalDistDryGain = AC.createGain(); globalDistDryGain.gain.value = 1;
+    globalDistWetGain = AC.createGain(); globalDistWetGain.gain.value = 0;
+    globalDistShaper  = AC.createWaveShaper();
+    globalDistShaper.curve = makeDriveCurve(0);
+    globalDistShaper.oversample = '2x';
+    globalDistOut = AC.createGain(); globalDistOut.gain.value = 1;
+
+    masterGain.connect(globalDistDryGain);
+    masterGain.connect(globalDistShaper);
+    globalDistShaper.connect(globalDistWetGain);
+    globalDistDryGain.connect(globalDistOut);
+    globalDistWetGain.connect(globalDistOut);
+
+    // Global delay (feedback delay; wet mix 0 = bypassed)
+    globalDelayNode   = AC.createDelay(2.1);
+    globalDelayNode.delayTime.value = 0.25;
+    globalDelayFbGain = AC.createGain(); globalDelayFbGain.gain.value = 0.3;
+    globalDelayWetGain = AC.createGain(); globalDelayWetGain.gain.value = 0;
+    globalDelayDryGain = AC.createGain(); globalDelayDryGain.gain.value = 1;
+    globalDelayOut = AC.createGain(); globalDelayOut.gain.value = 1;
+
+    globalDistOut.connect(globalDelayDryGain);
+    globalDistOut.connect(globalDelayNode);
+    globalDelayNode.connect(globalDelayFbGain);
+    globalDelayFbGain.connect(globalDelayNode); // feedback loop
+    globalDelayNode.connect(globalDelayWetGain);
+    globalDelayDryGain.connect(globalDelayOut);
+    globalDelayWetGain.connect(globalDelayOut);
+
+    // Signal chain: masterGain → dist/delay chain → limiter → analyser → out
+    //               masterGain → reverb → reverbGain → limiter
+    globalDelayOut.connect(limiter);
     masterGain.connect(reverb);
     reverb.connect(reverbGain);
     reverbGain.connect(limiter);
@@ -3008,7 +3880,7 @@ function initAudio() {
     document.getElementById('startBtn').classList.add('running');
 
     for (const p of particles) p.initAudio();
-  } catch (e) {}
+  } catch (e) { console.warn('initAudio error:', e); }
 }
 
 // === UI & CONTROLS ===
@@ -3059,31 +3931,30 @@ wireSynthSlider('noiseVol',  'noiseVolV',  2);
 wireSynthSlider('filtDrive',     'filtDriveV',    2);
 wireSynthSlider('filtKeytrack',  'filtKeytrackV', 2);
 wireSynthSlider('filtEnvAmt',    'filtEnvAmtV',   2);
-wireSynthSlider('chorusRate',    'chorusRateV',   1);
-wireSynthSlider('chorusDepth',   'chorusDepthV',  2);
-wireSynthSlider('chorusMix',     'chorusMixV',    2);
 wireSynthSlider('intFmRatio',    'intFmRatioV',   2);
 wireSynthSlider('intFmIndex',    'intFmIndexV',   1);
 
-// Rebuild unison voices on VOICES / DETUNE / WIDTH / BLEND change
+// Rebuild unison voices on VOICES / DETUNE / WIDTH / BLEND change.
+// Stagger across frames (4 particles/frame) to avoid a burst of node-creation
+// calls hitting the audio thread in one tick.
 ['uniVoices','uniDetune','uniWidth','uniBlend'].forEach(id => {
   document.getElementById(id)?.addEventListener('input', () => {
-    for (const p of particles) { if (p.oscGain) p._syncUnisonBuild(); }
-    updateOscLimitDisplay();
+    updateOscLimitDisplay(); // cull if over budget first
+    staggerParticles(p => { if (p.oscGain) p._syncUnisonBuild(); }, 4);
   });
 });
 
-// OSC 2 enable / disable
+// OSC 2 enable / disable — staggered to avoid simultaneous oscillator creation spike
 document.getElementById('osc2On')?.addEventListener('change', function() {
   const ctrl = document.getElementById('osc2Controls');
   if (ctrl) ctrl.style.display = this.checked ? 'flex' : 'none';
+  updateOscLimitDisplay(); // update budget & cull before creating new nodes
   if (!audioStarted) return;
   if (this.checked) {
-    for (const p of particles) { if (p.oscGain) p._initOsc2(); }
+    staggerParticles(p => { if (p.oscGain) p._initOsc2(); }, 4);
   } else {
-    for (const p of particles) p._destroyOsc2();
+    for (const p of particles) p._destroyOsc2(); // destroy is cheap (just ramp+timeout)
   }
-  updateOscLimitDisplay();
 });
 
 // OSC 2 waveform
@@ -3161,15 +4032,6 @@ document.getElementById('filtDrive')?.addEventListener('input', function() {
   }
 });
 
-// Chorus enable / disable
-document.getElementById('chorusOn')?.addEventListener('change', function() {
-  if (!audioStarted) return;
-  if (this.checked) {
-    for (const p of particles) { if (p.oscGain && !p.chorDelay) p._initChorus(); }
-  } else {
-    for (const p of particles) p._destroyChorus();
-  }
-});
 
 // Internal FM enable — affects syncAudio logic; triggers updateOscLimitDisplay
 document.getElementById('intFmOn')?.addEventListener('change', updateOscLimitDisplay);
@@ -3232,6 +4094,9 @@ document.getElementById('synthmode').addEventListener('change', () => {
   document.getElementById('panel-sub').style.display = mode === 'sub' ? '' : 'none';
   document.getElementById('panel-add').style.display = mode === 'add' ? '' : 'none';
   if (audioStarted) for (const p of particles) p.initAudio();
+  // Rebuild mod matrix dst dropdown and patch view for new mode
+  mmBuildSelects();
+  if (_mmPageOpen) { mmResizePatchCanvas(); mmRenderPatchView(); }
 });
 
 // Drone toggle: ramp gain so it doesn't click
@@ -3338,8 +4203,7 @@ canvas.addEventListener('contextmenu', e => e.preventDefault());
 
 canvas.addEventListener('mousedown', e => {
   e.preventDefault();
-  const r   = canvas.getBoundingClientRect();
-  const cx  = e.clientX - r.left, cy = e.clientY - r.top;
+  const { x: cx, y: cy } = canvasPt(e);
 
   // ── Collision object right-click remove ──────────────────────
   if (e.button === 2) {
@@ -3441,8 +4305,7 @@ canvas.addEventListener('mousedown', e => {
 });
 
 canvas.addEventListener('mousemove', e => {
-  const r  = canvas.getBoundingClientRect();
-  const cx = e.clientX - r.left, cy = e.clientY - r.top;
+  const { x: cx, y: cy } = canvasPt(e);
   mouse.x = cx; mouse.y = cy;
   if (collHandleObj) {
     document.getElementById('floatPanel').classList.remove('visible');
@@ -3483,13 +4346,13 @@ canvas.addEventListener('touchstart', e => {
   e.preventDefault();
   if (!audioStarted) initAudio();
   mouse.down = true;
-  const r = canvas.getBoundingClientRect();
-  mouse.x = e.touches[0].clientX - r.left; mouse.y = e.touches[0].clientY - r.top;
+  const pt = canvasPt(e);
+  mouse.x = pt.x; mouse.y = pt.y;
 }, { passive: false });
 canvas.addEventListener('touchmove', e => {
   e.preventDefault();
-  const r = canvas.getBoundingClientRect();
-  mouse.x = e.touches[0].clientX - r.left; mouse.y = e.touches[0].clientY - r.top;
+  const pt = canvasPt(e);
+  mouse.x = pt.x; mouse.y = pt.y;
 }, { passive: false });
 canvas.addEventListener('touchend', () => { mouse.down = false; });
 
@@ -4554,13 +5417,12 @@ document.querySelectorAll('[data-ctype]').forEach(b => {
 
 // Update oscillator count display + warn when particle limit is auto-reduced
 function updateOscLimitDisplay() {
-  const perP  = Math.max(1, countOscsPerParticle());
+  const perP  = Math.max(1, countOscsPerParticle());  // actual osc count (display)
   const MAX   = 192;
-  const auto  = Math.max(4, Math.floor(MAX / perP));
+  const auto  = Math.max(4, Math.floor(MAX / nodeWeightPerParticle())); // budget by node weight
   const slide = parseInt(document.getElementById('plimit')?.value || '24');
   const warn  = document.getElementById('uniWarn');
   if (warn) warn.style.display = auto < slide ? '' : 'none';
-  // Enforce auto-limit
   particleLimit = Math.min(slide, auto);
   document.getElementById('plimv').textContent = particleLimit;
   while (particles.length > particleLimit) {
@@ -4583,22 +5445,51 @@ function loop() {
     if (analyser.fftSize !== targetFFT) analyser.fftSize = targetFFT;
   }
 
+  refreshSynthParams(); // cache slider values once — used by every syncAudio() this frame
   updateLFO(dt);
+  mmComputeGlobalSources(dt); // mod matrix: build once-per-frame global source cache
+  mmDecayCollImp(dt);          // mod matrix: decay collision impulse across particles
   tickEmitters(dt);
-  physics();
+  physics(); // mmEvaluateParticle(p) is called inside physics() before p.syncAudio(false)
   updateFM();
   draw();
   drawScope();
   seqUpdateVisuals();
   pruneCollVoices();
 
-  // Oscillator count display (update every 30 frames for performance)
+  // Oscillator count display + fx sidebar meters (update every 30 frames for performance)
   if (!loop._oscTick) loop._oscTick = 0;
   if (++loop._oscTick >= 30) {
     loop._oscTick = 0;
     const perP = Math.max(1, countOscsPerParticle());
     const el = document.getElementById('osccount');
     if (el) el.textContent = `${particles.length * perP}/192`;
+    updateFxMeters();
+  }
+
+  // Mod matrix UI updates — only when page is open
+  if (_mmPageOpen) {
+    if (!loop._mmTick) loop._mmTick = 0;
+    mmUpdateMiniCanvas();
+    if (++loop._mmTick % 5 === 0) {
+      mmUpdateSrcMon();
+      mmDrawLfoScope();
+      if (document.getElementById('mmVtPatch').classList.contains('active')) {
+        mmRenderPatchView();
+      } else {
+        mmUpdateLiveBars();
+      }
+      // Matrix CPU estimate
+      const cpuEl = document.getElementById('mmCpuPct');
+      if (cpuEl) {
+        const activeConns = modMatrix.connections.filter(c => c.enabled).length;
+        const estMs = activeConns * particles.length * 0.008;
+        const pct = Math.min(99, Math.round(estMs / 16 * 100));
+        cpuEl.textContent = pct;
+        const badge = cpuEl.closest('.mm-badge');
+        if (badge) badge.style.color = pct > 60 ? '#f44' : pct > 30 ? '#fa3' : '#3a4a5a';
+      }
+    }
   }
 
   const ft = document.getElementById('frametime');
@@ -4606,6 +5497,15 @@ function loop() {
 
   requestAnimationFrame(loop);
 }
+
+// ── Mod matrix state — must be declared before loop() runs ──────────────
+const modMatrix = { connections: [], maxConnections: 64 };
+let _mmConnIdCtr = 1, _mmSortKey = 'source', _mmSortAsc = true;
+let _mmAmtVal = 0.5, _mmPageOpen = false, _mmFsActive = false;
+let _lfo2Phase = 0, _lfo2Val = 0, _lfo2SH = 0, _lfo2Smooth = 0.5, _lfo2STgt = 0.5;
+let _mmGlobSrc = {}, _mmBeatPhase = 0, _mmPrevBeat = 0;
+let _mmRandBeat = Math.random(), _mmRandStep = Math.random(), _mmRandSmooth = 0.5;
+let _mmPrevSeqStep = -1, _mmLastSrcSample = {};
 
 initParticles(0);
 seqRenderCells();
@@ -5073,6 +5973,1280 @@ function presetShowStatus(msg, ms) {
     const name = document.getElementById('presetSelect').value; if (!name) return;
     presetDuplicate(name);
   });
+})();
+
+// ═══════════════════════════════════════════════════════════════
+// EFFECTS SIDEBAR
+// ═══════════════════════════════════════════════════════════════
+
+function toggleFxSidebar() {
+  const sb  = document.getElementById('fx-sidebar');
+  const btn = document.getElementById('fxToggleBtn');
+  const open = sb.classList.toggle('open');
+  btn.classList.toggle('active', open);
+  // resize() is already triggered by ResizeObserver during the CSS transition,
+  // but call it once more after the transition settles to be safe.
+  setTimeout(resize, 220);
+}
+
+function toggleFxCard(id) {
+  document.getElementById(id)?.classList.toggle('collapsed');
+}
+
+function toggleFxEffect(name, enabled) {
+  const dot = document.getElementById('fxdot-' + name);
+  if (dot) { dot.className = 'fx-dot ' + (enabled ? 'on' : 'off'); }
+
+  if (!audioStarted) return;
+
+  switch (name) {
+    case 'drive': {
+      // Per-particle drive is already live via filtDrive slider; dot-only here
+      break;
+    }
+    case 'filter': {
+      // Sync filter enable state — re-apply cutoff/type via existing per-particle filter
+      const cutoff = parseFloat(document.getElementById('fxCut')?.value || '2000');
+      const res    = parseFloat(document.getElementById('fxRes')?.value || '1');
+      const type   = document.getElementById('fxFiltType')?.value || 'lowpass';
+      for (const p of particles) {
+        if (!p.subFilter) continue;
+        p.subFilter.type      = enabled ? type : 'allpass';
+        p.subFilter.frequency.setTargetAtTime(cutoff, AC.currentTime, 0.05);
+        p.subFilter.Q.setTargetAtTime(res, AC.currentTime, 0.05);
+      }
+      break;
+    }
+    case 'chorus': {
+      if (enabled) {
+        for (const p of particles) { if (p.oscGain && !p.chorNode) p._initChorus(); }
+      } else {
+        for (const p of particles) p._destroyChorus();
+      }
+      break;
+    }
+    case 'dist': {
+      if (!globalDistWetGain || !globalDistDryGain) return;
+      const t = AC.currentTime;
+      const amt = parseFloat(document.getElementById('fxDistAmt')?.value || '0');
+      if (enabled) {
+        globalDistWetGain.gain.setTargetAtTime(amt, t, 0.01);
+        globalDistDryGain.gain.setTargetAtTime(1 - amt * 0.5, t, 0.01);
+      } else {
+        globalDistWetGain.gain.setTargetAtTime(0, t, 0.01);
+        globalDistDryGain.gain.setTargetAtTime(1, t, 0.01);
+      }
+      break;
+    }
+    case 'delay': {
+      if (!globalDelayWetGain || !globalDelayDryGain) return;
+      const t = AC.currentTime;
+      const mix = parseFloat(document.getElementById('fxDelMix')?.value || '0.3');
+      if (enabled) {
+        globalDelayWetGain.gain.setTargetAtTime(mix, t, 0.01);
+        globalDelayDryGain.gain.setTargetAtTime(1 - mix * 0.5, t, 0.01);
+      } else {
+        globalDelayWetGain.gain.setTargetAtTime(0, t, 0.01);
+        globalDelayDryGain.gain.setTargetAtTime(1, t, 0.01);
+      }
+      break;
+    }
+    case 'reverb': {
+      if (!reverbGain) return;
+      const t = AC.currentTime;
+      const mix = parseFloat(document.getElementById('fxRevMix')?.value || '0.35');
+      reverbGain.gain.setTargetAtTime(enabled ? mix : 0, t, 0.05);
+      break;
+    }
+  }
+}
+
+// Wire up effect card sliders
+(function wireEffectsSidebar() {
+  // DRIVE — mirrors per-particle filtDrive
+  const fxDrive = document.getElementById('fxDrive');
+  const fxDriveV = document.getElementById('fxDriveV');
+  const filtDriveEl = document.getElementById('filtDrive');
+  if (fxDrive) {
+    fxDrive.addEventListener('input', function() {
+      const v = parseFloat(this.value);
+      fxDriveV.textContent = v.toFixed(2);
+      if (filtDriveEl) { filtDriveEl.value = v; filtDriveEl.dispatchEvent(new Event('input')); }
+    });
+    // Sync initial value
+    if (filtDriveEl) fxDrive.value = filtDriveEl.value;
+  }
+
+  // FILTER
+  function wireFxSlider(id, valId, digits, onChange) {
+    const el = document.getElementById(id);
+    const vEl = document.getElementById(valId);
+    if (!el) return;
+    el.addEventListener('input', function() {
+      vEl.textContent = parseFloat(this.value).toFixed(digits);
+      onChange && onChange(parseFloat(this.value));
+    });
+  }
+  wireFxSlider('fxCut', 'fxCutV', 0, v => {
+    if (!audioStarted) return;
+    for (const p of particles) {
+      if (p.subFilter && document.getElementById('fxen-filter')?.checked)
+        p.subFilter.frequency.setTargetAtTime(v, AC.currentTime, 0.05);
+    }
+  });
+  wireFxSlider('fxRes', 'fxResV', 1, v => {
+    if (!audioStarted) return;
+    for (const p of particles) {
+      if (p.subFilter && document.getElementById('fxen-filter')?.checked)
+        p.subFilter.Q.setTargetAtTime(v, AC.currentTime, 0.05);
+    }
+  });
+  wireFxSlider('fxEnvAmt', 'fxEnvAmtV', 2);
+  document.getElementById('fxFiltType')?.addEventListener('change', function() {
+    if (!audioStarted || !document.getElementById('fxen-filter')?.checked) return;
+    for (const p of particles) { if (p.subFilter) p.subFilter.type = this.value; }
+  });
+
+  // CHORUS — push params to all active chorus nodes directly from slider events.
+  // This replaces the old per-frame AudioParam write in syncAudio().
+  function pushChorusParams() {
+    if (!audioStarted) return;
+    const t      = AC.currentTime;
+    const rate   = parseFloat(document.getElementById('fxChoRate')?.value   ?? '0.5');
+    const depth  = parseFloat(document.getElementById('fxChoDepth')?.value  ?? '0.5');
+    const mix    = parseFloat(document.getElementById('fxChoMix')?.value     ?? '0.5');
+    const spread = parseFloat(document.getElementById('fxChoSpread')?.value  ?? '0.5');
+    for (const p of particles) {
+      if (!p.chorNode) continue;
+      const params = p.chorNode.parameters;
+      params.get('rate').setValueAtTime(rate, t);
+      params.get('depth').setValueAtTime(depth, t);
+      params.get('mix').setValueAtTime(mix, t);
+      params.get('phaseOffset').setValueAtTime(p._chorPhase * spread, t);
+    }
+  }
+  wireFxSlider('fxChoRate',   'fxChoRateV',   2, pushChorusParams);
+  wireFxSlider('fxChoDepth',  'fxChoDepthV',  2, pushChorusParams);
+  wireFxSlider('fxChoMix',    'fxChoMixV',    2, pushChorusParams);
+  wireFxSlider('fxChoSpread', 'fxChoSpreadV', 2, pushChorusParams);
+
+  // DISTORTION — character + amount
+  document.getElementById('fxDistChar')?.addEventListener('change', function() {
+    if (!globalDistShaper || !audioStarted) return;
+    const amt = parseFloat(document.getElementById('fxDistAmt')?.value || '0');
+    globalDistShaper.curve = makeDistCurve(this.value, amt);
+  });
+  wireFxSlider('fxDistAmt', 'fxDistAmtV', 2, v => {
+    if (!globalDistShaper || !audioStarted) return;
+    const char = document.getElementById('fxDistChar')?.value || 'soft';
+    globalDistShaper.curve = makeDistCurve(char, v);
+    if (!document.getElementById('fxen-dist')?.checked) return;
+    globalDistWetGain.gain.setTargetAtTime(v, AC.currentTime, 0.01);
+    globalDistDryGain.gain.setTargetAtTime(1 - v * 0.5, AC.currentTime, 0.01);
+  });
+
+  // DELAY
+  wireFxSlider('fxDelTime', 'fxDelTimeV', 0, v => {
+    if (!globalDelayNode || !audioStarted) return;
+    globalDelayNode.delayTime.setTargetAtTime(v / 1000, AC.currentTime, 0.05);
+  });
+  wireFxSlider('fxDelFb', 'fxDelFbV', 2, v => {
+    if (!globalDelayFbGain || !audioStarted) return;
+    globalDelayFbGain.gain.setTargetAtTime(v, AC.currentTime, 0.05);
+  });
+  wireFxSlider('fxDelMix', 'fxDelMixV', 2, v => {
+    if (!globalDelayWetGain || !audioStarted || !document.getElementById('fxen-delay')?.checked) return;
+    globalDelayWetGain.gain.setTargetAtTime(v, AC.currentTime, 0.05);
+    globalDelayDryGain.gain.setTargetAtTime(1 - v * 0.5, AC.currentTime, 0.05);
+  });
+
+  // REVERB
+  wireFxSlider('fxRevMix', 'fxRevMixV', 2, v => {
+    if (!reverbGain || !audioStarted || !document.getElementById('fxen-reverb')?.checked) return;
+    reverbGain.gain.setTargetAtTime(v, AC.currentTime, 0.05);
+  });
+
+  // Drag-to-reorder effect cards
+  const chain = document.getElementById('fx-chain');
+  let dragSrc = null;
+  chain.addEventListener('dragstart', e => {
+    dragSrc = e.target.closest('.fx-card');
+    if (!dragSrc) return;
+    e.dataTransfer.effectAllowed = 'move';
+  });
+  chain.addEventListener('dragover', e => {
+    e.preventDefault();
+    const target = e.target.closest('.fx-card');
+    if (!target || target === dragSrc) return;
+    chain.querySelectorAll('.fx-card').forEach(c => c.classList.remove('fx-drag-over'));
+    target.classList.add('fx-drag-over');
+  });
+  chain.addEventListener('dragleave', e => {
+    e.target.closest?.('.fx-card')?.classList.remove('fx-drag-over');
+  });
+  chain.addEventListener('drop', e => {
+    e.preventDefault();
+    const target = e.target.closest('.fx-card');
+    chain.querySelectorAll('.fx-card').forEach(c => c.classList.remove('fx-drag-over'));
+    if (!target || target === dragSrc) return;
+    // Crossfade: ramp master to 0, reorder DOM, ramp back
+    if (audioStarted && masterGain) {
+      const t = AC.currentTime;
+      masterGain.gain.setTargetAtTime(0, t, 0.004);
+      setTimeout(() => {
+        chain.insertBefore(dragSrc, target);
+        if (audioStarted && masterGain)
+          masterGain.gain.setTargetAtTime(parseFloat(document.getElementById('mastervol')?.value || '0.6'), AC.currentTime, 0.004);
+      }, 10);
+    } else {
+      chain.insertBefore(dragSrc, target);
+    }
+    dragSrc = null;
+  });
+  chain.addEventListener('dragend', () => {
+    chain.querySelectorAll('.fx-card').forEach(c => c.classList.remove('fx-drag-over'));
+    dragSrc = null;
+  });
+})();
+
+// Make distortion curve generator — separate from per-particle drive
+function makeDistCurve(character, amount) {
+  const N = 256;
+  const curve = new Float32Array(N);
+  for (let i = 0; i < N; i++) {
+    const x = (i * 2) / (N - 1) - 1;
+    if (amount < 0.001) { curve[i] = x; continue; }
+    if (character === 'hard') {
+      const k = amount * 8;
+      curve[i] = Math.max(-1, Math.min(1, x * (1 + k)));
+    } else if (character === 'fuzz') {
+      const k = amount * 12;
+      curve[i] = Math.sign(x) * (1 - Math.exp(-Math.abs(x) * (1 + k)));
+    } else { // soft (tanh)
+      const k = amount * 6;
+      curve[i] = Math.tanh(x * (1 + k)) / Math.tanh(1 + k);
+    }
+  }
+  return curve;
+}
+
+// Update CPU meter and oscillator count in sidebar (called from main loop)
+function updateFxMeters() {
+  if (!document.getElementById('fx-sidebar')?.classList.contains('open')) return;
+  const perP  = Math.max(1, countOscsPerParticle());
+  const total = particles.length * perP;
+  const MAX   = 192;
+  const oscPct = Math.min(100, (total / MAX) * 100);
+  const cpuPct = Math.min(100, oscPct * 1.1); // rough proxy
+
+  const cpuFill = document.getElementById('fx-cpu-fill');
+  const oscFill = document.getElementById('fx-osc-fill');
+  const cpuPctEl = document.getElementById('fx-cpu-pct');
+  const oscTxtEl = document.getElementById('fx-osc-txt');
+
+  if (cpuFill) cpuFill.style.width = cpuPct.toFixed(0) + '%';
+  if (oscFill) oscFill.style.width = oscPct.toFixed(0) + '%';
+  if (cpuPctEl) cpuPctEl.textContent = cpuPct.toFixed(0);
+  if (oscTxtEl) oscTxtEl.textContent = total + '/' + MAX;
+
+  // Change CPU bar colour based on load
+  if (cpuFill) {
+    cpuFill.style.background = cpuPct > 80 ? '#f44' : cpuPct > 50 ? '#fa3' : '#3fa';
+  }
+}
+
+// ══════════════════════════════════════════════════════════════════════════
+// MOD MATRIX
+// ══════════════════════════════════════════════════════════════════════════
+
+// ── Data structure ────────────────────────────────────────────────────────
+// (modMatrix, _mmConnIdCtr, _mm*, _lfo2* vars declared above loop() — see line ~5461)
+
+
+function _lfo2Compute(phase, shape, depth) {
+  const p = ((phase % (Math.PI * 2)) + Math.PI * 2) % (Math.PI * 2);
+  const norm = p / (Math.PI * 2); // 0..1
+  let v;
+  switch (shape) {
+    case 'tri':    v = norm < 0.5 ? norm * 4 - 1 : 3 - norm * 4; break;
+    case 'saw':    v = norm * 2 - 1; break;
+    case 'ramp':   v = 1 - norm * 2; break;
+    case 'square': v = norm < 0.5 ? 1 : -1; break;
+    case 'sh':     v = _lfo2SH; break;
+    case 'rsmooth':v = _lfo2Smooth * 2 - 1; break;
+    default:       v = Math.sin(phase); // sine
+  }
+  return v * depth;
+}
+
+// ── Global source cache — declared above loop() ───────────────────────────
+
+function mmComputeGlobalSources(dt) {
+  // BPM beat phase — independent of audio context
+  const bpm = audioStarted ? sl('bpm') : 120;
+  const beatHz = bpm / 60;
+  _mmPrevBeat = _mmBeatPhase;
+  _mmBeatPhase = (_mmBeatPhase + beatHz * dt) % 1;
+
+  // Beat boundary
+  if (_mmBeatPhase < _mmPrevBeat) {
+    _mmRandBeat = Math.random();
+    _lfo2SH = Math.random() * 2 - 1;
+  }
+
+  // Sequencer step boundary
+  if (seqCurrentStep !== _mmPrevSeqStep) {
+    _mmRandStep = Math.random();
+    _mmPrevSeqStep = seqCurrentStep;
+  }
+
+  // Slow random drift
+  _mmRandSmooth += (Math.random() - 0.5) * dt * 0.8;
+  _mmRandSmooth  = Math.max(0, Math.min(1, _mmRandSmooth));
+
+  // LFO 2
+  const lfo2SyncOn = document.getElementById('mmLfo2Sync')?.checked;
+  let lfo2Rate;
+  if (lfo2SyncOn) {
+    const div = parseFloat(document.getElementById('mmLfo2SyncDiv')?.value || '1');
+    lfo2Rate = beatHz / div;
+  } else {
+    lfo2Rate = parseFloat(document.getElementById('mmLfo2Rate')?.value || '1');
+  }
+  const lfo2Depth = parseFloat(document.getElementById('mmLfo2Depth')?.value || '0.5');
+  const lfo2Shape = document.getElementById('mmLfo2Shape')?.value || 'sine';
+  const lfo2PhOff = (parseFloat(document.getElementById('mmLfo2Phase')?.value || '0') / 360) * Math.PI * 2;
+
+  // Smooth random (LFO2)
+  _lfo2STgt += (Math.random() - 0.5) * 2 * dt * lfo2Rate;
+  _lfo2STgt  = Math.max(0, Math.min(1, _lfo2STgt));
+  _lfo2Smooth += (_lfo2STgt - _lfo2Smooth) * Math.min(1, lfo2Rate * dt * 3);
+
+  _lfo2Phase = (_lfo2Phase + lfo2Rate * Math.PI * 2 * dt) % (Math.PI * 2);
+  _lfo2Val   = _lfo2Compute(_lfo2Phase + lfo2PhOff, lfo2Shape, lfo2Depth);
+
+  // Averages
+  let avgW = 0, avgV = 0, avgT = 0;
+  const pn = particles.length || 1;
+  for (const p of particles) { avgW += p.warmth; avgV += Math.hypot(p.vx, p.vy); avgT += p.tension; }
+
+  // Mouse normalised
+  const mx = (mouse.x !== null && W > 0) ? Math.max(0, Math.min(1, mouse.x / W)) : 0.5;
+  const my = (mouse.y !== null && H > 0) ? Math.max(0, Math.min(1, mouse.y / H)) : 0.5;
+
+  // Sequencer
+  const curStep = seqSteps[seqCurrentStep] || { vel: 0.7, active: false };
+
+  // Particle density
+  const maxP = parseInt(document.getElementById('maxparticles')?.value || '32');
+
+  _mmGlobSrc = {
+    lfo1:        lfoVal,
+    lfo1_abs:    Math.abs(lfoVal),
+    lfo2:        _lfo2Val,
+    lfo2_abs:    Math.abs(_lfo2Val),
+    bpm_saw:     _mmBeatPhase,
+    bpm_sine:    Math.sin(_mmBeatPhase * Math.PI * 2),
+    bpm_square:  _mmBeatPhase < 0.5 ? 1 : 0,
+    bpm_eighth:  (_mmBeatPhase * 2 % 1) < 0.5 ? 1 : 0,
+    bpm_sixteenth:(_mmBeatPhase * 4 % 1) < 0.5 ? 1 : 0,
+    seq_velocity: seqPlaying ? (curStep.vel ?? 0.7) : 0,
+    seq_position: seqStepCount > 0 ? seqCurrentStep / seqStepCount : 0,
+    seq_gate:     (seqPlaying && curStep.active) ? 1 : 0,
+    rand_smooth:  _mmRandSmooth,
+    rand_sample:  Math.random(),
+    rand_beat:    _mmRandBeat,
+    rand_step:    _mmRandStep,
+    mouse_x:      mx,
+    mouse_y:      my,
+    mouse_held:   mouse.down ? 1 : 0,
+    master_vol:   sl('mastervol'),
+    reverb_amt:   sl('reverbamt'),
+    particle_dens: Math.min(1, particles.length / Math.max(1, maxP)),
+    avg_warmth:   avgW / pn,
+    avg_velocity: Math.min(1, avgV / pn / 4),
+    avg_tension:  avgT / pn,
+  };
+}
+
+// Per-particle sources
+function _mmGetParticleSources(p) {
+  const spd = Math.hypot(p.vx, p.vy);
+  const maxSpd = 5;
+
+  // Neighbor proximity
+  let nearInv = 0, nearCount = 0;
+  for (const q of particles) {
+    if (q === p) continue;
+    const d = Math.hypot(q.x - p.x, q.y - p.y);
+    if (d < 130) nearCount++;
+    const inv = Math.max(0, 1 - d / 200);
+    if (inv > nearInv) nearInv = inv;
+  }
+
+  // Wall distance (inverted: 1=touching, 0=center)
+  const edgeX = W > 0 ? Math.min(p.x, W - p.x) / W : 0.5;
+  const edgeY = H > 0 ? Math.min(p.y, H - p.y) / H : 0.5;
+  const wallDist = Math.max(0, 1 - Math.min(edgeX, edgeY) * 6);
+
+  // Nearest scene object
+  let soDist = 0;
+  for (const obj of sceneObjects) {
+    const d = Math.hypot(obj.x - p.x, obj.y - p.y);
+    const inv = Math.max(0, 1 - d / (obj.r * 3 + 60));
+    if (inv > soDist) soDist = inv;
+  }
+
+  // Mouse–particle distance
+  const mpd = (mouse.x !== null)
+    ? Math.max(0, 1 - Math.hypot(mouse.x - p.x, mouse.y - p.y) / 250)
+    : 0;
+
+  // Note age
+  const age = p.spawnTime ? Math.min(1, (performance.now() - p.spawnTime) / 10000) : 0;
+
+  // Pitch normalised
+  const freq = warmthToFreq(p.warmth, p);
+  const pitchNorm = Math.max(0, Math.min(1, (freq - 80) / (4000 - 80)));
+
+  // Scale degree
+  const scaleDeg = (Math.log2(Math.max(1, freq / ROOT)) % 1 + 1) % 1;
+
+  return {
+    vel_magnitude: Math.min(1, spd / maxSpd),
+    vel_x:         Math.max(-1, Math.min(1, p.vx / maxSpd)),
+    vel_y:         Math.max(-1, Math.min(1, p.vy / maxSpd)),
+    pos_x:         W > 0 ? Math.max(0, Math.min(1, p.x / W)) : 0.5,
+    pos_y:         H > 0 ? Math.max(0, Math.min(1, p.y / H)) : 0.5,
+    neighbor_dist: nearInv,
+    neighbor_count:Math.min(1, nearCount / 8),
+    collision_imp: Math.max(0, Math.min(1, p._collImp || 0)),
+    wall_dist:     wallDist,
+    scene_obj_dist:soDist,
+    warmth:        p.warmth,
+    tension:       p.tension,
+    scale_degree:  scaleDeg,
+    chord_position:typeof p._chordVoice === 'number' ? Math.min(1, p._chordVoice / 4) : p.warmth,
+    pitch_norm:    pitchNorm,
+    note_age:      age,
+    note_decay:    1 - age,
+    mouse_p_dist:  mpd,
+  };
+}
+
+// Evaluate all enabled connections for a single particle
+function mmEvaluateParticle(p) {
+  const pSrc = _mmGetParticleSources(p);
+  const src  = Object.assign({}, pSrc, _mmGlobSrc);
+
+  // Cache first particle's sources for the source monitor
+  if (p === particles[0]) _mmLastSrcSample = src;
+
+  const mods = {};
+  for (const c of modMatrix.connections) {
+    if (!c.enabled) continue;
+    const v = src[c.source];
+    if (v === undefined || v === 0) { c._liveAmt = 0; continue; }
+    const contrib = v * c.amount;
+    mods[c.destination] = (mods[c.destination] || 0) + contrib;
+    c._liveAmt = contrib;
+  }
+  p._mods = mods;
+}
+
+// Decay collision impulse over 300 ms
+function mmDecayCollImp(dt) {
+  const decay = Math.pow(0.001, dt / 0.3);
+  for (const p of particles) {
+    if (p._collImp) p._collImp *= decay;
+  }
+}
+
+// ── Source / Destination definitions ─────────────────────────────────────
+const MM_SRC_GROUPS = [
+  { label:'PHYSICAL',    keys:['vel_magnitude','vel_x','vel_y','pos_x','pos_y','neighbor_dist','neighbor_count','collision_imp','wall_dist','scene_obj_dist'] },
+  { label:'MUSICAL',     keys:['warmth','tension','scale_degree','chord_position','pitch_norm'] },
+  { label:'ENVELOPE',    keys:['note_age','note_decay'] },
+  { label:'LFO',         keys:['lfo1','lfo1_abs','lfo2','lfo2_abs'] },
+  { label:'CLOCK',       keys:['bpm_saw','bpm_sine','bpm_square','bpm_eighth','bpm_sixteenth'] },
+  { label:'SEQUENCER',   keys:['seq_velocity','seq_position','seq_gate'] },
+  { label:'RANDOM',      keys:['rand_smooth','rand_sample','rand_beat','rand_step'] },
+  { label:'MOUSE',       keys:['mouse_x','mouse_y','mouse_held','mouse_p_dist'] },
+  { label:'GLOBAL STATE',keys:['master_vol','reverb_amt','particle_dens','avg_warmth','avg_velocity','avg_tension'] },
+];
+
+const MM_DST_GROUPS = [
+  { label:'GLOBAL',      keys:['amplitude','pan','reverb_send','pitch_offset','pitch_bend','warmth_drift','tension_decay'] },
+  { label:'FM',          keys:['fm_depth','fm_ratio','fm_feedback','fm_mod_amp','int_fm_ratio','int_fm_index','lfo1_rate','lfo1_depth','lfo2_rate','lfo2_depth'] },
+  { label:'SUBTRACTIVE', keys:['filter_cutoff','filter_res','filter_drive','filter_env_amt','filter_attack','filter_decay','osc_detune'] },
+  { label:'ADDITIVE',    keys:['harmonic_tilt','harmonic_1','harmonic_2','harmonic_3','harmonic_spread','inharmonic','harmonic_odd','harmonic_even'] },
+  { label:'UNISON',      keys:['unison_detune','unison_width','unison_blend'] },
+  { label:'OSC 2',       keys:['osc2_volume','osc2_detune','osc2_pw'] },
+  { label:'EFFECTS',     keys:['chorus_rate','chorus_depth','chorus_mix','drive_amount','delay_time','delay_feedback','delay_mix'] },
+  { label:'GRAIN',       keys:['grain_rate','grain_density','grain_vol'] },
+];
+
+// ── Factory patches ───────────────────────────────────────────────────────
+const MM_FACTORY = [
+  { label:'VELOCITY EXPR.', conns:[
+    {source:'vel_magnitude',destination:'fm_depth',   amount:0.9},
+    {source:'vel_magnitude',destination:'amplitude',  amount:0.7},
+    {source:'vel_magnitude',destination:'grain_rate', amount:0.8},
+    {source:'vel_magnitude',destination:'filter_cutoff',amount:0.6},
+  ]},
+  { label:'SPATIAL MIXER', conns:[
+    {source:'pos_x',destination:'pan',         amount:1.0},
+    {source:'pos_y',destination:'reverb_send', amount:0.8},
+    {source:'pos_y',destination:'amplitude',   amount:-0.4},
+  ]},
+  { label:'RHYTHMIC TIMBRE', conns:[
+    {source:'bpm_sine',   destination:'fm_depth',      amount:0.7},
+    {source:'bpm_square', destination:'filter_cutoff', amount:0.5},
+    {source:'bpm_eighth', destination:'grain_density', amount:0.6},
+  ]},
+  { label:'COLLISION CHAOS', conns:[
+    {source:'collision_imp',destination:'fm_feedback',  amount:0.9},
+    {source:'collision_imp',destination:'grain_density',amount:0.8},
+    {source:'collision_imp',destination:'filter_res',   amount:0.7},
+    {source:'collision_imp',destination:'fm_depth',     amount:0.6},
+  ]},
+  { label:'WARMTH HARMONY', conns:[
+    {source:'warmth',destination:'harmonic_tilt', amount:0.8},
+    {source:'warmth',destination:'fm_ratio',      amount:0.5},
+    {source:'warmth',destination:'filter_cutoff', amount:0.7},
+    {source:'warmth',destination:'harmonic_odd',  amount:-0.5},
+  ]},
+  { label:'MOUSE CONDUCTOR', conns:[
+    {source:'mouse_x',   destination:'filter_cutoff', amount:1.0},
+    {source:'mouse_y',   destination:'reverb_send',   amount:0.8},
+    {source:'mouse_y',   destination:'fm_depth',      amount:0.6},
+    {source:'mouse_held',destination:'grain_rate',    amount:0.9},
+  ]},
+  { label:'ORGANIC DRIFT', conns:[
+    {source:'rand_smooth',destination:'pitch_bend',     amount:0.3},
+    {source:'rand_smooth',destination:'fm_depth',       amount:0.2},
+    {source:'rand_beat',  destination:'warmth_drift',   amount:0.4},
+    {source:'lfo1',       destination:'harmonic_spread',amount:0.3},
+    {source:'lfo2',       destination:'filter_cutoff',  amount:0.2},
+  ]},
+  { label:'CLUSTER SWELL', conns:[
+    {source:'neighbor_count',destination:'reverb_send',   amount:0.9},
+    {source:'neighbor_count',destination:'amplitude',     amount:0.5},
+    {source:'neighbor_count',destination:'harmonic_tilt', amount:0.4},
+    {source:'neighbor_dist', destination:'fm_depth',      amount:0.8},
+  ]},
+];
+
+// ── Page open/close ───────────────────────────────────────────────────────
+function openModMatrix() {
+  _mmPageOpen = true;
+  const pg = document.getElementById('modMatrixPage');
+  pg.classList.add('mm-visible');
+  document.getElementById('mmOpenBtn').classList.add('active');
+  mmBuildSelects();
+  mmRenderConnList();
+  mmBuildSrcMon();
+  setTimeout(() => {
+    mmResizeMiniCanvas();
+    mmResizePatchCanvas();
+    mmRenderPatchView();
+  }, 60);
+}
+
+function closeModMatrix() {
+  _mmPageOpen = false;
+  document.getElementById('modMatrixPage').classList.remove('mm-visible');
+  document.getElementById('mmOpenBtn').classList.remove('active');
+}
+
+// ── Mode-filtered destination groups ─────────────────────────────────────
+function mmActiveDstGroups() {
+  const mode = getSynthMode();
+  return MM_DST_GROUPS.filter(g => {
+    if (g.label === 'FM')          return mode === 'fm';
+    if (g.label === 'SUBTRACTIVE') return mode === 'sub';
+    if (g.label === 'ADDITIVE')    return mode === 'add';
+    return true;
+  });
+}
+
+// ── Build option dropdowns ─────────────────────────────────────────────────
+function mmBuildSelects() {
+  const srcSel = document.getElementById('mmSrcSel');
+  const dstSel = document.getElementById('mmDstSel');
+  if (!srcSel || !dstSel) return;
+  if (!srcSel._built) {
+    let sh = '';
+    for (const g of MM_SRC_GROUPS) {
+      sh += `<optgroup label="── ${g.label} ──">`;
+      for (const k of g.keys) sh += `<option value="${k}">${k.replace(/_/g,' ')}</option>`;
+      sh += '</optgroup>';
+    }
+    srcSel.innerHTML = sh;
+    srcSel._built = true;
+  }
+  // Always rebuild dst based on current synth mode
+  let dh = '';
+  for (const g of mmActiveDstGroups()) {
+    dh += `<optgroup label="── ${g.label} ──">`;
+    for (const k of g.keys) dh += `<option value="${k}">${k.replace(/_/g,' ')}</option>`;
+    dh += '</optgroup>';
+  }
+  dstSel.innerHTML = dh;
+}
+
+// ── CRUD ──────────────────────────────────────────────────────────────────
+function mmAddConnection() {
+  if (modMatrix.connections.length >= modMatrix.maxConnections) return;
+  modMatrix.connections.push({
+    id:          'conn_' + (_mmConnIdCtr++).toString().padStart(3,'0'),
+    source:      document.getElementById('mmSrcSel').value,
+    destination: document.getElementById('mmDstSel').value,
+    amount:      _mmAmtVal,
+    enabled:     document.getElementById('mmNewEnabled').checked,
+    label:       (document.getElementById('mmLabelInput').value || '').trim(),
+    _liveAmt:    0,
+  });
+  document.getElementById('mmLabelInput').value = '';
+  mmRenderConnList();
+}
+
+function mmDeleteConnection(id) {
+  modMatrix.connections = modMatrix.connections.filter(c => c.id !== id);
+  mmRenderConnList();
+}
+
+function mmToggleConn(id, checked) {
+  const c = modMatrix.connections.find(c => c.id === id);
+  if (c) c.enabled = checked;
+}
+
+function mmClearAll() {
+  if (!confirm('Clear all connections?')) return;
+  modMatrix.connections = [];
+  mmRenderConnList();
+}
+
+function mmToggleEnableAll() {
+  const anyEn = modMatrix.connections.some(c => c.enabled);
+  modMatrix.connections.forEach(c => c.enabled = !anyEn);
+  document.getElementById('mmEnAllBtn').textContent = anyEn ? 'ENABLE ALL' : 'DISABLE ALL';
+  mmRenderConnList();
+}
+
+function mmSetSort(btn, key) {
+  if (_mmSortKey === key) _mmSortAsc = !_mmSortAsc;
+  else { _mmSortKey = key; _mmSortAsc = true; }
+  document.querySelectorAll('.mm-sort-btn').forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+  mmRenderConnList();
+}
+
+function mmLoadFactory(idx) {
+  const patch = MM_FACTORY[idx];
+  if (!patch) return;
+  if (document.getElementById('mmClearFirst')?.checked) modMatrix.connections = [];
+  for (const c of patch.conns) {
+    const existing = modMatrix.connections.find(e => e.source === c.source && e.destination === c.destination);
+    if (existing) {
+      existing.amount  = c.amount;
+      existing.enabled = true;
+    } else {
+      if (modMatrix.connections.length >= modMatrix.maxConnections) break;
+      modMatrix.connections.push({
+        id: 'conn_' + (_mmConnIdCtr++).toString().padStart(3,'0'),
+        source: c.source, destination: c.destination,
+        amount: c.amount, enabled: true,
+        label: patch.label, _liveAmt: 0,
+      });
+    }
+  }
+  mmRenderConnList();
+  // Flash the clicked button cyan for 200ms
+  const btn = document.querySelectorAll('.mm-fac-btn')[idx];
+  if (btn) {
+    btn.style.background = '#3af'; btn.style.color = '#000'; btn.style.borderColor = '#3af';
+    setTimeout(() => { btn.style.background = ''; btn.style.color = ''; btn.style.borderColor = ''; }, 200);
+  }
+}
+
+// ── Render connection list ────────────────────────────────────────────────
+function mmRenderConnList() {
+  const el = document.getElementById('mmConnList');
+  if (!el) return;
+  document.getElementById('mmConnCount').textContent = modMatrix.connections.length;
+
+  const filter = (document.getElementById('mmFilter')?.value || '').toLowerCase();
+  let conns = modMatrix.connections.filter(c =>
+    !filter || c.source.includes(filter) || c.destination.includes(filter) || (c.label||'').toLowerCase().includes(filter)
+  );
+  conns = conns.slice().sort((a, b) => {
+    let va = _mmSortKey === 'amount' ? Math.abs(a.amount) : (a[_mmSortKey]||'');
+    let vb = _mmSortKey === 'amount' ? Math.abs(b.amount) : (b[_mmSortKey]||'');
+    if (typeof va === 'string') va = va.toLowerCase();
+    if (typeof vb === 'string') vb = vb.toLowerCase();
+    if (va < vb) return _mmSortAsc ? -1 : 1;
+    if (va > vb) return _mmSortAsc ?  1 : -1;
+    return 0;
+  });
+
+  el.innerHTML = conns.map(c => {
+    const pos   = c.amount >= 0;
+    const pct   = Math.round(Math.abs(c.amount) * 50);
+    const col   = pos ? '#3af' : '#fa3';
+    const bLeft = pos ? '50%' : `${50 - pct}%`;
+    const amtClass = c.amount > 0.001 ? 'pos' : c.amount < -0.001 ? 'neg' : 'zero';
+    return `<div class="mm-conn-row" id="row_${c.id}">
+  <input type="checkbox" ${c.enabled?'checked':''} onchange="mmToggleConn('${c.id}',this.checked)">
+  <span class="mm-conn-src" title="${c.source}">${c.source.replace(/_/g,' ')}</span>
+  <span class="mm-conn-arr">→</span>
+  <span class="mm-conn-dst" title="${c.destination}">${c.destination.replace(/_/g,' ')}</span>
+  <div class="mm-conn-amt-wrap" data-conn-id="${c.id}">
+    <div class="mm-conn-amt-bar" style="left:${bLeft};width:${pct}%;background:${col};"></div>
+    <div class="mm-conn-live-bar"></div>
+  </div>
+  <span class="mm-conn-amt-txt ${amtClass}" id="amttxt_${c.id}" data-conn-id="${c.id}">${c.amount>=0?'+':''}${c.amount.toFixed(2)}</span>
+  <span class="mm-conn-label" title="${c.label||''}">${c.label||''}</span>
+  <button class="mm-conn-del" onclick="mmDeleteConnection('${c.id}')">✕</button>
+</div>`;
+  }).join('');
+}
+
+// Only update live bars — avoids full re-render every 5 frames
+function mmUpdateLiveBars() {
+  // Use CSS custom properties on the row — no layout thrashing
+  for (const c of modMatrix.connections) {
+    const row = document.getElementById('row_' + c.id);
+    if (!row) continue;
+    const lv = c._liveAmt || 0;
+    const livePct = Math.round(Math.abs(lv) * 50);
+    const liveL   = lv >= 0 ? '50%' : `${50 - livePct}%`;
+    const liveC   = lv >= 0 ? '#3af' : '#fa3';
+    row.style.setProperty('--lw', livePct + '%');
+    row.style.setProperty('--ll', liveL);
+    row.style.setProperty('--lc', liveC);
+  }
+}
+
+// ── View switching ────────────────────────────────────────────────────────
+function mmSetView(view) {
+  document.getElementById('mmGridView').style.display  = view === 'grid'  ? 'flex' : 'none';
+  document.getElementById('mmPatchView').style.display = view === 'patch' ? 'flex' : 'none';
+  document.getElementById('mmVtGrid').classList.toggle('active',  view === 'grid');
+  document.getElementById('mmVtPatch').classList.toggle('active', view === 'patch');
+  if (view === 'patch') {
+    mmBuildSelects();
+    setTimeout(mmRenderPatchView, 40);
+  }
+}
+
+// ── Amount knob ───────────────────────────────────────────────────────────
+(function mmInitKnob() {
+  let _kDrag = false, _kStartY = 0, _kStartVal = 0.5;
+
+  function mmDrawKnob(val) {
+    const cv = document.getElementById('mmAmtKnob');
+    if (!cv) return;
+    const ctx2 = cv.getContext('2d');
+    const cx = 30, cy = 30, r = 22;
+    ctx2.clearRect(0, 0, 60, 60);
+    // Track ring
+    ctx2.beginPath(); ctx2.arc(cx, cy, r, 0.55*Math.PI, 2.45*Math.PI);
+    ctx2.strokeStyle = '#1a2535'; ctx2.lineWidth = 4; ctx2.stroke();
+    // Value arc (from 6 o'clock = 0, spans ±)
+    const startA = 1.5 * Math.PI; // 12 o'clock
+    const arcSpan = 0.95 * Math.PI;
+    if (val !== 0) {
+      ctx2.beginPath();
+      if (val > 0) ctx2.arc(cx, cy, r, startA, startA + val * arcSpan, false);
+      else         ctx2.arc(cx, cy, r, startA + val * arcSpan, startA, false);
+      ctx2.strokeStyle = val >= 0 ? '#3af' : '#fa3';
+      ctx2.lineWidth = 4; ctx2.stroke();
+    }
+    // Dot at current position
+    const dotA = startA + val * arcSpan;
+    ctx2.beginPath();
+    ctx2.arc(cx + Math.cos(dotA) * r, cy + Math.sin(dotA) * r, 3, 0, Math.PI * 2);
+    ctx2.fillStyle = '#fff'; ctx2.fill();
+
+    _mmAmtVal = val;
+    const valEl = document.getElementById('mmAmtVal');
+    if (valEl) valEl.textContent = (val >= 0 ? '+' : '') + val.toFixed(2);
+    const bar = document.getElementById('mmBipolarBar');
+    if (bar) {
+      const pct = Math.abs(val) * 50;
+      bar.style.left  = val >= 0 ? '50%' : `${50 - pct}%`;
+      bar.style.width = `${pct}%`;
+      bar.style.background = val >= 0 ? '#3af' : '#fa3';
+    }
+  }
+
+  window._mmDrawKnob = mmDrawKnob;
+
+  // Attach after DOM ready
+  document.addEventListener('DOMContentLoaded', () => {
+    const cv = document.getElementById('mmAmtKnob');
+    if (!cv) return;
+    mmDrawKnob(0.5);
+
+    cv.addEventListener('mousedown', e => {
+      _kDrag = true; _kStartY = e.clientY; _kStartVal = _mmAmtVal;
+      e.preventDefault();
+    });
+    cv.addEventListener('dblclick', () => {
+      const v = parseFloat(prompt('Amount (-1 to +1):', _mmAmtVal.toFixed(2)));
+      if (!isNaN(v)) mmDrawKnob(Math.max(-1, Math.min(1, v)));
+    });
+    window.addEventListener('mousemove', e => {
+      if (!_kDrag) return;
+      const val = Math.max(-1, Math.min(1, _kStartVal + (_kStartY - e.clientY) / 120));
+      mmDrawKnob(val);
+    });
+    window.addEventListener('mouseup', () => { _kDrag = false; });
+  });
+})();
+
+// ── Mini canvas ───────────────────────────────────────────────────────────
+function mmResizeMiniCanvas() {
+  const mc = document.getElementById('mmMiniCanvas');
+  if (!mc) return;
+  const r = mc.getBoundingClientRect();
+  if (r.width < 1) return;
+  mc.width  = Math.floor(r.width);
+  mc.height = Math.floor(r.height || r.width * 9 / 16);
+  const ms = document.getElementById('mmMiniScope');
+  if (ms) { const sr = ms.getBoundingClientRect(); ms.width = Math.floor(sr.width || r.width); ms.height = ms.offsetHeight || 30; }
+}
+
+function mmUpdateMiniCanvas() {
+  const mc = document.getElementById('mmMiniCanvas');
+  if (!mc || mc.width < 1) return;
+  const mctx = mc.getContext('2d');
+  if (canvas.width > 0 && canvas.height > 0) {
+    mctx.drawImage(canvas, 0, 0, mc.width, mc.height);
+  }
+  const ms = document.getElementById('mmMiniScope');
+  const scopeEl = document.getElementById('scope');
+  if (ms && scopeEl && scopeEl.width > 0 && ms.width > 0) {
+    ms.getContext('2d').drawImage(scopeEl, 0, 0, ms.width, ms.height);
+  }
+}
+
+// Mini canvas forwards clicks to the main mouse object
+document.addEventListener('DOMContentLoaded', () => {
+  const mc = document.getElementById('mmMiniCanvas');
+  if (!mc) return;
+  function fwd(e, type) {
+    const r = mc.getBoundingClientRect();
+    if (r.width < 1 || r.height < 1) return;
+    const src = e.touches ? e.touches[0] : e;
+    mouse.x = ((src.clientX - r.left) / r.width)  * W;
+    mouse.y = ((src.clientY - r.top)  / r.height) * H;
+    if (type === 'down') mouse.down = true;
+    if (type === 'up')   mouse.down = false;
+  }
+  mc.addEventListener('mousedown', e => fwd(e,'down'));
+  mc.addEventListener('mousemove', e => fwd(e,'move'));
+  mc.addEventListener('mouseup',   e => fwd(e,'up'));
+  mc.addEventListener('mouseleave',() => mouse.down = false);
+});
+
+// ── Fullscreen toggle ─────────────────────────────────────────────────────
+function mmToggleFullscreen() {
+  _mmFsActive = !_mmFsActive;
+  const mc  = document.getElementById('mmMiniCanvas');
+  const btn = document.getElementById('mmFsBtn');
+  if (_mmFsActive) {
+    Object.assign(mc.style, { position:'fixed', top:'0', left:'0', width:'100vw', height:'100vh', zIndex:'300' });
+    btn.textContent = '✕ EXIT';
+  } else {
+    Object.assign(mc.style, { position:'', top:'', left:'', width:'', height:'', zIndex:'' });
+    btn.textContent = '⤢ FULLSCREEN';
+  }
+  setTimeout(mmResizeMiniCanvas, 30);
+}
+
+// ── LFO scope ─────────────────────────────────────────────────────────────
+function mmDrawLfoScope() {
+  const cv = document.getElementById('mmLfoScope');
+  if (!cv) return;
+  if (!cv.width || cv.width < 10) { cv.width = cv.offsetWidth || 200; cv.height = cv.offsetHeight || 50; }
+  const ctx2 = cv.getContext('2d');
+  const W2 = cv.width, H2 = cv.height;
+  ctx2.fillStyle = '#050810'; ctx2.fillRect(0, 0, W2, H2);
+
+  const lfo2Shape = document.getElementById('mmLfo2Shape')?.value || 'sine';
+  const lfo2Depth = parseFloat(document.getElementById('mmLfo2Depth')?.value || '0.5');
+  const lfo2PhOff = (parseFloat(document.getElementById('mmLfo2Phase')?.value || '0') / 360) * Math.PI * 2;
+
+  for (let li = 0; li < 2; li++) {
+    ctx2.beginPath();
+    for (let i = 0; i < W2; i++) {
+      const t = (i / W2) * Math.PI * 2;
+      const v = li === 0
+        ? Math.sin(lfoPhase + t)
+        : _lfo2Compute(_lfo2Phase + t + lfo2PhOff, lfo2Shape, lfo2Depth);
+      const y = H2 * 0.5 - v * H2 * 0.42;
+      i === 0 ? ctx2.moveTo(0, y) : ctx2.lineTo(i, y);
+    }
+    ctx2.strokeStyle = li === 0 ? 'rgba(51,170,255,0.85)' : 'rgba(255,160,40,0.85)';
+    ctx2.lineWidth = 1.5; ctx2.stroke();
+  }
+  // Phase tick marks
+  const l1x = (lfoPhase  / (Math.PI * 2) % 1) * W2;
+  const l2x = (_lfo2Phase / (Math.PI * 2) % 1) * W2;
+  ctx2.fillStyle = '#3af'; ctx2.fillRect(l1x, 0, 1, H2);
+  ctx2.fillStyle = '#fa3'; ctx2.fillRect(l2x, 0, 1, H2);
+}
+
+// ── Source monitor ────────────────────────────────────────────────────────
+function mmBuildSrcMon() {
+  const el = document.getElementById('mmSrcMon');
+  if (!el || el._built) return;
+  let html = '';
+  for (const g of MM_SRC_GROUPS) {
+    html += `<div class="mm-srcmon-group"><div class="mm-srcmon-grp-lbl">${g.label}</div><div class="mm-srcmon-meters">`;
+    for (const k of g.keys) {
+      html += `<div class="mm-srcmon-item">
+  <div class="mm-srcmon-bar-bg"><div class="mm-srcmon-bar-fill" id="mm_bf_${k}" style="height:0%;background:#3af;"></div></div>
+  <div class="mm-srcmon-name" title="${k}">${k.replace(/_/g,' ')}</div>
+  <div class="mm-srcmon-num"  id="mm_bn_${k}">—</div>
+</div>`;
+    }
+    html += '</div></div>';
+  }
+  el.innerHTML = html;
+  el._built = true;
+}
+
+let _mmLastMonUpdate = 0;
+function mmUpdateSrcMon() {
+  // Throttle to ~20fps — meters don't need 60fps updates
+  const now = performance.now();
+  if (now - _mmLastMonUpdate < 50) return;
+  _mmLastMonUpdate = now;
+
+  const src = _mmLastSrcSample;
+  if (!src) return;
+  // Phase 1: read all values (no DOM access)
+  const allKeys = MM_SRC_GROUPS.flatMap(g => g.keys);
+  const vals = {};
+  for (const k of allKeys) vals[k] = src[k] !== undefined ? src[k] : 0;
+  // Phase 2: write to DOM in one pass
+  for (const k of allKeys) {
+    const v = vals[k];
+    const pct = Math.max(0, Math.min(100, (v + 1) * 50));
+    const fill = document.getElementById('mm_bf_' + k);
+    const num  = document.getElementById('mm_bn_' + k);
+    if (fill) { fill.style.height = pct + '%'; fill.style.background = v < 0 ? '#fa3' : '#3af'; }
+    if (num)  num.textContent = v.toFixed(2);
+  }
+}
+
+// ── Patch view ────────────────────────────────────────────────────────────
+let _mmPatchDrag = null; // {srcKey, x, y}
+
+function mmResizePatchCanvas() {
+  const cv = document.getElementById('mmPatchCanvas');
+  if (!cv) return;
+  const dpr = window.devicePixelRatio || 1;
+  const container = cv.parentElement;
+  const r = container.getBoundingClientRect();
+  const logW = r.width || 500;
+  // Compute minimum content height from node counts
+  const nodeH = 20, nodeGap = 3;
+  const allSrcs = MM_SRC_GROUPS.flatMap(g => g.keys);
+  const allDsts = mmActiveDstGroups().flatMap(g => g.keys);
+  const contentH = Math.max(allSrcs.length, allDsts.length) * (nodeH + nodeGap) + 24;
+  const logH = Math.max(contentH, r.height || 400);
+  cv.style.height = logH + 'px';
+  cv.width  = Math.round(logW * dpr);
+  cv.height = Math.round(logH * dpr);
+  cv._logW = logW;
+  cv._logH = logH;
+  cv._dpr  = dpr;
+}
+
+function _mmPatchLayout(cv) {
+  const W2 = cv._logW || (cv.width  / (cv._dpr || 1));
+  const H2 = cv._logH || (cv.height / (cv._dpr || 1));
+  const colW = Math.floor(W2 * 0.3);
+  const nodeH = 20, nodeGap = 3;
+  const srcX = 6, dstX = W2 - colW - 6;
+  const allSrcs = MM_SRC_GROUPS.flatMap(g => g.keys);
+  const allDsts = mmActiveDstGroups().flatMap(g => g.keys);
+  const srcPos = {}, dstPos = {};
+  let y = 8;
+  for (const k of allSrcs) { srcPos[k] = {x:srcX, y, w:colW, h:nodeH}; y += nodeH + nodeGap; }
+  y = 8;
+  for (const k of allDsts) { dstPos[k] = {x:dstX, y, w:colW, h:nodeH}; y += nodeH + nodeGap; }
+  return { srcPos, dstPos, colW, nodeH, W2, H2 };
+}
+
+function mmRenderPatchView() {
+  const cv = document.getElementById('mmPatchCanvas');
+  if (!cv || cv.width < 10) { mmResizePatchCanvas(); return; }
+  const dpr = cv._dpr || window.devicePixelRatio || 1;
+  const ctx2 = cv.getContext('2d');
+  // Reset to identity, clear at device-pixel resolution, then scale for crisp drawing
+  ctx2.setTransform(1, 0, 0, 1, 0, 0);
+  ctx2.clearRect(0, 0, cv.width, cv.height);
+  ctx2.setTransform(dpr, 0, 0, dpr, 0, 0);
+  const { srcPos, dstPos, colW, nodeH, W2, H2 } = _mmPatchLayout(cv);
+
+  ctx2.fillStyle = '#060a10'; ctx2.fillRect(0, 0, W2, H2);
+
+  // Draw bezier connections
+  ctx2.setLineDash([]);
+  for (const c of modMatrix.connections) {
+    const sp = srcPos[c.source], dp = dstPos[c.destination];
+    if (!sp || !dp) continue;
+    const x1 = sp.x + colW, y1 = sp.y + nodeH * 0.5;
+    const x2 = dp.x,        y2 = dp.y + nodeH * 0.5;
+    const alpha = c.enabled ? Math.max(0.12, Math.min(0.9, 0.15 + Math.abs(c._liveAmt || 0) * 4)) : 0.08;
+    ctx2.beginPath(); ctx2.moveTo(x1, y1);
+    ctx2.bezierCurveTo(x1 + (x2-x1)*0.45, y1, x1 + (x2-x1)*0.55, y2, x2, y2);
+    ctx2.strokeStyle = c.amount >= 0 ? `rgba(51,170,255,${alpha})` : `rgba(255,160,40,${alpha})`;
+    ctx2.lineWidth = 1 + Math.abs(c.amount) * 2.5;
+    if (!c.enabled) ctx2.setLineDash([3,3]);
+    ctx2.stroke();
+    ctx2.setLineDash([]);
+  }
+
+  // Ghost drag curve
+  if (_mmPatchDrag) {
+    const sp = srcPos[_mmPatchDrag.srcKey];
+    if (sp) {
+      const x1 = sp.x + colW, y1 = sp.y + nodeH * 0.5;
+      ctx2.beginPath(); ctx2.moveTo(x1, y1);
+      ctx2.bezierCurveTo(x1+80, y1, _mmPatchDrag.x-80, _mmPatchDrag.y, _mmPatchDrag.x, _mmPatchDrag.y);
+      ctx2.strokeStyle = 'rgba(51,170,255,0.5)'; ctx2.lineWidth = 2; ctx2.stroke();
+    }
+  }
+
+  // Draw src nodes
+  ctx2.font = '9px var(--font-mono, monospace)';
+  for (const [k, pos] of Object.entries(srcPos)) {
+    const hasConn = modMatrix.connections.some(c => c.source === k && c.enabled);
+    const v = (_mmLastSrcSample[k] ?? 0);
+    const barH = Math.max(0, Math.min(1, (v + 1) * 0.5));
+    ctx2.fillStyle = hasConn ? '#0d1828' : '#07101a';
+    _mmRoundRect(ctx2, pos.x, pos.y, colW, nodeH, 2); ctx2.fill();
+    ctx2.fillStyle = 'rgba(51,170,255,0.35)';
+    ctx2.fillRect(pos.x, pos.y + nodeH*(1-barH), 3, nodeH*barH);
+    ctx2.fillStyle = hasConn ? '#5bb0d0' : '#2a4a5a';
+    ctx2.fillText(k.replace(/_/g,' '), pos.x+6, pos.y+13);
+    ctx2.beginPath(); ctx2.arc(pos.x+colW, pos.y+nodeH*0.5, 3, 0, Math.PI*2);
+    ctx2.fillStyle = hasConn ? '#3af' : '#1e3050'; ctx2.fill();
+  }
+
+  // Draw dst nodes
+  for (const [k, pos] of Object.entries(dstPos)) {
+    const cnt = modMatrix.connections.filter(c => c.destination===k && c.enabled).length;
+    ctx2.fillStyle = cnt ? '#0b1620' : '#07101a';
+    _mmRoundRect(ctx2, pos.x, pos.y, colW, nodeH, 2); ctx2.fill();
+    ctx2.fillStyle = cnt ? '#5bd0a0' : '#2a4a4a';
+    ctx2.fillText(k.replace(/_/g,' '), pos.x+8, pos.y+13);
+    if (cnt) { ctx2.fillStyle='#3af'; ctx2.fillText(cnt, pos.x+colW-10, pos.y+13); }
+    ctx2.beginPath(); ctx2.arc(pos.x, pos.y+nodeH*0.5, 3, 0, Math.PI*2);
+    ctx2.fillStyle = cnt ? '#3fa' : '#1e3050'; ctx2.fill();
+  }
+}
+
+function _mmRoundRect(ctx2, x, y, w, h, r) {
+  ctx2.beginPath();
+  ctx2.moveTo(x+r,y); ctx2.lineTo(x+w-r,y); ctx2.arcTo(x+w,y,x+w,y+r,r);
+  ctx2.lineTo(x+w,y+h-r); ctx2.arcTo(x+w,y+h,x+w-r,y+h,r);
+  ctx2.lineTo(x+r,y+h); ctx2.arcTo(x,y+h,x,y+h-r,r);
+  ctx2.lineTo(x,y+r); ctx2.arcTo(x,y,x+r,y,r); ctx2.closePath();
+}
+
+// Patch canvas mouse events
+document.addEventListener('DOMContentLoaded', () => {
+  const cv = document.getElementById('mmPatchCanvas');
+  if (!cv) return;
+  function hitNode(ex, ey, map) {
+    for (const [k, p] of Object.entries(map)) {
+      if (ex>=p.x && ex<=p.x+p.w && ey>=p.y && ey<=p.y+p.h) return k;
+    }
+    return null;
+  }
+  function cvCoord(e) {
+    const r = cv.getBoundingClientRect();
+    const sx = cv.width  / (r.width  || 1);
+    const sy = cv.height / (r.height || 1);
+    const src = e.touches ? e.touches[0] : e;
+    return { ex:(src.clientX-r.left)*sx, ey:(src.clientY-r.top)*sy };
+  }
+  cv.addEventListener('mousedown', e => {
+    const {ex,ey} = cvCoord(e);
+    const {srcPos} = _mmPatchLayout(cv);
+    const hit = hitNode(ex, ey, srcPos);
+    if (hit) { _mmPatchDrag = {srcKey:hit, x:ex, y:ey}; e.preventDefault(); }
+  });
+  cv.addEventListener('mousemove', e => {
+    if (!_mmPatchDrag) return;
+    const {ex,ey} = cvCoord(e);
+    _mmPatchDrag.x = ex; _mmPatchDrag.y = ey;
+    mmRenderPatchView();
+  });
+  cv.addEventListener('mouseup', e => {
+    if (!_mmPatchDrag) return;
+    const {ex,ey} = cvCoord(e);
+    const {dstPos} = _mmPatchLayout(cv);
+    const hit = hitNode(ex, ey, dstPos);
+    if (hit && modMatrix.connections.length < modMatrix.maxConnections) {
+      modMatrix.connections.push({
+        id:'conn_'+(_mmConnIdCtr++).toString().padStart(3,'0'),
+        source:_mmPatchDrag.srcKey, destination:hit,
+        amount:0.5, enabled:true, label:'', _liveAmt:0,
+      });
+      mmRenderConnList();
+    }
+    _mmPatchDrag = null; mmRenderPatchView();
+  });
+  cv.addEventListener('contextmenu', e => {
+    e.preventDefault();
+    const {ex,ey} = cvCoord(e);
+    const {srcPos, dstPos, colW, nodeH} = _mmPatchLayout(cv);
+    // Find closest curve midpoint
+    let closest = null, bestD = 40;
+    for (const c of modMatrix.connections) {
+      const sp = srcPos[c.source], dp = dstPos[c.destination];
+      if (!sp || !dp) continue;
+      const mx = (sp.x+colW+dp.x)/2, my = (sp.y+dp.y+nodeH)/2;
+      const d = Math.hypot(ex-mx, ey-my);
+      if (d < bestD) { bestD=d; closest=c.id; }
+    }
+    if (closest) { mmDeleteConnection(closest); mmRenderPatchView(); }
+  });
+});
+
+// ── Save / Load patch ─────────────────────────────────────────────────────
+const _MM_PATCH_PFX = 'particlesynth_modpatch_';
+
+function mmSavePatch() {
+  const name = prompt('Save patch name:', 'my_patch');
+  if (!name) return;
+  localStorage.setItem(_MM_PATCH_PFX + name, JSON.stringify(modMatrix.connections));
+  alert(`Patch "${name}" saved.`);
+}
+
+function mmLoadPatch() {
+  const keys = Object.keys(localStorage).filter(k => k.startsWith(_MM_PATCH_PFX));
+  if (!keys.length) { alert('No saved patches found.'); return; }
+  const names = keys.map(k => k.slice(_MM_PATCH_PFX.length));
+  const choice = prompt('Load patch:\n' + names.map((n,i) => `${i+1}. ${n}`).join('\n'), '1');
+  const idx = parseInt(choice) - 1;
+  if (isNaN(idx) || idx < 0 || idx >= names.length) return;
+  try {
+    modMatrix.connections = JSON.parse(localStorage.getItem(keys[idx])).map(c => ({...c,_liveAmt:0}));
+    mmRenderConnList();
+  } catch(e) { alert('Failed to load patch.'); }
+}
+
+// ── Amount bar drag + double-click edit ──────────────────────────────────
+(function mmInitAmtDrag() {
+  let _drag = null; // { connId, startX, startAmt, barEl, txtEl, barW }
+
+  document.addEventListener('mousedown', e => {
+    if (!_mmPageOpen) return;
+    const wrap = e.target.closest('.mm-conn-amt-wrap');
+    if (!wrap || !wrap.dataset.connId) return;
+    const connId = wrap.dataset.connId;
+    const c = modMatrix.connections.find(x => x.id === connId);
+    if (!c) return;
+    _drag = {
+      connId, startX: e.clientX, startAmt: c.amount,
+      barEl: wrap.querySelector('.mm-conn-amt-bar'),
+      txtEl: document.getElementById('amttxt_' + connId),
+      barW:  wrap.getBoundingClientRect().width || 200,
+    };
+    document.body.style.cursor = 'ew-resize';
+    e.preventDefault();
+  });
+
+  window.addEventListener('mousemove', e => {
+    if (!_drag) return;
+    const c = modMatrix.connections.find(x => x.id === _drag.connId);
+    if (!c) return;
+    const delta = (e.clientX - _drag.startX) / _drag.barW;
+    c.amount = Math.round(Math.max(-1, Math.min(1, _drag.startAmt + delta * 2)) * 100) / 100;
+    // Redraw bar inline — no full re-render
+    const pos = c.amount >= 0;
+    const pct = Math.round(Math.abs(c.amount) * 50);
+    const col = pos ? '#3af' : '#fa3';
+    if (_drag.barEl) {
+      _drag.barEl.style.left       = pos ? '50%' : `${50 - pct}%`;
+      _drag.barEl.style.width      = pct + '%';
+      _drag.barEl.style.background = col;
+    }
+    if (_drag.txtEl) {
+      const ac = c.amount > 0.001 ? 'pos' : c.amount < -0.001 ? 'neg' : 'zero';
+      _drag.txtEl.textContent = (c.amount >= 0 ? '+' : '') + c.amount.toFixed(2);
+      _drag.txtEl.className = 'mm-conn-amt-txt ' + ac;
+    }
+  });
+
+  window.addEventListener('mouseup', () => {
+    if (_drag) { document.body.style.cursor = ''; _drag = null; }
+  });
+
+  // Double-click amount text → inline input
+  document.addEventListener('dblclick', e => {
+    if (!_mmPageOpen) return;
+    const txt = e.target.closest('.mm-conn-amt-txt');
+    if (!txt || !txt.dataset.connId) return;
+    const connId = txt.dataset.connId;
+    const c = modMatrix.connections.find(x => x.id === connId);
+    if (!c) return;
+    const input = document.createElement('input');
+    input.type = 'text';
+    input.value = c.amount.toFixed(2);
+    input.style.cssText = 'width:48px;background:#0c1220;border:1px solid #3af;color:#3af;' +
+      'font-size:10px;font-family:var(--font-mono,monospace);padding:1px 3px;outline:none;';
+    txt.replaceWith(input);
+    input.select();
+    let committed = false;
+    const commit = () => {
+      if (committed) return; committed = true;
+      const v = parseFloat(input.value);
+      c.amount = isNaN(v) ? c.amount : Math.max(-1, Math.min(1, Math.round(v * 100) / 100));
+      mmRenderConnList();
+    };
+    input.addEventListener('blur', commit);
+    input.addEventListener('keydown', ev => {
+      if (ev.key === 'Enter')  { ev.preventDefault(); input.blur(); }
+      if (ev.key === 'Escape') { committed = true; input.removeEventListener('blur', commit); mmRenderConnList(); }
+    });
+  });
+})();
+
+// Add window resize handler for patch canvas
+window.addEventListener('resize', () => {
+  if (_mmPageOpen) { mmResizePatchCanvas(); mmRenderPatchView(); }
+});
+
+// ── Preset integration ────────────────────────────────────────────────────
+// Wrap collectPreset / applyPreset if they exist after this script runs
+(function() {
+  const _origCollect = window.collectPreset;
+  if (_origCollect) {
+    window.collectPreset = function() {
+      const p = _origCollect();
+      p.modMatrix = JSON.stringify(modMatrix.connections);
+      return p;
+    };
+  }
+  const _origApply = window.applyPreset;
+  if (_origApply) {
+    window.applyPreset = function(p) {
+      _origApply(p);
+      if (p.modMatrix) {
+        try { modMatrix.connections = JSON.parse(p.modMatrix).map(c=>({...c,_liveAmt:0})); mmRenderConnList(); } catch(_) {}
+      }
+    };
+  }
 })();
 </script>
 </body>
